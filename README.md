@@ -21,14 +21,15 @@ Cliente → Vehículo → Recepción → Diagnóstico → Presupuesto → Aproba
 
 ## Stack
 
-Versiones verificadas en `composer.lock` y en el entorno local (2026-10-17; reverificadas el 2026-10-19):
+Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 2026-10-24):
 
 | Capa | Tecnología |
 |---|---|
-| Lenguaje | PHP `^8.2` (desarrollo con PHP 8.3) |
-| Backend | Laravel 12 (`laravel/framework` 12.70) |
+| Lenguaje | PHP `^8.3` (desarrollo con PHP 8.3) |
+| Backend | Laravel 13 (`laravel/framework` 13.38) |
 | Autenticación | Laravel Sanctum 4.3 (tokens Bearer) |
-| Roles y permisos | spatie/laravel-permission 6.25 (guard `api`) |
+| Roles y permisos | spatie/laravel-permission 8.3 (guard `api`) |
+| Tests | PHPUnit 12.5 |
 | PDF | barryvdh/laravel-dompdf 3.1 (dompdf 3.1; requiere la extensión `gd` para imágenes) |
 | Base de datos | MySQL (Laragon con MySQL 8.4); SQLite en archivo (`database/testing.sqlite`) para los tests |
 | Tests | PHPUnit 11.5 |
@@ -76,7 +77,7 @@ Versiones verificadas en `composer.lock` y en el entorno local (2026-10-17; reve
 
 ## Requisitos
 
-- PHP 8.2 o superior con las extensiones `pdo_mysql`, `bcmath`, `mbstring`, `gd` (imágenes en los PDF) y `zip` (y
+- PHP 8.3 o superior con las extensiones `pdo_mysql`, `bcmath`, `mbstring`, `gd` (imágenes en los PDF) y `zip` (y
   `pdo_sqlite` para los tests). Sin `zip` en el PHP de consola, Composer no puede descomprimir los paquetes y los
   clona uno por uno con git: la instalación tarda muchísimo. En Laragon, descomentar `extension=zip` en el `php.ini`.
 - Composer

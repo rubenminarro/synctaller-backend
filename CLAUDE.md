@@ -16,7 +16,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 
 ## 1. Estado actual (verificado el 2026-10-21)
 
-* **Backend/API:** Laravel 12.70, roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
+* **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21). 232 rutas API, 369 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
