@@ -8,7 +8,7 @@
 cierre económico, facturación, pagos, entrega, historial, mantenimiento preventivo, reportes), FASE 21 (compras) y
 FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría); 6 roles;
 369 tests en verde (2026-10-24)
-**Stack principal:** Laravel 12.70 + MySQL (8.4 en Laragon). Frontend previsto en React 19: **no está en este
+**Stack principal:** Laravel 13.38 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend previsto en React 19: **no está en este
 repositorio** (ver 1.2)
 **Entorno local:** Laragon / Windows
 **Base de datos:** `synctaller` (hasta el 2026-10-21, `presupuestador`)
@@ -69,8 +69,8 @@ La arquitectura debe permitir continuar agregando módulos sin romper los módul
 
 ## Backend
 
-* PHP
-* Laravel 12
+* PHP 8.3
+* Laravel 13 (hasta el 2026-10-24, Laravel 12; ver 2.51)
 * Laravel Sanctum
 * Laravel API Resources
 * Laravel Form Requests
@@ -1346,6 +1346,34 @@ tal cual (no se pasa a negro: tiene que leerse en pestañas claras y oscuras). U
 `foreignObject`, `iframe`, `embed`, `object`, eventos `on…`, `javascript:`) se rechaza con 422, porque queda público en el
 disco y se ejecutaría al abrir su URL. Sin favicon, el frontend usa su ícono original. Tests:
 `tests/Feature/Settings/SystemFaviconTest` (5).
+
+---
+
+# 2.51 Actualización a Laravel 13 y dependencias (2026-10-24)
+
+Rama `chore/laravel-13`, en tres pasos con la suite completa en verde después de cada uno (369 tests):
+
+| Paquete | Antes | Después |
+|---|---|---|
+| PHP (requisito) | `^8.2` | `^8.3` (Laravel 13 y spatie 8 lo exigen; el entorno ya era 8.3) |
+| `laravel/framework` | 12.70 | 13.38 |
+| `laravel/tinker` | 2.11 | 3.0 |
+| `spatie/laravel-permission` | 6.25 | 8.3 |
+| `phpunit/phpunit` | 11.5 | 12.5 |
+| Sanctum, Pail, Pint, Sail, Mockery, Collision | — | últimas menores (Sanctum 4.3.3, Collision 8.9.5, …) |
+
+* **spatie 6 → 8:** sin cambios en el código. Se compararon la configuración y la migración publicadas con las del
+  paquete: el esquema es el mismo (solo cambia el estilo del stub) y la configuración agrega `models.team` y
+  `models.default_model`, ambas `null` por defecto (equivale a no tenerlas). Todos los métodos, middlewares
+  (`role`, `permission`, `role_or_permission`) y `UnauthorizedException` que usa la app siguen existiendo.
+* **PHPUnit 12:** los tests no usan anotaciones en comentarios (`@test`, `@dataProvider`) ni mocks: sin cambios.
+* **Configuración:** Laravel combina `config/*.php` con los valores del framework, así que las opciones nuevas de
+  Laravel 13 (p. ej. `cache.stores.session`, `mail.markdown.extensions`, `config/images.php`) toman su valor por defecto.
+  No se publicaron.
+* **Verificación además de la suite:** prueba de humo contra Nginx (login, `/me`, listados, PDF y CSV de reportes, PDF
+  de factura, errores 404/401 en JSON, preflight CORS desde `localhost:5173`) y las 19 pantallas principales del
+  frontend sin errores HTTP ni de consola.
+* No hay migraciones nuevas. En otro equipo: `composer install` con PHP 8.3 o superior.
 
 ---
 
