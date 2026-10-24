@@ -3,127 +3,95 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Budget;
-use App\Models\BudgetItem;
-use App\Models\Diagnostic;
+use App\Models\Part;
 use App\Models\Service;
 use App\Enums\BudgetItemType;
-use App\Enums\DiagnosticStatus;
 use App\Services\BudgetService;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Ítems de cada presupuesto de ejemplo (servicios y repuestos del catálogo, o
+ * mano de obra libre), cargados como lo hace la API, y su recorrido hasta el
+ * estado final del escenario: borrador, enviado, aprobado, rechazado,
+ * rechazado y reabierto, o cancelado.
+ */
 class BudgetItemSeeder extends Seeder
 {
-    public function run(): void
+    public function run(BudgetService $budgetService): void
     {
-        $budgetService = app(BudgetService::class);
+        foreach (ExampleScenarios::chronological() as $scenario) {
+            $budget = isset($scenario['budget']) ? BudgetSeeder::of($scenario) : null;
 
-        $budgetsPayload = [
-            // Placa del vehículo (ver BudgetSeeder::BUDGETS).
-            'AAA111' => [
-                'target_status' => 'DRAFT',
-                'items' => [
-                    [
-                        'type' => BudgetItemType::LABOR,
-                        'description' => 'Mano de obra - Cambio de bujes y amortiguadores',
-                        'quantity' => 1,
-                        'unit_price' => 350000,
-                        'notes' => 'Incluye alineación posterior',
-                    ],
-                    [
-                        'type' => BudgetItemType::PART,
-                        'description' => 'Juego de Bujes de Parrilla',
-                        'quantity' => 2,
-                        'unit_price' => 120000,
-                        'notes' => 'Repuesto original',
-                    ],
-                ],
-            ],
-            'BBB222' => [
-                'target_status' => 'APPROVED',
-                'items' => [
-                    [
-                        'type' => BudgetItemType::SERVICE,
-                        'description' => 'Desabollado y preparación de puerta',
-                        'quantity' => 1,
-                        'unit_price' => 450000,
-                        'notes' => null,
-                    ],
-                    [
-                        'type' => BudgetItemType::SERVICE,
-                        'description' => 'Pintura general de puerta trasera',
-                        'quantity' => 1,
-                        'unit_price' => 500000,
-                        'notes' => 'Pintura poliuretánica',
-                    ],
-                ],
-            ],
-            'CCC333' => [
-                'target_status' => 'SENT',
-                'items' => [
-                    [
-                        'type' => BudgetItemType::PART,
-                        'description' => 'Amortiguadores Delanteros',
-                        'quantity' => 2,
-                        'unit_price' => 650000,
-                        'notes' => 'Marca Monroe',
-                    ],
-                    [
-                        'type' => BudgetItemType::SERVICE,
-                        'description' => 'Instalación de Amortiguadores',
-                        'quantity' => 1,
-                        'unit_price' => 200000,
-                        'notes' => null,
-                    ],
-                ],
-            ],
-        ];
-
-        DB::transaction(function () use ($budgetsPayload, $budgetService) {
-            foreach ($budgetsPayload as $plate => $payload) {
-                $budget = Budget::where('reception_id', BudgetSeeder::receptionOf($plate)?->id)
-                    ->orderBy('id')
-                    ->first();
-
-                // Idempotente: solo carga ítems en el presupuesto de ejemplo si sigue vacío.
-                if (! $budget || $budget->items()->exists()) {
-                    continue;
-                }
-
-                foreach ($payload['items'] as $item) {
-                    // Los servicios de ejemplo se vinculan al catálogo por nombre.
-                    $serviceId = $item['type'] === BudgetItemType::SERVICE
-                        ? Service::where('name', $item['description'])->value('id')
-                        : null;
-
-                    BudgetItem::create([
-                        'budget_id' => $budget->id,
-                        'type' => $item['type'],
-                        'service_id' => $serviceId,
-                        'description' => $item['description'],
-                        'quantity' => $item['quantity'],
-                        'unit_price' => $item['unit_price'],
-                        'total' => $budgetService->itemTotal($item['quantity'], $item['unit_price']),
-                        'notes' => $item['notes'],
-                    ]);
-                }
-
-                $budgetService->recalculateBudget($budget);
-
-                // Enviar exige los diagnósticos de la recepción cerrados: en los ejemplos enviados se dan por terminados.
-                if (in_array($payload['target_status'], ['SENT', 'APPROVED'], true)) {
-                    Diagnostic::where('reception_id', $budget->reception_id)
-                        ->whereIn('status', [DiagnosticStatus::PENDING->value, DiagnosticStatus::IN_PROGRESS->value])
-                        ->update(['status' => DiagnosticStatus::COMPLETED->value]);
-                }
-
-                if ($payload['target_status'] === 'SENT') {
-                    $budgetService->send($budget);
-                } elseif ($payload['target_status'] === 'APPROVED') {
-                    $budgetService->send($budget);
-                    $budgetService->approve($budget);
-                }
+            // Idempotente: solo carga ítems (y mueve el estado) si el presupuesto sigue vacío.
+            if (!$budget || $budget->items()->exists()) {
+                continue;
             }
-        });
+
+            ExampleScenarios::travel(ExampleScenarios::at($scenario, 0, 16), function () use ($budget, $scenario, $budgetService) {
+                DB::transaction(function () use ($budget, $scenario, $budgetService) {
+                    foreach ($scenario['budget']['items'] as $item) {
+                        // Igual que BudgetItemController::store.
+                        $data = $budgetService->prepareCatalogItem(self::itemData($item));
+                        $data['total'] = $budgetService->itemTotal($data['quantity'], $data['unit_price']);
+                        $budget->items()->create($data);
+                    }
+
+                    $budgetService->recalculateBudget($budget);
+                });
+            });
+
+            $status = $scenario['budget']['status'];
+            $at = fn (int $offset, int $hour) => ExampleScenarios::at($scenario, $offset, $hour);
+
+            if ($status === 'draft') {
+                continue;
+            }
+
+            // Enviar exige los diagnósticos cerrados: los escenarios enviados los tienen completados o cancelados.
+            ExampleScenarios::travel($at(1, 9), fn () => $budgetService->send($budget->refresh()));
+
+            match ($status) {
+                'approved' => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->approve($budget->refresh())),
+                'rejected' => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->reject($budget->refresh())),
+                'cancelled' => ExampleScenarios::travel($at(2, 9), fn () => $budgetService->cancel($budget->refresh())),
+                'reopened' => [
+                    ExampleScenarios::travel($at(1, 16), fn () => $budgetService->reject($budget->refresh())),
+                    ExampleScenarios::travel($at(2, 10), fn () => $budgetService->reopen($budget->refresh())),
+                ],
+                default => null,
+            };
+        }
+    }
+
+    /**
+     * [service, nombre] | [part, SKU, cantidad] | [labor, descripción, precio] → datos del ítem como los envía la API.
+     */
+    private static function itemData(array $item): array
+    {
+        return match ($item[0]) {
+            'service' => [
+                'type' => BudgetItemType::SERVICE->value,
+                'service_id' => Service::where('name', $item[1])->firstOrFail()->id,
+                'description' => $item[1],
+                'quantity' => 1,
+            ],
+            'part' => (function () use ($item) {
+                $part = Part::where('sku', $item[1])->firstOrFail();
+
+                return [
+                    'type' => BudgetItemType::PART->value,
+                    'part_id' => $part->id,
+                    'description' => $part->name,
+                    'quantity' => $item[2],
+                    'unit_price' => $part->sale_price,
+                ];
+            })(),
+            'labor' => [
+                'type' => BudgetItemType::LABOR->value,
+                'description' => $item[1],
+                'quantity' => 1,
+                'unit_price' => $item[2],
+            ],
+        };
     }
 }

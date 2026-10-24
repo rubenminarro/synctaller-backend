@@ -26,6 +26,9 @@
         <env name="DB_CONNECTION" value="sqlite"/>
         <!-- Archivo, no :memory: (tests/bootstrap.php lo crea y fija su ruta absoluta). -->
         <env name="DB_DATABASE" value="database/testing.sqlite"/>
+        <!-- Sin sincronizar a disco en cada COMMIT (config/database.php): la base de tests es descartable. -->
+        <env name="DB_SQLITE_SYNCHRONOUS" value="OFF"/>
+        <env name="DB_SQLITE_JOURNAL_MODE" value="MEMORY"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

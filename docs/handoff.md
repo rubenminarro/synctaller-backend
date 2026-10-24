@@ -7,7 +7,7 @@
 **Estado:** Backend/API funcional — roadmap original completo (FASES 10 a 20: repuestos, inventario, servicios,
 cierre económico, facturación, pagos, entrega, historial, mantenimiento preventivo, reportes), FASE 21 (compras) y
 FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría); 6 roles;
-369 tests en verde (2026-10-24)
+368 tests en verde (2026-10-24)
 **Stack principal:** Laravel 13.38 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend previsto en React 19: **no está en este
 repositorio** (ver 1.2)
 **Entorno local:** Laragon / Windows
@@ -1374,6 +1374,28 @@ Rama `chore/laravel-13`, en tres pasos con la suite completa en verde después d
   de factura, errores 404/401 en JSON, preflight CORS desde `localhost:5173`) y las 19 pantallas principales del
   frontend sin errores HTTP ni de consola.
 * No hay migraciones nuevas. En otro equipo: `composer install` con PHP 8.3 o superior.
+
+---
+
+# 2.52 Datos de prueba por escenarios (2026-10-24)
+
+Pedido del usuario: más usuarios por rol y seeders que dejen cada módulo en cada uno de sus estados, creados por los
+Services, para probar la app. Se mantuvo la estructura existente (un seeder por módulo en `DatabaseSeeder`, sin una
+clase de demo aparte).
+
+| Tema | Decisión |
+|---|---|
+| Usuarios | 17 (2 administradores, 3 recepcionistas, 2 jefes de taller, 2 cajeros, 2 de depósito, 6 mecánicos con fichas activas, inactiva y de licencia). `TEST_PASSWORD` (nueva en `.env.example`) para todos salvo `admin@mail.com.py` (`ADMIN_PASSWORD`) |
+| Catálogos | 30 clientes (uno sin email, uno dado de baja de los avisos), 45 vehículos (uno sin placa), servicios, proveedores y repuestos en cada estado. Se corrigieron datos que no pasaban la validación de la API: teléfonos con 0 inicial (ahora `595…`) y dos colores fuera de `VehicleColor` |
+| Escenarios | `ExampleScenarios`: 35 recepciones con su estado final (17 terminadas, 16 abiertas, 2 canceladas) y el plan de facturación de las terminadas (`BILLING`). Cada seeder de módulo los recorre por los Services, con el usuario del rol y el reloj en la fecha del evento (`Carbon::setTestNow`), repartidos en los últimos tres meses. La recepción de un escenario se identifica por número de visita del vehículo (no por fecha): volver a sembrar otro día no duplica |
+| Seeders nuevos | `WorkOrderSeeder` (ciclo completo de la OT: ítems, reparto, horas, repuestos, extras; en uno solo porque los pasos se entrelazan), `ReceptionCancellationSeeder`, `InvoiceSeeder`, `PaymentSeeder`, `VehicleDeliverySeeder`, `PurchaseSeeder`, `SupplierPaymentSeeder`, `InventoryAdjustmentSeeder`, `VehicleMaintenanceSeeder`, `CommissionSeeder`, `NotificationSeeder` |
+| Kardex | `inventory_movements` guarda el saldo acumulado y se lista por id: los movimientos se siembran en orden cronológico (carga inicial hace 100 días, compras que mueven stock antes de los escenarios, ajustes al final). El test lo verifica |
+| Avisos | Los registran los Services durante los escenarios; `NotificationSeeder` envía con el mailer `array` (nunca sale un email), hace fallar uno con un SMTP inexistente y lo reenvía, corre los recordatorios diarios y marca leídos los avisos internos de más de tres días. Los avisos de presupuesto antiguos se marcan enviados sin generar el PDF (~0,35 s cada uno); los tres más recientes pasan por el Service |
+| Rendimiento | La suite tardaba 218 s; ahora ~178 s. `DatabaseSeederTest` pasó de cuatro siembras con la cola `sync` (cada aviso de presupuesto armaba el PDF: ~10 s por siembra) a una siembra más la de idempotencia con `Queue::fake()` (~10 s en total). `VehicleModelSeeder` inserta en una sola consulta (2,1 s → 13 ms). `phpunit.xml` desactiva la sincronización a disco de SQLite. Sembrar una base vacía tarda ~15 s; lo que queda es el costo real de los Services (`WorkOrderSeeder`, ~4.000 consultas) |
+| Sin cambiar | `DatabaseSeeder` sigue con `WithoutModelEvents` (la siembra no deja registros de auditoría). `RolesAndPermissionsSeeder` (1,5 s) no se optimizó: lo usan todos los tests y audita los permisos |
+
+Los emails de los clientes de ejemplo usan el dominio reservado `example.com`: no pasan la validación con
+`EMAIL_DNS_CHECK=true` (al editarlos desde la app hay que cambiar el email o desactivar la verificación en desarrollo).
 
 ---
 

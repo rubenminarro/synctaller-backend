@@ -31,6 +31,21 @@ return [
 
     'connections' => [
 
+        // La usan los tests (phpunit.xml). DB_SQLITE_SYNCHRONOUS=OFF y DB_SQLITE_JOURNAL_MODE=MEMORY evitan escribir a
+        // disco en cada COMMIT: la base de tests se descarta, y así la suite tarda bastante menos.
+        'sqlite' => [
+            'driver' => 'sqlite',
+            'url' => env('DB_URL'),
+            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'prefix' => '',
+            'prefix_indexes' => null,
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            'busy_timeout' => null,
+            'journal_mode' => env('DB_SQLITE_JOURNAL_MODE'),
+            'synchronous' => env('DB_SQLITE_SYNCHRONOUS'),
+            'transaction_mode' => 'DEFERRED',
+        ],
+
         'synctaller' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),

@@ -5,103 +5,51 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Reception;
 use App\Models\ServiceCategory;
-use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\ReceptionCheckList;
-use App\Enums\FuelLevel;
 use App\Services\ReceptionChecklistService;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Una recepción por escenario (ExampleScenarios), cargada por su recepcionista
+ * en la fecha de llegada, con su checklist. El estado lo derivan después los
+ * presupuestos y las OT; las cancelaciones las hace ReceptionCancellationSeeder.
+ */
 class ReceptionSeeder extends Seeder
 {
-    public function run(): void
+    public function run(ReceptionChecklistService $checklistService): void
     {
+        foreach (ExampleScenarios::chronological() as $scenario) {
+            $vehicle = Vehicle::where('plate', $scenario['plate'])->first();
 
-        $checklistService = app(ReceptionChecklistService::class);
-
-        $adminId = User::where('email', 'admin@mail.com.py')->value('id') ?? 1;
-
-        $data = [
-            [
-                'plate' => 'AAA111',
-                'service_categories' => ['general', 'mechanical'],
-                'reception_date' => now()->subDays(10),
-                'estimated_delivery_date' => now()->addDays(2),
-                'mileage' => 125000,
-                'fuel_level' => FuelLevel::HALF,
-                'problem_description' => 'Ruido en la suspensión delantera.',
-                'observations' => 'Cliente solicita revisión completa.',
-            ],
-            [
-                'plate' => 'BBB222',
-                'service_categories' => ['general', 'bodywork'],
-                'reception_date' => now()->subDays(8),
-                'estimated_delivery_date' => now()->addDays(5),
-                'mileage' => 89000,
-                'fuel_level' => FuelLevel::QUARTER,
-                'problem_description' => 'Golpe en puerta trasera izquierda.',
-                'observations' => 'Requiere presupuesto para pintura.',
-            ],
-            [
-                'plate' => 'CCC333',
-                'service_categories' => ['electrical'],
-                'reception_date' => now()->subDays(7),
-                'estimated_delivery_date' => now()->addDays(7),
-                'mileage' => 156000,
-                'fuel_level' => FuelLevel::FULL,
-                'problem_description' => 'Cambio de amortiguadores y reparación de paragolpes.',
-                'observations' => null,
-            ],
-            [
-                'plate' => 'DDD444',
-                'service_categories' => ['bodywork', 'electrical'],
-                'reception_date' => now()->subDays(6),
-                'estimated_delivery_date' => now()->addDays(3),
-                'mileage' => 74000,
-                'fuel_level' => FuelLevel::THREE_QUARTERS,
-                'problem_description' => 'Falla en sistema de frenos.',
-                'observations' => 'Vehículo llegó en grúa.',
-            ],
-            [
-                'plate' => 'EEE555',
-                'service_categories' => ['general', 'tires'],
-                'reception_date' => now()->subDays(5),
-                'estimated_delivery_date' => now()->addDays(10),
-                'mileage' => 45000,
-                'fuel_level' => FuelLevel::HALF,
-                'problem_description' => 'Daño en capó y guardabarros.',
-                'observations' => null,
-            ],
-        ];
-
-        foreach ($data as $receptionData) {
-            $vehicle = Vehicle::where('plate', $receptionData['plate'])->first();
-
-            // Idempotente: un vehículo que ya tiene recepciones (incluso eliminadas) se omite.
-            if (!$vehicle || Reception::withTrashed()->where('vehicle_id', $vehicle->id)->exists()) {
+            // Idempotente: la visita del escenario ya existe (aunque esté eliminada).
+            if (!$vehicle || ExampleScenarios::reception($scenario)) {
                 continue;
             }
 
-            DB::transaction(function () use ($receptionData, $vehicle, $adminId, $checklistService) {
+            $arrival = ExampleScenarios::at($scenario, 0, 8, 30);
 
-                $serviceCategoryIds = ServiceCategory::whereIn('code', $receptionData['service_categories'])
-                    ->pluck('id')
-                    ->all();
-                unset($receptionData['plate'], $receptionData['service_categories']);
+            ExampleScenarios::travel($arrival, function () use ($scenario, $vehicle, $arrival, $checklistService) {
+                DB::transaction(function () use ($scenario, $vehicle, $arrival, $checklistService) {
+                    $reception = Reception::create([
+                        'client_id' => $vehicle->client_id,
+                        'vehicle_id' => $vehicle->id,
+                        'created_by' => ExampleScenarios::user($scenario['receptionist'])->id,
+                        'reception_date' => $arrival,
+                        'estimated_delivery_date' => $arrival->addDays(count($scenario['diagnostics']) > 1 ? 7 : 3),
+                        // El kilometraje actual del vehículo menos lo que anduvo desde esta visita.
+                        'mileage' => max(0, (int) $vehicle->mileage - $scenario['days'] * 40),
+                        'fuel_level' => $scenario['fuel'],
+                        'problem_description' => $scenario['problem'],
+                        'observations' => $scenario['observations'] ?? null,
+                    ]);
 
-                $receptionData['client_id'] = $vehicle->client_id;
-                $receptionData['vehicle_id'] = $vehicle->id;
-                $receptionData['created_by'] = $adminId;
+                    $serviceCategoryIds = ServiceCategory::whereIn('code', $scenario['categories'])->pluck('id')->all();
+                    $reception->serviceCategories()->sync($serviceCategoryIds);
 
-                $reception = Reception::create($receptionData);
-
-                $reception->serviceCategories()->sync($serviceCategoryIds);
-
-                $checkList = ReceptionCheckList::create([
-                    'reception_id' => $reception->id,
-                ]);
-
-                $checklistService->generateChecklistItems($checkList, $serviceCategoryIds);
+                    $checkList = ReceptionCheckList::create(['reception_id' => $reception->id]);
+                    $checklistService->generateChecklistItems($checkList, $serviceCategoryIds);
+                });
             });
         }
     }

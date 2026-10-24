@@ -2,17 +2,22 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Severity;
 use App\Models\DiagnosticItem;
 use App\Models\DiagnosticItemPhoto;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * Fotos de ejemplo en los ítems de diagnóstico de severidad alta o crítica (los
+ * que en la práctica se documentan con fotos).
+ */
 class DiagnosticItemPhotoSeeder extends Seeder
 {
     public function run(): void
     {
-        $items = DiagnosticItem::all();
+        $items = DiagnosticItem::whereIn('severity', [Severity::HIGH->value, Severity::CRITICAL->value])->get();
 
         $assetsPath = database_path(
             'seeders/assets/diagnostic-items'
@@ -57,6 +62,5 @@ class DiagnosticItemPhotoSeeder extends Seeder
                 );
             }
         }
-        
     }
 }

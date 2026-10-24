@@ -18,7 +18,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
-  (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21). 232 rutas API, 369 tests en verde.
+  (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21). 232 rutas API, 368 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos y conexión `synctaller`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -101,6 +101,8 @@ resultados esperados y casos de error).
   permisos una vez por ejecución, cada test en una transacción; no sembrarlos en `setUp`). Si `pdo_sqlite` está deshabilitado:
   `php -d extension=pdo_sqlite -d extension=sqlite3 vendor/bin/phpunit`. Los tests no necesitan red:
   `phpunit.xml` fija `EMAIL_DNS_CHECK=false` (sin consulta DNS de emails) y `uncompromised()` se simula con `Http::fake`.
+  También desactiva la sincronización a disco de SQLite (`DB_SQLITE_SYNCHRONOUS`, `DB_SQLITE_JOURNAL_MODE`, conexión
+  `sqlite` de `config/database.php`).
 * No editar archivos con `Get-Content`/`Set-Content` de PowerShell 5.1: corrompen UTF-8 y agregan BOM. Usar las
   herramientas de edición.
 * Servidor web local: **Nginx** de Laragon (puerto 80, PHP por `php-cgi`), no Apache. Con Apache (PHP como módulo
@@ -109,6 +111,16 @@ resultados esperados y casos de error).
   contra MySQL.
 * No ejecutar `migrate:fresh`, `db:wipe` ni seeders de datos de ejemplo sobre la base de desarrollo sin pedido
   explícito (ver README, sección de base de datos).
+* **Seeders de ejemplo:** un seeder por módulo, registrados en `DatabaseSeeder`. El flujo del taller sale de
+  `database/seeders/ExampleScenarios.php` (un escenario por recepción y su estado final); cada seeder recorre los
+  escenarios y hace su parte **por los Services** (nunca `create()` directo de documentos), con el usuario del rol que
+  corresponde y el reloj en la fecha del evento (`ExampleScenarios::travel`). Reglas:
+  * Idempotentes: cada seeder omite lo que ya existe (`DatabaseSeederTest` siembra dos veces).
+  * El kardex guarda el saldo acumulado y se lista por orden de carga: los movimientos de stock se siembran en orden
+    cronológico (compras antes de los escenarios, ajustes al final).
+  * Un estado nuevo en un enum necesita su escenario y su verificación en `DatabaseSeederTest`.
+  * Los usuarios nuevos usan `TEST_PASSWORD`; el administrador principal, `ADMIN_PASSWORD`.
+  * No envían emails reales: `NotificationSeeder` usa el mailer `array`.
 * Notificaciones: los emails salen por cola (`QUEUE_CONNECTION=database`) y los recordatorios por el scheduler; sin
   `php artisan queue:work` y `php artisan schedule:run` (cada minuto) los avisos quedan `pending` o no se generan.
   En los tests la cola es `sync` y el mail `array` (`Mail::fake()` para verificar envíos).
@@ -179,7 +191,7 @@ de los permisos, ordenados; el administrador recibe todos los del guard `api` po
 | `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar y avisos a clientes (consultar y reenviar) |
 | `deposito` | Stock | Repuestos, proveedores, inventario, compras completas, repuestos en OT, reporte de inventario, consulta de pagos a proveedores y cuentas por pagar |
 
-El rol del mecánico se llama `mechanic` (no `mecanico`). Ningún usuario del seeder tiene los cuatro últimos roles.
+El rol del mecánico se llama `mechanic` (no `mecanico`). El seeder crea usuarios de cada rol (README, "Datos de prueba").
 La bandeja interna (`me/notifications`) y las preferencias (`me/preferences`) no usan permisos: cada usuario ve solo
 lo suyo.
 

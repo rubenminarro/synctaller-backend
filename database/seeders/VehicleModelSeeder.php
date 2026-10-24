@@ -45,20 +45,18 @@ class VehicleModelSeeder extends Seeder
      */
     public function run(): void
     {
-        // Idempotente: omite los modelos que ya existen para la marca.
+        $brandIds = Brand::whereIn('name', array_keys(self::MODELS_BY_BRAND))->pluck('id', 'name');
+        $now = now();
+        $rows = [];
+
         foreach (self::MODELS_BY_BRAND as $brandName => $models) {
-            $brandId = Brand::where('name', $brandName)->value('id');
-
-            if (!$brandId) {
-                continue;
-            }
-
-            foreach ($models as $modelName) {
-                VehicleModel::firstOrCreate([
-                    'brand_id' => $brandId,
-                    'name'     => $modelName,
-                ]);
+            foreach ($brandIds->has($brandName) ? $models : [] as $modelName) {
+                $rows[] = ['brand_id' => $brandIds[$brandName], 'name' => $modelName, 'created_at' => $now, 'updated_at' => $now];
             }
         }
+
+        // Una sola consulta (antes, una búsqueda y un alta por modelo). Idempotente: los únicos (brand_id, name) y
+        // name omiten los modelos que ya existen, también los dados de baja.
+        VehicleModel::insertOrIgnore($rows);
     }
 }

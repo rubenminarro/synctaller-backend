@@ -70,7 +70,7 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 
 | Estado | Qué |
 |---|---|
-| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema (2026-10-24) y los módulos base. 232 rutas API y 369 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
+| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema (2026-10-24) y los módulos base. 232 rutas API y 368 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
 | Pendiente, sin diseño | Notificaciones por WhatsApp |
 
 ---
@@ -115,8 +115,9 @@ DB_DATABASE=synctaller
 DB_USERNAME=root
 DB_PASSWORD=
 
-# Contraseña que el seeder asigna a los usuarios de prueba
+# Contraseñas que el seeder asigna: al administrador principal y al resto de los usuarios de prueba
 ADMIN_PASSWORD=
+TEST_PASSWORD=
 
 # Validar que el dominio de los emails exista (DNS); false solo sin red
 EMAIL_DNS_CHECK=true
@@ -178,10 +179,11 @@ La API queda disponible en `http://127.0.0.1:8000/api`.
   interesen.
 - Todos los seeders son **idempotentes**: `php artisan db:seed` sobre una base ya sembrada no duplica ni falla
   (`tests/Feature/Seeders/DatabaseSeederTest`). Omiten lo que ya existe por clave natural: marca y modelo por nombre,
-  cliente por documento, vehículo por placa, recepción si el vehículo ya tiene una, presupuesto si la recepción ya
-  tiene uno, ítems si el presupuesto ya tiene, repuestos por SKU, etc. Igual **agregan** los datos de ejemplo que
-  falten (por ejemplo, la recepción de un vehículo de ejemplo sin recepciones), así que sobre una base con datos reales
-  conviene correr solo los seeders necesarios.
+  cliente por documento, vehículo por placa, la visita de cada escenario, presupuesto si la recepción ya tiene uno, OT
+  si el presupuesto ya tiene, factura si la OT ya tiene, repuestos por SKU, etc. Igual **agregan** los datos de ejemplo
+  que falten, así que sobre una base con datos reales conviene correr solo los seeders necesarios.
+- Los datos de ejemplo se crean **por los Services**, como si los cargaran los usuarios de cada rol, y con la fecha de
+  cada evento repartida en los últimos tres meses (ver "Datos de prueba"). Sembrar una base vacía tarda unos 15 s.
 - `RolesAndPermissionsSeeder` sincroniza roles y permisos; correrlo después de cada fase que agregue permisos:
 
 ```bash
@@ -190,19 +192,43 @@ php artisan db:seed --class=RolesAndPermissionsSeeder
 
 - Si se cambia el `.env` y no se ve reflejado, verificar que no haya configuración cacheada (`php artisan config:clear`).
 
-### Usuarios del seeder
+### Datos de prueba
 
-| Email | Rol | Mecánico |
-|---|---|---|
-| `admin@mail.com.py` | administrador | — |
-| `jperez@mail.com.py` | mechanic | MEC-001 (comisión 10%, costo/hora 45.000) |
-| `cgomez@mail.com.py` | mechanic | MEC-002 (comisión 8,5%, costo/hora 35.000) |
+**Usuarios** (`AdminUserSeeder`, `MechanicSeeder`). `admin@mail.com.py` usa `ADMIN_PASSWORD`; el resto, `TEST_PASSWORD`.
+Qué puede hacer cada rol está en la sección 5 de [`CLAUDE.md`](CLAUDE.md).
 
-Todos usan la contraseña definida en `ADMIN_PASSWORD`.
+| Rol | Emails (`@mail.com.py`) |
+|---|---|
+| administrador | `admin`, `admin2` |
+| recepcionista | `recepcion1`, `recepcion2`, `recepcion3` |
+| jefe-taller | `jefetaller1`, `jefetaller2` |
+| cajero | `caja1`, `caja2` |
+| deposito | `deposito1`, `deposito2` |
+| mechanic | `jperez` (MEC-001), `cgomez` (MEC-002), `mecanico3`–`mecanico4` (activos), `mecanico5` (inactivo), `mecanico6` (de licencia) |
 
-El seeder también crea los roles `recepcionista`, `jefe-taller`, `cajero` y `deposito` (sin usuarios asignados; se
-asignan con `PATCH /api/users/{id}` enviando `role`). Qué puede hacer cada uno está en la sección 5 de
-[`CLAUDE.md`](CLAUDE.md).
+**Catálogos:** 30 clientes (uno sin email, `30111222`, y uno dado de baja de los avisos, `30222333`), 45 vehículos (uno
+sin placa), 18 servicios (uno inactivo), 5 proveedores (uno inactivo), 18 repuestos (uno inactivo, uno descontinuado,
+dos bajo el mínimo y el kit de embrague sin stock).
+
+**Escenarios del taller** (`database/seeders/ExampleScenarios.php`): una recepción por escenario, llevada hasta su
+estado final por los Services, con fechas en los últimos tres meses.
+
+| Escenarios | Estado final |
+|---|---|
+| H01–H13 | OT completada, facturada y entregada: contado y crédito, pagadas, parciales, vencidas (H06, H07), una factura anulada y vuelta a emitir (H04), un cobro anulado (H05), una entrega anulada y vuelta a registrar (H03) |
+| H14–H17 | OT completada sin entregar: pagada (H14), al contado sin cobrar (H15), factura en borrador (H16), sin facturar (H17) |
+| C01–C03 | Recepción pendiente: sin diagnóstico, con diagnóstico pendiente, con diagnóstico en curso |
+| C04–C08, C15–C16 | Presupuesto en borrador, enviado, rechazado, rechazado y reabierto, cancelado; enviado a clientes que no reciben avisos (omitidos) |
+| C09, C14 | OT pendiente (C14 con repuestos reservados) |
+| C10–C13 | OT en curso (C12 con un extra pendiente de la respuesta del cliente, C13 esperando un repuesto sin stock) o pausada (C11) |
+| X01–X02 | Recepción cancelada (X02 con la OT cancelada) |
+
+Además: compras recibidas, anulada y en borrador, con cuentas por pagar vencidas y por vencer
+(`PurchaseSeeder`, `SupplierPaymentSeeder`); ajustes de inventario (`InventoryAdjustmentSeeder`); mantenimientos al
+día, por vencer y vencidos (`VehicleMaintenanceSeeder`); comisiones liquidadas de los meses cerrados
+(`CommissionSeeder`); y avisos a clientes enviados, fallido, reenviado, omitidos y pendientes, con los avisos internos
+de más de tres días leídos (`NotificationSeeder`). Nunca sale un email: el seeder usa el mailer `array`. Los avisos que
+quedan pendientes se envían con `php artisan queue:work` (en desarrollo, `MAIL_MAILER=log`).
 
 ---
 
@@ -278,7 +304,7 @@ detalles internos.
 
 ## Tests
 
-Los tests usan SQLite en memoria (no tocan la base de desarrollo):
+Los tests usan SQLite (no tocan la base de desarrollo):
 
 ```bash
 php artisan test
@@ -288,13 +314,17 @@ vendor/bin/phpunit
 composer test
 ```
 
-369 tests en `tests/Feature`, uno o más archivos por módulo. No necesitan internet: `phpunit.xml` desactiva la
+368 tests en `tests/Feature`, uno o más archivos por módulo. No necesitan internet: `phpunit.xml` desactiva la
 consulta DNS de los emails (`EMAIL_DNS_CHECK=false`).
 
 Usan una base SQLite en archivo, `database/testing.sqlite` (la crea `tests/bootstrap.php`; está en `.gitignore`):
 `RefreshDatabase` migra y siembra roles y permisos **una vez por ejecución** (`Tests\TestCase::$seeder`) y cada test
 corre en una transacción que se revierte. Con `:memory:` migraba y sembraba en cada test (la suite tardaba ~4 min; ahora
-~2,5). Un test nuevo que necesite roles y permisos no tiene que sembrarlos.
+unos 3). Un test nuevo que necesite roles y permisos no tiene que sembrarlos. `phpunit.xml` además desactiva la
+sincronización a disco de SQLite (`DB_SQLITE_SYNCHRONOUS=OFF`, `DB_SQLITE_JOURNAL_MODE=MEMORY`): la base es descartable.
+
+`DatabaseSeederTest` siembra los datos de prueba una sola vez (y otra para la idempotencia), con la cola falseada
+como en desarrollo, y verifica que cada rol y cada estado de los módulos quede cubierto.
 
 Si `pdo_sqlite` no está habilitado en el `php.ini` de Laragon:
 

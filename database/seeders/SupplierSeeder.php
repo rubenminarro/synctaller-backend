@@ -5,6 +5,9 @@ namespace Database\Seeders;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 
+/**
+ * Proveedores de ejemplo; el último está inactivo.
+ */
 class SupplierSeeder extends Seeder
 {
     public function run(): void
@@ -24,12 +27,35 @@ class SupplierSeeder extends Seeder
                 'phone' => '021 000 002',
                 'email' => 'contacto@lubricanteseste.test',
             ],
+            [
+                'name' => 'Frenos y Suspensiones Asunción',
+                'tax_id' => '80000003-3',
+                'contact_name' => 'Ventas mayoristas',
+                'phone' => '021 000 003',
+                'email' => 'ventas@frenosasuncion.test',
+            ],
+            [
+                'name' => 'Electro Auto Paraguay',
+                'tax_id' => '80000004-4',
+                'contact_name' => 'Mostrador',
+                'phone' => '021 000 004',
+                'email' => 'pedidos@electroauto.test',
+            ],
+            [
+                'name' => 'Neumáticos Mariscal',
+                'tax_id' => '80000005-5',
+                'contact_name' => 'Administración',
+                'phone' => '021 000 005',
+                'email' => 'administracion@neumaticosmariscal.test',
+                'is_active' => false,
+                'notes' => 'Proveedor dado de baja: entregas incumplidas.',
+            ],
         ];
 
         foreach ($suppliers as $supplier) {
             Supplier::firstOrCreate(
                 ['tax_id' => $supplier['tax_id']],
-                [...$supplier, 'is_active' => true]
+                ['is_active' => true, ...$supplier]
             );
         }
     }
