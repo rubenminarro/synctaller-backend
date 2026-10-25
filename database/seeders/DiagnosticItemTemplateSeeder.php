@@ -11,7 +11,7 @@ use Illuminate\Database\Seeder;
 
 /**
  * Catálogo de ítems de diagnóstico habituales, por categoría de servicio. Uno queda inactivo (estado de ejemplo).
- * Los títulos coinciden con los de DiagnosticItemSeeder: esos ítems se vinculan al catálogo.
+ * Incluye cada título de DiagnosticItemSeeder: los ítems de los diagnósticos salen siempre del catálogo.
  */
 class DiagnosticItemTemplateSeeder extends Seeder
 {

@@ -434,11 +434,12 @@ Diagnóstico: `POST {{base_url}}/diagnostics` con `{ "reception_id": {{reception
 | Título repetido | `POST {{base_url}}/diagnostic-item-templates` | mismo body | 422 | `VALIDATION_ERROR` (`errors.title`) |
 | Ítem desde el catálogo | `POST {{base_url}}/diagnostic-items` | `{ "diagnostic_id": {id}, "diagnostic_item_template_id": {{template_id}} }` | 201 | Título, severidad, banderas, tiempo y recomendación copiados; `status` `pending`; `template.code` |
 | Pisar lo sugerido | `POST {{base_url}}/diagnostic-items` | `{ ..., "diagnostic_item_template_id": {{template_id}}, "severity": "critical" }` | 201 | `severity` `critical` |
-| Ítem libre al catálogo | `POST {{base_url}}/diagnostic-items` | ítem completo con `"save_as_template": true` | 201 | `template` con la entrada nueva |
+| Sin ítem del catálogo | `POST {{base_url}}/diagnostic-items` | `{ "diagnostic_id": {id}, "title": "Otro", "severity": "low", ... }` | 422 | `VALIDATION_ERROR` (`errors.diagnostic_item_template_id` y `errors.title`: el ítem se elige siempre del catálogo) |
+| Cambiar el ítem al editar | `PATCH {{base_url}}/diagnostic-items/{id}` | `{ "title": "Otro" }` o `{ "diagnostic_item_template_id": 5 }` | 422 | `VALIDATION_ERROR`: se elimina el ítem y se agrega otro |
 | Desactivar | `POST {{base_url}}/diagnostic-item-templates/{{template_id}}/deactivate` | — | 200 | `status.value` `inactive` (repetir → 422 `DIAGNOSTIC_ITEM_TEMPLATE_INVALID_STATUS_TRANSITION`) |
 | Usar uno inactivo | `POST {{base_url}}/diagnostic-items` | `{ "diagnostic_id": {id}, "diagnostic_item_template_id": {{template_id}} }` | 422 | `DIAGNOSTIC_ITEM_TEMPLATE_INACTIVE` |
 | Eliminar en uso | `DELETE {{base_url}}/diagnostic-item-templates/{{template_id}}` | — | 200 | Los ítems conservan sus datos; `template.deleted` `true` |
-| Mecánico (token = `{{token_mec}}`) | `GET` lista / `POST` alta | — | 200 / 403 | Consulta y usa el catálogo; no lo modifica ni usa `save_as_template` (`FORBIDDEN`) |
+| Mecánico (token = `{{token_mec}}`) | `GET` lista / `POST` alta | — | 200 / 403 | Consulta y usa el catálogo; no lo modifica (`FORBIDDEN`) |
 
 ### M.7 Obtener mecánico
 

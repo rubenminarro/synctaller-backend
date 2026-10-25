@@ -124,9 +124,11 @@ class DatabaseSeederTest extends TestCase
             array_keys($this->statusCounts('diagnostic_items'))
         );
         $this->assertEqualsCanonicalizing(['low', 'medium', 'high', 'critical'], DB::table('diagnostic_items')->distinct()->pluck('severity')->all());
-        // Ítems del catálogo y libres.
-        $this->assertTrue(DB::table('diagnostic_items')->whereNotNull('diagnostic_item_template_id')->exists());
-        $this->assertTrue(DB::table('diagnostic_items')->whereNull('diagnostic_item_template_id')->exists());
+        // Cada ítem sale del catálogo y conserva su título.
+        $this->assertSame(0, DB::table('diagnostic_items')
+            ->join('diagnostic_item_templates', 'diagnostic_item_templates.id', '=', 'diagnostic_items.diagnostic_item_template_id')
+            ->whereColumn('diagnostic_items.title', '!=', 'diagnostic_item_templates.title')
+            ->count());
 
         // Cada OT completada tiene su cierre económico; los datos se reparten en los últimos meses.
         $this->assertSame(17, DB::table('work_order_closings')->count());

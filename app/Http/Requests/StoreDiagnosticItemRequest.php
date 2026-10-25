@@ -23,27 +23,15 @@ class StoreDiagnosticItemRequest extends FormRequest
                 'required',
                 Rule::exists('diagnostics', 'id')
             ],
-            // Ítem del catálogo: los campos que no se envían se completan con los suyos (DiagnosticItemTemplateService).
+            // El ítem se elige siempre del catálogo (como el repuesto en una línea de compra): el título sale de él y
+            // los campos que no se envían se completan con los suyos (DiagnosticItemTemplateService).
             'diagnostic_item_template_id' => [
-                'nullable',
+                'required',
                 'integer',
                 Rule::exists('diagnostic_item_templates', 'id')->whereNull('deleted_at'),
-                'prohibited_if_accepted:save_as_template',
-            ],
-            // Ítem libre que además se guarda en el catálogo (requiere diagnostic-item-templates.store).
-            'save_as_template' => [
-                'sometimes',
-                'boolean',
             ],
             'title' => [
-                'required_without:diagnostic_item_template_id',
-                'string',
-                'max:255',
-                'regex:/^[\pL\pN\s]*$/u',
-                Rule::when(
-                    $this->boolean('save_as_template'),
-                    [Rule::unique('diagnostic_item_templates', 'title')->whereNull('deleted_at')]
-                ),
+                'prohibited',
             ],
             'description' => [
                 'nullable',
@@ -51,19 +39,19 @@ class StoreDiagnosticItemRequest extends FormRequest
                 'regex:/^[\pL\pN\s.,;:()\-#@!?%]*$/u'
             ],
             'severity' => [
-                'required_without:diagnostic_item_template_id',
+                'nullable',
                 Rule::enum(Severity::class),
             ],
             'status' => [
-                'required_without:diagnostic_item_template_id',
+                'nullable',
                 Rule::enum(DiagnosticItemStatus::class)
             ],
             'requires_repair' => [
-                'required_without:diagnostic_item_template_id',
+                'nullable',
                 'boolean'
             ],
             'requires_replacement' => [
-                'required_without:diagnostic_item_template_id',
+                'nullable',
                 'boolean'
             ],
             'estimated_cost' => [
@@ -93,38 +81,27 @@ class StoreDiagnosticItemRequest extends FormRequest
                 'exists' => 'El diagnóstico especificado no existe.',
             ],
             'diagnostic_item_template_id' => [
+                'required' => 'Elija el ítem del catálogo de diagnóstico.',
                 'integer' => 'El ID del ítem del catálogo debe ser un número entero.',
                 'exists' => 'El ítem del catálogo seleccionado no existe.',
-                'prohibited_if_accepted' => 'Un ítem elegido del catálogo no se vuelve a guardar en el catálogo.',
-            ],
-            'save_as_template' => [
-                'boolean' => 'El campo save_as_template debe ser verdadero o falso.',
             ],
             'title' => [
-                'required_without' => 'El título es obligatorio.',
-                'unique' => 'Ya existe un ítem de diagnóstico en el catálogo con ese título.',
-                'string' => 'El título debe ser una cadena de texto.',
-                'max' => 'El título no puede exceder los 255 caracteres.',
-                'regex' => 'El título solo puede contener letras, números y espacios.',
+                'prohibited' => 'El título sale del ítem del catálogo: no se envía.',
             ],
             'description' => [
                 'string' => 'La descripción debe ser una cadena de texto.',
                 'regex' => 'La descripción solo pueden contener letras, números, espacios y los siguientes caracteres: . , ; : ( ) - # @ ! ? %',
             ],
             'severity' => [
-                'required_without' => 'La severidad es obligatoria.',
                 Enum::class => 'La prioridad debe ser uno de los siguientes: low, medium, high, critical.',
             ],
             'status' => [
-                'required_without' => 'El estado es obligatorio.',
                 Enum::class => 'El estado debe ser uno de los siguientes: pending, ok, observation, repair_required, replace_required, not_applicable.',
             ],
             'requires_repair' => [
-                'required_without' => 'El campo requires_repair es obligatorio.',
                 'boolean' => 'El campo requiere_repair debe ser verdadero o falso.',
             ],
             'requires_replacement' => [
-                'required_without' => 'El campo requires_replacement es obligatorio.',
                 'boolean' => 'El campo requires_replacement debe ser verdadero o falso.',
             ],
             'estimated_cost' => [

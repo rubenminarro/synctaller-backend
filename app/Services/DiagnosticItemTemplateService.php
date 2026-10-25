@@ -14,9 +14,8 @@ use Illuminate\Support\Facades\DB;
  */
 class DiagnosticItemTemplateService
 {
-    /** Campos que el catálogo sugiere al ítem del diagnóstico. */
+    /** Campos que el catálogo sugiere al ítem del diagnóstico (el título se copia siempre). */
     public const COPIED_FIELDS = [
-        'title',
         'description',
         'severity',
         'requires_repair',
@@ -68,15 +67,11 @@ class DiagnosticItemTemplateService
     }
 
     /**
-     * Datos del ítem del diagnóstico al elegir una entrada del catálogo: los campos no enviados (o `null`) se
-     * completan con los del catálogo; el estado del ítem arranca "pendiente" si no se informa.
+     * Datos del ítem del diagnóstico, que siempre sale de una entrada del catálogo: el título es el suyo y los demás
+     * campos no enviados (o `null`) se completan con los del catálogo; el estado arranca "pendiente" si no se informa.
      */
     public function prepareDiagnosticItem(array $data): array
     {
-        if (empty($data['diagnostic_item_template_id'])) {
-            return $data;
-        }
-
         $template = DiagnosticItemTemplate::findOrFail($data['diagnostic_item_template_id']);
 
         if (!$template->isUsable()) {
@@ -93,17 +88,10 @@ class DiagnosticItemTemplateService
             }
         }
 
+        $data['title'] = $template->title;
         $data['status'] ??= DiagnosticItemStatus::PENDING->value;
 
         return $data;
-    }
-
-    /**
-     * "Guardar en el catálogo" desde un ítem libre: crea la entrada con los campos del ítem.
-     */
-    public function createFromDiagnosticItem(array $data): DiagnosticItemTemplate
-    {
-        return $this->create(array_intersect_key($data, array_flip(self::COPIED_FIELDS)));
     }
 
     private function transitionStatus(DiagnosticItemTemplate $template, DiagnosticItemTemplateStatus $status): DiagnosticItemTemplate

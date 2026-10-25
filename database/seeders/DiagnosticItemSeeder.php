@@ -16,7 +16,8 @@ use Illuminate\Database\Seeder;
 class DiagnosticItemSeeder extends Seeder
 {
     /**
-     * Plantillas de ítem por clave (los escenarios las nombran en sus diagnósticos).
+     * Plantillas de ítem por clave (los escenarios las nombran en sus diagnósticos). Cada título es una entrada del
+     * catálogo; el resto de los valores es lo hallado en ese vehículo.
      */
     public const TEMPLATES = [
         'oil_due' => ['title' => 'Aceite de motor vencido', 'description' => 'El aceite superó el kilometraje recomendado.', 'severity' => Severity::MEDIUM, 'status' => DiagnosticItemStatus::REPLACE_REQUIRED, 'requires_repair' => false, 'requires_replacement' => true, 'estimated_cost' => 380000, 'estimated_time' => 30, 'recommendation' => 'Cambio de aceite y filtro.'],
@@ -39,7 +40,7 @@ class DiagnosticItemSeeder extends Seeder
         'shock_absorber' => ['title' => 'Amortiguador delantero', 'description' => 'Se observa pérdida de aceite en el amortiguador.', 'severity' => Severity::CRITICAL, 'status' => DiagnosticItemStatus::REPLACE_REQUIRED, 'requires_repair' => false, 'requires_replacement' => true, 'estimated_cost' => 1500000, 'estimated_time' => 120, 'recommendation' => 'Reemplazar ambos amortiguadores delanteros.'],
         'bushings' => ['title' => 'Bujes de parrilla', 'description' => 'Bujes agrietados con juego.', 'severity' => Severity::HIGH, 'status' => DiagnosticItemStatus::REPLACE_REQUIRED, 'requires_repair' => false, 'requires_replacement' => true, 'estimated_cost' => 240000, 'estimated_time' => 90, 'recommendation' => 'Reemplazar el juego de bujes.'],
         'tires_worn' => ['title' => 'Neumáticos', 'description' => 'Banda de rodamiento por debajo de 1,6 mm.', 'severity' => Severity::HIGH, 'status' => DiagnosticItemStatus::REPLACE_REQUIRED, 'requires_repair' => false, 'requires_replacement' => true, 'estimated_cost' => 2200000, 'estimated_time' => 60, 'recommendation' => 'Reemplazar los neumáticos.'],
-        'door_dent' => ['title' => 'Abolladura en puerta trasera', 'description' => 'Golpe sin daño estructural.', 'severity' => Severity::MEDIUM, 'status' => DiagnosticItemStatus::REPAIR_REQUIRED, 'requires_repair' => true, 'requires_replacement' => false, 'estimated_cost' => 950000, 'estimated_time' => 840, 'recommendation' => 'Desabollar y pintar.'],
+        'door_dent' => ['title' => 'Abolladura en carrocería', 'description' => 'Golpe en la puerta trasera, sin daño estructural.', 'severity' => Severity::MEDIUM, 'status' => DiagnosticItemStatus::REPAIR_REQUIRED, 'requires_repair' => true, 'requires_replacement' => false, 'estimated_cost' => 950000, 'estimated_time' => 840, 'recommendation' => 'Desabollar y pintar.'],
         'alternator' => ['title' => 'Alternador', 'description' => 'Tensión de carga por debajo de 13 V.', 'severity' => Severity::CRITICAL, 'status' => DiagnosticItemStatus::REPAIR_REQUIRED, 'requires_repair' => true, 'requires_replacement' => false, 'estimated_cost' => 350000, 'estimated_time' => 180, 'recommendation' => 'Reparar el alternador.'],
         'clutch_worn' => ['title' => 'Kit de embrague', 'description' => 'Disco de embrague al límite.', 'severity' => Severity::HIGH, 'status' => DiagnosticItemStatus::REPLACE_REQUIRED, 'requires_repair' => false, 'requires_replacement' => true, 'estimated_cost' => 2150000, 'estimated_time' => 360, 'recommendation' => 'Reemplazar el kit de embrague.'],
     ];
@@ -64,13 +65,13 @@ class DiagnosticItemSeeder extends Seeder
                     foreach ($items as $key) {
                         $template = self::TEMPLATES[$key];
 
-                        // Idempotente: un ítem por título en cada diagnóstico. Si el título está en el catálogo
-                        // (DiagnosticItemTemplateSeeder), el ítem queda vinculado; si no, es un ítem libre.
+                        // Idempotente: un ítem por título en cada diagnóstico. El ítem sale siempre del catálogo
+                        // (DiagnosticItemTemplateSeeder): cada título de TEMPLATES tiene su entrada.
                         DiagnosticItem::firstOrCreate(
                             ['diagnostic_id' => $diagnostic->id, 'title' => $template['title']],
                             [
                                 ...$template,
-                                'diagnostic_item_template_id' => DiagnosticItemTemplate::where('title', $template['title'])->value('id'),
+                                'diagnostic_item_template_id' => DiagnosticItemTemplate::where('title', $template['title'])->firstOrFail()->id,
                                 'severity' => $template['severity']->value,
                                 'status' => $template['status']->value,
                             ]

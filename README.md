@@ -47,7 +47,7 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 | Usuarios, roles y permisos | Roles `administrador`, `mechanic`, `recepcionista`, `jefe-taller`, `cajero` y `deposito`; permisos por operación |
 | Clientes y vehículos | Clientes, marcas, modelos, vehículos (también anidados por cliente) |
 | Recepción | Ingreso del vehículo, categorías de servicio, checklist y fotos; estado derivado del flujo (en proceso, en reparación, terminado) y cancelación con motivo |
-| Diagnóstico | Diagnóstico técnico con ítems y fotos; catálogo de ítems reutilizables (el ítem copia sus valores al elegirlo) |
+| Diagnóstico | Diagnóstico técnico con ítems y fotos; cada ítem se elige de un catálogo reutilizable (copia sus valores, que se ajustan en cada revisión) |
 | Presupuestos | Ítems de mano de obra, servicio y repuesto; estados `draft → sent → approved` |
 | Órdenes de trabajo | Nace de un presupuesto aprobado; estados, ítems, mecánico responsable |
 | Repuestos e inventario | Catálogo, proveedores, stock con movimientos inmutables, reservas y consumo en la OT; repuestos extra con la aprobación del cliente registrada |
@@ -207,7 +207,7 @@ Qué puede hacer cada rol está en la sección 5 de [`CLAUDE.md`](CLAUDE.md).
 | mechanic | `jperez` (MEC-001), `cgomez` (MEC-002), `mecanico3`–`mecanico4` (activos), `mecanico5` (inactivo), `mecanico6` (de licencia) |
 
 **Catálogos:** 30 clientes (uno sin email, `30111222`, y uno dado de baja de los avisos, `30222333`), 45 vehículos (uno
-sin placa), 18 servicios (uno inactivo), 32 ítems de diagnóstico en el catálogo (uno inactivo; la mayoría de los ítems de los escenarios salen de él y dos son libres), 5 proveedores (uno inactivo), 18 repuestos (uno inactivo, uno descontinuado,
+sin placa), 18 servicios (uno inactivo), 32 ítems de diagnóstico en el catálogo (uno inactivo; todos los ítems de los escenarios salen de él), 5 proveedores (uno inactivo), 18 repuestos (uno inactivo, uno descontinuado,
 dos bajo el mínimo y el kit de embrague sin stock).
 
 **Escenarios del taller** (`database/seeders/ExampleScenarios.php`): una recepción por escenario, llevada hasta su

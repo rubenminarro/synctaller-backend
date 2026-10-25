@@ -13,7 +13,6 @@ use App\Services\DiagnosticItemTemplateService;
 use App\Services\DiagnosticService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -110,28 +109,10 @@ class DiagnosticItemController extends Controller implements HasMiddleware
         DiagnosticItemTemplateService $templateService
     ) {
         $data = $request->validated();
-        $saveAsTemplate = (bool) ($data['save_as_template'] ?? false);
-        unset($data['save_as_template']);
-
-        if ($saveAsTemplate && !$request->user()->can('diagnostic-item-templates.store')) {
-            return $this->errorResponse(
-                'No tiene permiso para agregar ítems al catálogo de diagnóstico.',
-                403,
-                'FORBIDDEN'
-            );
-        }
 
         $diagnosticService->ensureItemsEditable(Diagnostic::findOrFail($data['diagnostic_id']));
 
-        $diagnosticItem = DB::transaction(function () use ($data, $saveAsTemplate, $templateService) {
-            $data = $templateService->prepareDiagnosticItem($data);
-
-            if ($saveAsTemplate) {
-                $data['diagnostic_item_template_id'] = $templateService->createFromDiagnosticItem($data)->id;
-            }
-
-            return DiagnosticItem::create($data);
-        });
+        $diagnosticItem = DiagnosticItem::create($templateService->prepareDiagnosticItem($data));
 
         $diagnosticItem->load([
             'photos',

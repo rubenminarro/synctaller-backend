@@ -18,11 +18,12 @@ class UpdateDiagnosticItemRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // El título y el ítem del catálogo quedan fijos (como el repuesto de una línea de compra).
             'title' => [
-                'sometimes',
-                'string',
-                'max:255',
-                'regex:/^[\pL\pN\s]*$/u'
+                'prohibited',
+            ],
+            'diagnostic_item_template_id' => [
+                'prohibited',
             ],
             'description' => [
                 'sometimes',
@@ -74,9 +75,10 @@ class UpdateDiagnosticItemRequest extends FormRequest
     {
         return [
             'title' => [
-                'string' => 'El título debe ser una cadena de texto.',
-                'max' => 'El título no puede exceder los 255 caracteres.',
-                'regex' => 'El título solo puede contener letras, números y espacios.',
+                'prohibited' => 'El título sale del ítem del catálogo y no se cambia. Elimine el ítem y agregue otro.',
+            ],
+            'diagnostic_item_template_id' => [
+                'prohibited' => 'El ítem del catálogo no se cambia. Elimine el ítem y agregue otro.',
             ],
             'description' => [
                 'string' => 'La descripción debe ser una cadena de texto.',

@@ -166,7 +166,7 @@ class DiagnosticItemTemplateTest extends ReceptionTestCase
         $this->assertDatabaseCount('diagnostic_items', 0);
     }
 
-    public function test_free_item_can_be_saved_to_the_catalog(): void
+    public function test_diagnostic_items_always_come_from_the_catalog(): void
     {
         $this->actingAsAdmin();
 
@@ -174,39 +174,18 @@ class DiagnosticItemTemplateTest extends ReceptionTestCase
         $free = [
             'diagnostic_id' => $diagnostic['id'],
             'title' => 'Nivel de refrigerante',
-            'description' => 'Por debajo del mínimo.',
             'severity' => 'medium',
             'status' => 'observation',
             'requires_repair' => false,
             'requires_replacement' => true,
-            'estimated_cost' => 116000,
-            'estimated_time' => 15,
-            'save_as_template' => true,
         ];
 
-        $item = $this->postJson('/api/diagnostic-items', $free)
-            ->assertCreated()
-            ->assertJsonPath('data.template.title', 'Nivel de refrigerante')
-            ->json('data');
+        // Ya no hay ítems escritos a mano.
+        $this->postJson('/api/diagnostic-items', $free)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['diagnostic_item_template_id', 'title']);
 
-        // Copia los campos sugeribles; no el estado ni el costo del ítem.
-        $this->getJson("/api/diagnostic-item-templates/{$item['diagnostic_item_template_id']}")
-            ->assertOk()
-            ->assertJsonPath('data.severity', 'medium')
-            ->assertJsonPath('data.estimated_time', 15)
-            ->assertJsonPath('data.description', 'Por debajo del mínimo.')
-            ->assertJsonMissingPath('data.estimated_cost');
-
-        // El título ya está en el catálogo; elegido del catálogo no se vuelve a guardar.
-        $this->postJson('/api/diagnostic-items', $free)->assertJsonValidationErrors(['title']);
-        $this->postJson('/api/diagnostic-items', [...$free, 'title' => 'Otro', 'diagnostic_item_template_id' => $item['diagnostic_item_template_id']])
-            ->assertJsonValidationErrors(['diagnostic_item_template_id']);
-
-        // Sin save_as_template, el ítem libre no toca el catálogo.
-        $this->postJson('/api/diagnostic-items', [...$free, 'save_as_template' => false])
-            ->assertCreated()
-            ->assertJsonPath('data.template', null);
-        $this->assertDatabaseCount('diagnostic_item_templates', 1);
+        $this->assertDatabaseCount('diagnostic_items', 0);
     }
 
     public function test_catalog_permissions(): void
@@ -221,7 +200,7 @@ class DiagnosticItemTemplateTest extends ReceptionTestCase
         $this->patchJson("/api/diagnostic-item-templates/{$template['id']}", ['estimated_time' => 30])->assertOk();
         $this->createTemplate(['title' => 'Batería']);
 
-        // El mecánico lo consulta y lo usa, pero no lo modifica ni guarda ítems en él.
+        // El mecánico lo consulta y lo usa, pero no lo modifica.
         $this->actingAsMechanic();
         $this->getJson('/api/diagnostic-item-templates')->assertOk();
         $this->getJson("/api/diagnostic-item-templates/{$template['id']}")->assertOk();
@@ -234,16 +213,6 @@ class DiagnosticItemTemplateTest extends ReceptionTestCase
             'diagnostic_id' => $diagnostic['id'],
             'diagnostic_item_template_id' => $template['id'],
         ])->assertCreated();
-
-        $this->postJson('/api/diagnostic-items', [
-            'diagnostic_id' => $diagnostic['id'],
-            'title' => 'Alternador',
-            'severity' => 'high',
-            'status' => 'pending',
-            'requires_repair' => true,
-            'requires_replacement' => false,
-            'save_as_template' => true,
-        ])->assertForbidden()->assertJsonPath('error_code', 'FORBIDDEN');
 
         // Recepcionista: sin acceso al catálogo.
         $this->actingAsRole('recepcionista');

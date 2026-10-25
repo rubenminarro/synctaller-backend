@@ -271,14 +271,16 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   (`POST …/activate|deactivate`; repetir → `DIAGNOSTIC_ITEM_TEMPLATE_INVALID_STATUS_TRANSITION`, 422). Mismas reglas de
   texto que el ítem del diagnóstico. Permisos `diagnostic-item-templates.index|show` (mecánico) y además
   `store|update|destroy|change-status` (administrador y jefe de taller).
-* `POST diagnostic-items` con `diagnostic_item_template_id`: los campos no enviados (o `null`) se **copian** del
-  catálogo y `status` arranca `pending` (`DiagnosticItemTemplateService::prepareDiagnosticItem`); catálogo inactivo →
-  `DIAGNOSTIC_ITEM_TEMPLATE_INACTIVE` (422). Editar o eliminar la entrada después no cambia los ítems: el ítem conserva
-  el vínculo (`template`: `id`, `code`, `title`, `deleted`) y la baja del catálogo es lógica aunque esté en uso. El
-  vínculo no se cambia al editar el ítem.
-* `save_as_template: true` en el alta de un ítem libre lo agrega también al catálogo (exige
-  `diagnostic-item-templates.store`, si no `403 FORBIDDEN`; título ya en el catálogo → 422 en `title`; incompatible con
-  `diagnostic_item_template_id`).
+* **El ítem del diagnóstico se elige siempre del catálogo**, como el repuesto de una línea de compra (decisión del
+  2026-10-24): `POST diagnostic-items` exige `diagnostic_item_template_id` (vigente; inactivo →
+  `DIAGNOSTIC_ITEM_TEMPLATE_INACTIVE`, 422) y no acepta `title` (`prohibited`): el título es el del catálogo. Los demás
+  campos no enviados (o `null`) se **copian** del catálogo y `status` arranca `pending`
+  (`DiagnosticItemTemplateService::prepareDiagnosticItem`). Al editar, `title` y `diagnostic_item_template_id` son
+  `prohibited`: para cambiar de ítem se elimina y se agrega otro. La columna es `NOT NULL` (migración `000055`, que
+  pasó los ítems libres existentes al catálogo).
+* Editar o eliminar la entrada del catálogo después no cambia los ítems (guardan su copia, título incluido): conservan
+  el vínculo (`template`: `id`, `code`, `title`, `deleted`) y la baja del catálogo es lógica aunque esté en uso (la
+  clave foránea es `restrictOnDelete`).
 
 ### 6.4 Presupuestos
 

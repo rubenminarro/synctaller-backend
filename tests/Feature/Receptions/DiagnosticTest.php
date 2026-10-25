@@ -3,9 +3,11 @@
 namespace Tests\Feature\Receptions;
 
 use App\Models\DiagnosticItemPhoto;
+use App\Models\DiagnosticItemTemplate;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
 class DiagnosticTest extends ReceptionTestCase
@@ -35,11 +37,22 @@ class DiagnosticTest extends ReceptionTestCase
         ];
     }
 
+    /**
+     * El ítem sale siempre del catálogo: `title` en $overrides elige (o crea) la entrada con ese título.
+     */
     private function itemPayload(int $diagnosticId, array $overrides = []): array
     {
+        $title = $overrides['title'] ?? 'Pastillas delanteras';
+        unset($overrides['title']);
+
+        $template = DiagnosticItemTemplate::firstOrCreate(
+            ['title' => $title],
+            ['code' => 'DIA-' . Str::upper(Str::random(6)), 'severity' => 'medium']
+        );
+
         return [
             'diagnostic_id' => $diagnosticId,
-            'title' => 'Pastillas delanteras',
+            'diagnostic_item_template_id' => $template->id,
             'description' => 'Desgaste del 90%',
             'severity' => 'high',
             'status' => 'replace_required',
@@ -116,6 +129,11 @@ class DiagnosticTest extends ReceptionTestCase
             ->assertOk()
             ->assertJsonPath('data.severity', 'critical');
 
+        // El título y el ítem del catálogo quedan fijos.
+        $this->patchJson("/api/diagnostic-items/{$item['id']}", ['title' => 'Otro', 'diagnostic_item_template_id' => $item['diagnostic_item_template_id']])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['title', 'diagnostic_item_template_id']);
+
         $this->deleteJson("/api/diagnostic-items/{$item['id']}")->assertOk();
         $this->getJson("/api/diagnostic-items/{$item['id']}")->assertNotFound();
     }
@@ -184,14 +202,15 @@ class DiagnosticTest extends ReceptionTestCase
     {
         $diagnostic = $this->postJson('/api/diagnostics', $this->diagnosticPayload())->json('data');
 
+        // Sin ítem del catálogo no hay ítem (ya no se escribe el título a mano).
         $this->postJson('/api/diagnostic-items', [])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['diagnostic_id', 'title', 'severity', 'status', 'requires_repair', 'requires_replacement']);
+            ->assertJsonValidationErrors(['diagnostic_id', 'diagnostic_item_template_id']);
 
         $this->postJson('/api/diagnostic-items', $this->itemPayload($diagnostic['id'], ['severity' => 'grave']))->assertJsonValidationErrors(['severity']);
         $this->postJson('/api/diagnostic-items', $this->itemPayload($diagnostic['id'], ['status' => 'roto']))->assertJsonValidationErrors(['status']);
         $this->postJson('/api/diagnostic-items', $this->itemPayload($diagnostic['id'], ['estimated_cost' => -1]))->assertJsonValidationErrors(['estimated_cost']);
-        $this->postJson('/api/diagnostic-items', $this->itemPayload($diagnostic['id'], ['title' => 'Pastillas!']))->assertJsonValidationErrors(['title']);
+        $this->postJson('/api/diagnostic-items', [...$this->itemPayload($diagnostic['id']), 'title' => 'Pastillas'])->assertJsonValidationErrors(['title']);
     }
 
     public function test_diagnostic_item_photos(): void

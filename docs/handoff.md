@@ -1407,13 +1407,22 @@ presupuesto. Plan y decisiones en `../synctaller-frontend/docs/plan-desarrollo.m
 
 | Tema | Decisión |
 |---|---|
-| Modelo | `diagnostic_item_templates` (migración `000054`, `DIA-000001`, soft delete, `Auditable`) y `diagnostic_items.diagnostic_item_template_id` nullable (`nullOnDelete`) |
+| Modelo | `diagnostic_item_templates` (migración `000054`, `DIA-000001`, soft delete, `Auditable`) y `diagnostic_items.diagnostic_item_template_id` (obligatorio desde la `000055`, ver el ajuste más abajo) |
 | Campos | Título (único entre los vigentes), categoría de servicio opcional, descripción, severidad sugerida, requiere reparación / reemplazo, tiempo y recomendación. Sin costo estimado: se desactualiza y el precio real va en el presupuesto. Sin estado del ítem: es el resultado de la revisión (arranca `pending`) |
 | Copia, no referencia | El ítem del diagnóstico copia los valores al crearse (los enviados pisan los del catálogo). Editar, desactivar o eliminar la entrada no cambia los diagnósticos hechos; el ítem conserva el vínculo (`template`, con `deleted` si se eliminó). Por eso la baja se permite aunque esté en uso (a diferencia de servicios y checklist) |
 | Permisos | `diagnostic-item-templates.index\|show` para el mecánico; además `store\|update\|destroy\|change-status` para administrador y jefe de taller |
-| Desde el diagnóstico | `save_as_template` en el alta de un ítem libre lo agrega también al catálogo (requiere `store`) |
-| Datos de prueba | `DiagnosticItemTemplateSeeder`: 32 entradas por categoría, una inactiva (Carburador). Los ítems de los escenarios cuyo título está en el catálogo quedan vinculados; dos quedan libres |
+| Datos de prueba | `DiagnosticItemTemplateSeeder`: 32 entradas por categoría, una inactiva (Carburador). Cada ítem de los escenarios sale de una entrada del catálogo |
 | Fuera de alcance | Generar ítems del presupuesto a partir del diagnóstico (el usuario lo descartó por ahora) y elegir varios ítems a la vez |
+
+**Ajuste del mismo día (rama `fix/items-diagnostico-desde-catalogo`).** La primera versión dejaba el catálogo opcional
+(ítems libres, título editable y `save_as_template` para guardar un ítem libre en el catálogo). El usuario aclaró que
+quería elegir el ítem del catálogo como se elige el repuesto en la línea de compra:
+
+| Tema | Decisión |
+|---|---|
+| Catálogo obligatorio | `diagnostic_item_template_id` es `required` en el alta y `prohibited` al editar; `title` es `prohibited` en ambos (sale del catálogo). Se quitó `save_as_template` |
+| Base de datos | Migración `000055`: cada ítem libre existente se vincula a la entrada vigente con su mismo título o a una nueva creada con sus datos; después la columna pasa a `NOT NULL` con `restrictOnDelete` (la baja del catálogo sigue siendo lógica). En la base local de prueba, los 2 ítems "Abolladura en puerta trasera" pasaron a `DIA-000033` |
+| Seeder | El ítem de ejemplo que no estaba en el catálogo ("Abolladura en puerta trasera") usa "Abolladura en carrocería"; `DiagnosticItemSeeder` exige la entrada (`firstOrFail`) |
 
 ---
 
