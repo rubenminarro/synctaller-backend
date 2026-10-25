@@ -18,9 +18,10 @@ y avisar, en lugar de "corregir" por cuenta propia.
 
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
-  (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21). 232 rutas API, 368 tests en verde.
+  (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
+  (6.3). 239 rutas API, 374 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
-  `synctaller-backend` y `synctaller-frontend`, base de datos y conexión `synctaller`).
+  `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
   Tabler; ver su `CLAUDE.md` y `docs/plan-desarrollo.md`). CORS y Sanctum están configurados para
   `http://localhost:5173`; CORS expone `Content-Disposition` (nombre de las descargas). `package.json` y `resources/` de este repositorio son el scaffold de Laravel (Vite +
@@ -185,9 +186,9 @@ de los permisos, ordenados; el administrador recibe todos los del guard `api` po
 | Rol | Función | Accesos clave |
 |---|---|---|
 | `administrador` | Todo (`Gate::before`) | Exclusivo: usuarios/roles/permisos, auditoría (`audit-logs.*`), logo del sistema (`system-settings.update`), costos y margen (`work-orders.view-economics`), liquidar comisiones, anular entregas, timbrados, ABM de planes de mantenimiento, reporte de rentabilidad |
-| `mechanic` | Ejecuta la OT | Diagnóstico, iniciar/pausar/completar OT e ítems, consumir/devolver repuestos, sus horas y comisiones, historial, estado de mantenimiento, dashboard (bloque taller) |
+| `mechanic` | Ejecuta la OT | Diagnóstico (consulta y usa el catálogo de ítems), iniciar/pausar/completar OT e ítems, consumir/devolver repuestos, sus horas y comisiones, historial, estado de mantenimiento, dashboard (bloque taller) |
 | `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras |
-| `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar |
+| `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar |
 | `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar y avisos a clientes (consultar y reenviar) |
 | `deposito` | Stock | Repuestos, proveedores, inventario, compras completas, repuestos en OT, reporte de inventario, consulta de pagos a proveedores y cuentas por pagar |
 
@@ -264,6 +265,20 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 * Diagnóstico `completed|cancelled`: no se agregan, editan ni eliminan ítems ni fotos (`DIAGNOSTIC_NOT_EDITABLE`); el
   diagnóstico sí se edita, y volverlo a `in_progress` permite corregirlos (`DiagnosticService`).
 * El listado se ordena por `diagnosed_at` descendente (antes por fecha de carga).
+* **Catálogo de ítems de diagnóstico** (`diagnostic-item-templates`, `DIA-000001`; decisión del 2026-10-24): título único
+  entre los vigentes, categoría de servicio opcional, severidad sugerida, requiere reparación / reemplazo, tiempo
+  estimado y recomendación (sin costo: el precio va en el presupuesto). Estado `active|inactive`
+  (`POST …/activate|deactivate`; repetir → `DIAGNOSTIC_ITEM_TEMPLATE_INVALID_STATUS_TRANSITION`, 422). Mismas reglas de
+  texto que el ítem del diagnóstico. Permisos `diagnostic-item-templates.index|show` (mecánico) y además
+  `store|update|destroy|change-status` (administrador y jefe de taller).
+* `POST diagnostic-items` con `diagnostic_item_template_id`: los campos no enviados (o `null`) se **copian** del
+  catálogo y `status` arranca `pending` (`DiagnosticItemTemplateService::prepareDiagnosticItem`); catálogo inactivo →
+  `DIAGNOSTIC_ITEM_TEMPLATE_INACTIVE` (422). Editar o eliminar la entrada después no cambia los ítems: el ítem conserva
+  el vínculo (`template`: `id`, `code`, `title`, `deleted`) y la baja del catálogo es lógica aunque esté en uso. El
+  vínculo no se cambia al editar el ítem.
+* `save_as_template: true` en el alta de un ítem libre lo agrega también al catálogo (exige
+  `diagnostic-item-templates.store`, si no `403 FORBIDDEN`; título ya en el catálogo → 422 en `title`; incompatible con
+  `diagnostic_item_template_id`).
 
 ### 6.4 Presupuestos
 
@@ -516,7 +531,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   con usuario, IP y user agent.
   * Modelos auditados: `Part`, `Service`, `BudgetItem`, `PartSupplier`, `Invoice`, `InvoiceItem`, `Payment`,
     `SupplierPayment`, `Purchase`, `PurchaseItem`, `User`, `Role`, `Permission`, `Client`, `Vehicle`, `Mechanic`,
-    `InvoiceStamp` y `MaintenancePlan`.
+    `InvoiceStamp`, `MaintenancePlan` y `DiagnosticItemTemplate`.
   * **Un modelo nuevo con precios, dinero, seguridad o datos maestros debe usar el trait.**
   * El stock ya se audita en `inventory_movements`.
 * **Exclusiones:** `password`, `remember_token` y `token` se guardan como `********`. Los timestamps no se registran.

@@ -119,6 +119,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'diagnostic-item-photos.update',
             'diagnostic-item-photos.destroy',
 
+            /* diagnostic item catalog permissions */
+            'diagnostic-item-templates.index',
+            'diagnostic-item-templates.store',
+            'diagnostic-item-templates.show',
+            'diagnostic-item-templates.update',
+            'diagnostic-item-templates.destroy',
+            'diagnostic-item-templates.change-status',
+
             /* budget permissions */
             'budgets.index',
             'budgets.store',
@@ -337,7 +345,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'diagnostic-item-photos.update', 
             'diagnostic-item-photos.destroy',
 
-            'work-orders.index', 
+            'diagnostic-item-templates.index',
+            'diagnostic-item-templates.show',
+
+            'work-orders.index',
             'work-orders.show', 
             
             'work-orders.start', 
@@ -444,6 +455,8 @@ class RolesAndPermissionsSeeder extends Seeder
                     'diagnostics.index', 'diagnostics.store', 'diagnostics.show', 'diagnostics.update', 'diagnostics.destroy',
                     'diagnostic-items.index', 'diagnostic-items.store', 'diagnostic-items.show', 'diagnostic-items.update', 'diagnostic-items.destroy',
                     'diagnostic-item-photos.index', 'diagnostic-item-photos.store', 'diagnostic-item-photos.update', 'diagnostic-item-photos.destroy',
+                    'diagnostic-item-templates.index', 'diagnostic-item-templates.store', 'diagnostic-item-templates.show',
+                    'diagnostic-item-templates.update', 'diagnostic-item-templates.destroy', 'diagnostic-item-templates.change-status',
                     'budgets.index', 'budgets.show', 'budget-items.index', 'budget-items.show',
                     'mechanics.index', 'mechanics.show',
                     'work-orders.index', 'work-orders.store', 'work-orders.show', 'work-orders.update',

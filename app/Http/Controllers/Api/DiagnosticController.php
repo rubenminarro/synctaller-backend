@@ -266,6 +266,7 @@ class DiagnosticController extends Controller implements HasMiddleware
             'reception.photos',
             'mechanic.user',
             'items.photos',
+            'items.template',
         ]);
 
         return $this->successResponse(

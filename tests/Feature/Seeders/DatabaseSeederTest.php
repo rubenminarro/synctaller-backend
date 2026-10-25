@@ -32,7 +32,7 @@ class DatabaseSeederTest extends TestCase
 
     private const TABLES = [
         'users', 'roles', 'permissions', 'mechanics', 'brands', 'vehicle_models', 'service_categories', 'services',
-        'maintenance_plans', 'check_list_items', 'clients', 'vehicles', 'receptions', 'reception_check_lists',
+        'maintenance_plans', 'check_list_items', 'diagnostic_item_templates', 'clients', 'vehicles', 'receptions', 'reception_check_lists',
         'reception_check_list_items', 'diagnostics', 'diagnostic_items', 'diagnostic_item_photos', 'budgets',
         'budget_items', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
         'work_orders', 'work_order_items', 'work_order_parts', 'work_order_closings', 'notifications',
@@ -77,6 +77,8 @@ class DatabaseSeederTest extends TestCase
         // Servicios y repuestos en cada estado; repuestos bajo el mínimo y sin stock.
         $this->assertEqualsCanonicalizing(['active', 'inactive'], DB::table('services')->distinct()->pluck('status')->all());
         $this->assertEqualsCanonicalizing(['active', 'inactive', 'discontinued'], DB::table('parts')->distinct()->pluck('status')->all());
+        $this->assertEqualsCanonicalizing(['active', 'inactive'], DB::table('diagnostic_item_templates')->distinct()->pluck('status')->all());
+        $this->assertGreaterThanOrEqual(30, DB::table('diagnostic_item_templates')->count());
         $this->assertGreaterThanOrEqual(2, DB::table('part_stocks')->join('parts', 'parts.id', '=', 'part_stocks.part_id')
             ->where('part_stocks.quantity_on_hand', '>', 0)
             ->whereColumn('part_stocks.quantity_on_hand', '<', 'parts.minimum_stock')
@@ -122,6 +124,9 @@ class DatabaseSeederTest extends TestCase
             array_keys($this->statusCounts('diagnostic_items'))
         );
         $this->assertEqualsCanonicalizing(['low', 'medium', 'high', 'critical'], DB::table('diagnostic_items')->distinct()->pluck('severity')->all());
+        // Ítems del catálogo y libres.
+        $this->assertTrue(DB::table('diagnostic_items')->whereNotNull('diagnostic_item_template_id')->exists());
+        $this->assertTrue(DB::table('diagnostic_items')->whereNull('diagnostic_item_template_id')->exists());
 
         // Cada OT completada tiene su cierre económico; los datos se reparten en los últimos meses.
         $this->assertSame(17, DB::table('work_order_closings')->count());

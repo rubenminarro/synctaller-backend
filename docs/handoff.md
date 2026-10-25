@@ -7,7 +7,7 @@
 **Estado:** Backend/API funcional — roadmap original completo (FASES 10 a 20: repuestos, inventario, servicios,
 cierre económico, facturación, pagos, entrega, historial, mantenimiento preventivo, reportes), FASE 21 (compras) y
 FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría); 6 roles;
-368 tests en verde (2026-10-24)
+374 tests en verde (2026-10-24)
 **Stack principal:** Laravel 13.38 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend previsto en React 19: **no está en este
 repositorio** (ver 1.2)
 **Entorno local:** Laragon / Windows
@@ -1396,6 +1396,24 @@ clase de demo aparte).
 
 Los emails de los clientes de ejemplo usan el dominio reservado `example.com`: no pasan la validación con
 `EMAIL_DNS_CHECK=true` (al editarlos desde la app hay que cambiar el email o desactivar la verificación en desarrollo).
+
+---
+
+# 2.53 Catálogo de ítems de diagnóstico (2026-10-24)
+
+Pedido del usuario: armar el diagnóstico eligiendo ítems reutilizables, como se eligen repuestos y servicios en el
+presupuesto. Plan y decisiones en `../synctaller-frontend/docs/plan-desarrollo.md`; reglas vigentes en `CLAUDE.md`,
+6.3.
+
+| Tema | Decisión |
+|---|---|
+| Modelo | `diagnostic_item_templates` (migración `000054`, `DIA-000001`, soft delete, `Auditable`) y `diagnostic_items.diagnostic_item_template_id` nullable (`nullOnDelete`) |
+| Campos | Título (único entre los vigentes), categoría de servicio opcional, descripción, severidad sugerida, requiere reparación / reemplazo, tiempo y recomendación. Sin costo estimado: se desactualiza y el precio real va en el presupuesto. Sin estado del ítem: es el resultado de la revisión (arranca `pending`) |
+| Copia, no referencia | El ítem del diagnóstico copia los valores al crearse (los enviados pisan los del catálogo). Editar, desactivar o eliminar la entrada no cambia los diagnósticos hechos; el ítem conserva el vínculo (`template`, con `deleted` si se eliminó). Por eso la baja se permite aunque esté en uso (a diferencia de servicios y checklist) |
+| Permisos | `diagnostic-item-templates.index\|show` para el mecánico; además `store\|update\|destroy\|change-status` para administrador y jefe de taller |
+| Desde el diagnóstico | `save_as_template` en el alta de un ítem libre lo agrega también al catálogo (requiere `store`) |
+| Datos de prueba | `DiagnosticItemTemplateSeeder`: 32 entradas por categoría, una inactiva (Carburador). Los ítems de los escenarios cuyo título está en el catálogo quedan vinculados; dos quedan libres |
+| Fuera de alcance | Generar ítems del presupuesto a partir del diagnóstico (el usuario lo descartó por ahora) y elegir varios ítems a la vez |
 
 ---
 
@@ -3887,6 +3905,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Exportación de reportes (CSV/PDF) y comprobantes imprimibles (FASE 24)
 [✓] Auditoría avanzada de precios, facturación, seguridad y datos maestros (FASE 25)
 [✓] Preferencias visuales por usuario y logo del sistema (2.50)
+[✓] Catálogo de ítems de diagnóstico (2.53)
 ```
 
 ## Próximo

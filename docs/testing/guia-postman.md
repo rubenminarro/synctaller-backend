@@ -422,6 +422,24 @@ Diagnóstico: `POST {{base_url}}/diagnostics` con `{ "reception_id": {{reception
 
 > Una recepción cancelada no cuenta como abierta: el vehículo puede volver a ingresar.
 
+### M.6d Catálogo de ítems de diagnóstico
+
+`POST {{base_url}}/diagnostic-item-templates` con `{ "title": "Pastillas de freno delanteras", "severity": "high",
+"requires_replacement": true, "estimated_time": 60, "recommendation": "Reemplazar las pastillas." }` → `201`, `code`
+`DIA-…`, `status.value` `active`. Guardar `data.id` → `template_id`.
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Listado y filtros | `GET {{base_url}}/diagnostic-item-templates?search=pastillas&status=active&category_id=` | — | 200 | Ordenado por título |
+| Título repetido | `POST {{base_url}}/diagnostic-item-templates` | mismo body | 422 | `VALIDATION_ERROR` (`errors.title`) |
+| Ítem desde el catálogo | `POST {{base_url}}/diagnostic-items` | `{ "diagnostic_id": {id}, "diagnostic_item_template_id": {{template_id}} }` | 201 | Título, severidad, banderas, tiempo y recomendación copiados; `status` `pending`; `template.code` |
+| Pisar lo sugerido | `POST {{base_url}}/diagnostic-items` | `{ ..., "diagnostic_item_template_id": {{template_id}}, "severity": "critical" }` | 201 | `severity` `critical` |
+| Ítem libre al catálogo | `POST {{base_url}}/diagnostic-items` | ítem completo con `"save_as_template": true` | 201 | `template` con la entrada nueva |
+| Desactivar | `POST {{base_url}}/diagnostic-item-templates/{{template_id}}/deactivate` | — | 200 | `status.value` `inactive` (repetir → 422 `DIAGNOSTIC_ITEM_TEMPLATE_INVALID_STATUS_TRANSITION`) |
+| Usar uno inactivo | `POST {{base_url}}/diagnostic-items` | `{ "diagnostic_id": {id}, "diagnostic_item_template_id": {{template_id}} }` | 422 | `DIAGNOSTIC_ITEM_TEMPLATE_INACTIVE` |
+| Eliminar en uso | `DELETE {{base_url}}/diagnostic-item-templates/{{template_id}}` | — | 200 | Los ítems conservan sus datos; `template.deleted` `true` |
+| Mecánico (token = `{{token_mec}}`) | `GET` lista / `POST` alta | — | 200 / 403 | Consulta y usa el catálogo; no lo modifica ni usa `save_as_template` (`FORBIDDEN`) |
+
 ### M.7 Obtener mecánico
 
 `GET {{base_url}}/mechanics`

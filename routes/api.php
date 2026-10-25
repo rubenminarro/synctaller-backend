@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\ReceptionPhotoController;
 use App\Http\Controllers\Api\DiagnosticController;
 use App\Http\Controllers\Api\DiagnosticItemController;
 use App\Http\Controllers\Api\DiagnosticItemPhotoController;
+use App\Http\Controllers\Api\DiagnosticItemTemplateController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetItemController;
 use App\Http\Controllers\Api\MechanicController;
@@ -100,6 +101,14 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
     Route::apiResource('diagnostic-items', DiagnosticItemController::class);
 
     Route::apiResource('diagnostic-items.photos', DiagnosticItemPhotoController::class)->except(['show']);
+
+    Route::apiResource('diagnostic-item-templates', DiagnosticItemTemplateController::class)->except(['update']);
+
+    Route::patch('diagnostic-item-templates/{diagnostic_item_template}', [DiagnosticItemTemplateController::class, 'update'])->name('diagnostic-item-templates.update');
+
+    Route::post('diagnostic-item-templates/{diagnostic_item_template}/activate', [DiagnosticItemTemplateController::class, 'activate'])->name('diagnostic-item-templates.activate');
+
+    Route::post('diagnostic-item-templates/{diagnostic_item_template}/deactivate', [DiagnosticItemTemplateController::class, 'deactivate'])->name('diagnostic-item-templates.deactivate');
 
     Route::apiResource('budgets', BudgetController::class);
 

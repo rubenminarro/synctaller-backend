@@ -6,6 +6,7 @@ use App\Enums\DiagnosticItemStatus;
 use App\Enums\Severity;
 use App\Models\Diagnostic;
 use App\Models\DiagnosticItem;
+use App\Models\DiagnosticItemTemplate;
 use Illuminate\Database\Seeder;
 
 /**
@@ -63,11 +64,13 @@ class DiagnosticItemSeeder extends Seeder
                     foreach ($items as $key) {
                         $template = self::TEMPLATES[$key];
 
-                        // Idempotente: un ítem por título en cada diagnóstico.
+                        // Idempotente: un ítem por título en cada diagnóstico. Si el título está en el catálogo
+                        // (DiagnosticItemTemplateSeeder), el ítem queda vinculado; si no, es un ítem libre.
                         DiagnosticItem::firstOrCreate(
                             ['diagnostic_id' => $diagnostic->id, 'title' => $template['title']],
                             [
                                 ...$template,
+                                'diagnostic_item_template_id' => DiagnosticItemTemplate::where('title', $template['title'])->value('id'),
                                 'severity' => $template['severity']->value,
                                 'status' => $template['status']->value,
                             ]

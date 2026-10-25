@@ -21,11 +21,26 @@ class DiagnosticItemResource extends JsonResource
             'estimated_cost' => $this->estimated_cost,
             'estimated_time' => $this->estimated_time,
             'recommendation' => $this->recommendation,
+            'diagnostic_item_template_id' => $this->diagnostic_item_template_id,
+            'template' => self::templateSummary($this),
             'photos' => DiagnosticItemPhotoResource::collection(
                 $this->whenLoaded('photos')
             ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    /**
+     * Entrada del catálogo de la que salió el ítem (`null` si es libre). `deleted`: se eliminó del catálogo después.
+     */
+    public static function templateSummary(JsonResource $resource): mixed
+    {
+        return $resource->whenLoaded('template', fn ($template) => $template ? [
+            'id' => $template->id,
+            'code' => $template->code,
+            'title' => $template->title,
+            'deleted' => $template->trashed(),
+        ] : null);
     }
 }

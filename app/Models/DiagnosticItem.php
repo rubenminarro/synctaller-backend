@@ -10,6 +10,7 @@ class DiagnosticItem extends Model
 {
     protected $fillable = [
         'diagnostic_id',
+        'diagnostic_item_template_id',
         'title',
         'description',
         'severity',
@@ -30,6 +31,14 @@ class DiagnosticItem extends Model
     public function diagnostic(): BelongsTo
     {
         return $this->belongsTo(Diagnostic::class);
+    }
+
+    /**
+     * Entrada del catálogo de la que se copió (aunque luego se haya eliminado).
+     */
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(DiagnosticItemTemplate::class, 'diagnostic_item_template_id')->withTrashed();
     }
 
     public function photos(): HasMany

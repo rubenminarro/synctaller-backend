@@ -9,9 +9,11 @@ use App\Http\Resources\DiagnosticItemResource;
 use App\Http\Resources\ShowDiagnosticItemResource;
 use App\Models\Diagnostic;
 use App\Models\DiagnosticItem;
+use App\Services\DiagnosticItemTemplateService;
 use App\Services\DiagnosticService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -38,6 +40,7 @@ class DiagnosticItemController extends Controller implements HasMiddleware
         $query = DiagnosticItem::query()
             ->with([
                 'photos',
+                'template',
             ]);
         
         $query->when($request->filled('search'), function ($query) use ($search) {
@@ -101,16 +104,38 @@ class DiagnosticItemController extends Controller implements HasMiddleware
         );
     }
 
-    public function store(StoreDiagnosticItemRequest $request, DiagnosticService $diagnosticService)
-    {
+    public function store(
+        StoreDiagnosticItemRequest $request,
+        DiagnosticService $diagnosticService,
+        DiagnosticItemTemplateService $templateService
+    ) {
         $data = $request->validated();
+        $saveAsTemplate = (bool) ($data['save_as_template'] ?? false);
+        unset($data['save_as_template']);
+
+        if ($saveAsTemplate && !$request->user()->can('diagnostic-item-templates.store')) {
+            return $this->errorResponse(
+                'No tiene permiso para agregar ítems al catálogo de diagnóstico.',
+                403,
+                'FORBIDDEN'
+            );
+        }
 
         $diagnosticService->ensureItemsEditable(Diagnostic::findOrFail($data['diagnostic_id']));
 
-        $diagnosticItem = DiagnosticItem::create($data);
+        $diagnosticItem = DB::transaction(function () use ($data, $saveAsTemplate, $templateService) {
+            $data = $templateService->prepareDiagnosticItem($data);
+
+            if ($saveAsTemplate) {
+                $data['diagnostic_item_template_id'] = $templateService->createFromDiagnosticItem($data)->id;
+            }
+
+            return DiagnosticItem::create($data);
+        });
 
         $diagnosticItem->load([
             'photos',
+            'template',
         ]);
 
         return $this->successResponse(
@@ -125,6 +150,7 @@ class DiagnosticItemController extends Controller implements HasMiddleware
         $diagnosticItem->load([
             'diagnostic',
             'photos',
+            'template',
         ]);
 
         return $this->successResponse(
@@ -143,6 +169,7 @@ class DiagnosticItemController extends Controller implements HasMiddleware
 
         $diagnosticItem->load([
             'diagnostic',
+            'template',
         ]);
 
         return $this->successResponse(

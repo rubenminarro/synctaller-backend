@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             VehicleModelSeeder::class,
             ServiceCategorySeeder::class,
             ServiceSeeder::class,
+            DiagnosticItemTemplateSeeder::class,
             MaintenancePlanSeeder::class,
             CheckListItemSeeder::class,
             CheckListItemServiceCategorySeeder::class,

@@ -21,6 +21,8 @@ class ShowDiagnosticItemResource extends JsonResource
             'estimated_cost' => $this->estimated_cost,
             'estimated_time' => $this->estimated_time,
             'recommendation' => $this->recommendation,
+            'diagnostic_item_template_id' => $this->diagnostic_item_template_id,
+            'template' => DiagnosticItemResource::templateSummary($this),
             'diagnostic' => new DiagnosticResource(
                 $this->whenLoaded('diagnostic')
             ),
