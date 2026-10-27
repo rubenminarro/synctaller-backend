@@ -34,7 +34,7 @@ Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 de
 
 | Repositorio | Remoto | Rama | Commit | Estado [verificado el 2026-10-27] |
 |---|---|---|---|---|
-| Backend | `https://github.com/rubenminarro/synctaller-backend.git` | `main` | `f61cb8c` ("Exige elegir del catálogo el ítem del diagnóstico") | Igual a `origin/main`; `composer.lock` modificado sin commitear; este documento sin commitear |
+| Backend | `https://github.com/rubenminarro/synctaller-backend.git` | `main` | `27803b1` (merge de este documento; actualizado por su corrección) | Igual a `origin/main`, sin cambios pendientes |
 | Frontend | `https://github.com/rubenminarro/synctaller-frontend.git` | `main` | `cbbb559` ("Elige siempre del catálogo el ítem del diagnóstico") | Sin cambios pendientes |
 
 * No hay ramas abiertas para el módulo de aseguradoras: no se escribió código del módulo.
@@ -42,22 +42,24 @@ Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 de
 
 ---
 
-## 3. Cambios pendientes en Git
+## 3. Estado de Git y `composer.lock`
 
-### 3.1 `composer.lock` (modificado, sin commitear)
+### 3.1 `composer.lock` (E0 resuelto: se descartaron los cambios locales)
 
-* Solo cambian versiones de parche: guzzle 8.3.0 → 8.3.1, masterminds/html5 2.11.0 → 2.12.0, nesbot/carbon 3.15.0 →
-  3.15.1, vlucas/phpdotenv 5.7.0 → 5.8.0.
-* El `content-hash` no cambia: `composer.json` está intacto.
-* `vendor/` de esta notebook ya tiene las versiones nuevas, así que el entorno local no coincide con lo commiteado.
-  Último commit del lock: `9ca9faf` (2026-10-24).
-* **Sin decidir (E0):** commitearlo en una rama `chore/` tras correr la suite, o revertirlo. No se tocó.
-* **Efecto del cambio de notebook:** si no se commitea, en la notebook nueva `composer install` instala las versiones
-  del lock commiteado (las anteriores). No rompe nada, pero el cambio de esta notebook se pierde.
+* El 2026-10-27, a pedido del usuario, se descartaron con `git checkout -- composer.lock` los cambios locales sin
+  commitear. Eran solo versiones de parche (guzzle 8.3.0 → 8.3.1, masterminds/html5 2.11.0 → 2.12.0, nesbot/carbon
+  3.15.0 → 3.15.1, vlucas/phpdotenv 5.7.0 → 5.8.0; `composer.json` intacto).
+* El lock commiteado es el de `9ca9faf` (2026-10-24).
+* **Notebook nueva:** `composer install` instala exactamente las versiones del lock commiteado. No hace falta nada
+  más.
+* **Notebook anterior** [pendiente si se sigue usando]: `vendor/` quedó con las versiones nuevas y no coincide con el
+  lock. Correr `composer install` para alinearlo.
+* Actualizar las dependencias queda para una tarea aparte (`chore/`), con la suite completa.
 
-### 3.2 `docs/continuidad-cambio-notebook.md` (este archivo, sin commitear)
+### 3.2 Este documento
 
-Ver la sección 10 para conservarlo en GitHub.
+Está en `main` desde el merge `27803b1`, vía la rama `docs/continuidad-cambio-notebook`. Esta corrección se mergea
+desde `docs/continuidad-composer-lock`.
 
 ---
 
@@ -109,7 +111,7 @@ Son la dirección del diseño, **no** una autorización para modificar código.
 
 | # | Propuesta | Recomendación |
 |---|---|---|
-| P1 | `composer.lock` | Commitear en `chore/` |
+| P1 | `composer.lock` | **Resuelto el 2026-10-27:** el usuario eligió descartar los cambios locales (sección 3.1) |
 | P2 | Paquete de tenancy | Spike con `spatie/laravel-multitenancy` 4.2.1 |
 | P3 | `first_name`/`last_name` | Nulos solo para empresas |
 | P4 | Correlativos no fiscales | Aceptar huecos |
@@ -228,7 +230,7 @@ No se implementó nada ni se abrió ninguna rama.
    partir de la especificación publicada.
 2. **Aprobar o ajustar** las decisiones A–G y P1–P9 (sección 5.2).
 3. **Actualizar la especificación publicada** con las correcciones aprobadas (lista de 14 cambios de la revisión).
-4. **E0:** decidir sobre `composer.lock`. Sin esto no se abren ramas de trabajo.
+4. ~~**E0:** decidir sobre `composer.lock`.~~ Resuelto el 2026-10-27 (sección 3.1).
 5. **En paralelo:** enviar las preguntas G1–G10 al contador y a talleres que trabajen con aseguradoras.
 6. Después, según el plan de la especificación:
    * correcciones independientes E1–E5 (sugerido: E2 → E3 → E4 → E5 → E1), cada una en su rama y con revisión;
@@ -239,19 +241,9 @@ No se implementó nada ni se abrió ninguna rama.
 
 ## 11. Cómo retomar en la otra notebook
 
-1. **Conservar este documento antes de irse** (desde esta notebook, con autorización):
-
-   ```bash
-   git switch -c docs/continuidad-cambio-notebook   # se lleva los cambios sin commitear
-   git add docs/continuidad-cambio-notebook.md      # SOLO este archivo; no agregar composer.lock
-   git commit -m "Registra el punto de continuidad para el cambio de notebook"
-   git push -u origin docs/continuidad-cambio-notebook
-   ```
-
-   Después, hacer el merge a `main` desde GitHub (lo hace el usuario). `composer.lock` sigue modificado en la rama
-   nueva sin commitear: decidir E0 aparte.
+1. **Este documento ya está en `main`** (sección 3.2). No hay que hacer nada para conservarlo.
 2. **Preparar el otro equipo:**
-   * clonar los dos repositorios en `C:\laragon\www\` (o hacer `git pull` si ya existen);
+   * clonar los dos repositorios en `C:\laragon\www\` (o hacer `git pull` en `main` si ya existen);
    * `composer install`, `.env` y base de datos según `README.md` (secciones "Requisitos", "Instalación local" y
      "Base de datos");
    * Laragon con **Nginx**;
