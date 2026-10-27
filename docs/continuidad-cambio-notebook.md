@@ -137,17 +137,17 @@ Son la dirección del diseño, **no** una autorización para modificar código.
 
 ## 6. Auditorías y especificaciones realizadas
 
-Las tres primeras son **páginas privadas en claude.ai** de la cuenta del usuario. Se abren desde cualquier equipo con
-esa cuenta. **No están en el repositorio.**
+Las cuatro son **páginas privadas en claude.ai** de la cuenta del usuario. Se abren desde cualquier equipo con esa
+cuenta. **No están en el repositorio.**
 
 | Documento | Contenido | Ubicación |
 |---|---|---|
 | Estudio previo: "Aseguradoras y siniestros en SyncTaller" | Auditoría del flujo actual, limitaciones L1–L14, escenarios, modelo conceptual, fases | https://claude.ai/artifact/54TDFLL6nRUoizKYyEYSED |
 | Informe de decisiones: "Decisiones del módulo de aseguradoras" | Multi-tenant (recomendación C), clientes y aseguradoras, reparto, autorizaciones, MVP, preguntas G | https://claude.ai/artifact/6NQ2MEHFyC4S2pUpgWensC |
 | Especificación técnica: "Especificación del módulo de aseguradoras" | Arquitectura SaaS, entidades, flujos, invariantes I1–I8, API, permisos, plan E/T/M | https://claude.ai/artifact/R1BmU5AE8gYb6VQanTaer4 |
-| Revisión de la especificación | Hallazgos H1–H15, invariantes corregidas R1–R10, ejemplos numéricos, criterios del spike S1–S13, decisiones A–G | **Solo en la conversación de Claude Code** de esta notebook. No se publicó ni se guardó en archivo [pendiente: conservarla] |
+| Revisión: "Revisión de la especificación de aseguradoras" | Hallazgos H1–H15, invariantes corregidas R1–R10, ejemplos numéricos, criterios del spike S1–S13, decisiones A–G | https://claude.ai/artifact/T1j1B68eKpFZLrub5Jw3vx |
 
-* Las copias HTML de las tres páginas están en la carpeta temporal de la sesión de esta notebook
+* Las copias HTML de las cuatro páginas están en la carpeta temporal de la sesión de esta notebook
   (`%LOCALAPPDATA%\Temp\claude\...\scratchpad\aseguradoras-*.html`). Esa carpeta **no viaja** al otro equipo.
 * Los archivos `Aseguradoras y siniestros en SyncTaller.md` y `Decisiones del módulo de aseguradoras.md` que se
   citaron en un pedido **no existen** en el repositorio [verificado]. Si existen en otro lugar, registrar su
@@ -214,7 +214,6 @@ Sin corregir; no se tocó código.
   (`NotificationReminderService`).
 * `receptions.approved_by` no se asigna nunca.
 * El disco `local` tiene `'serve' => true`: hay rutas `storage/{path}` con firma.
-* La revisión de la especificación existe solo en la conversación de esta notebook (sección 6).
 
 ---
 
@@ -225,9 +224,7 @@ No se implementó nada ni se abrió ninguna rama.
 
 **Siguiente paso recomendado, en orden:**
 
-1. **Conservar la revisión de la especificación.** Pedirle a Claude, en la conversación de esta notebook, que la
-   publique o la guarde en un archivo antes de cambiar de equipo. Si no, en el otro equipo habrá que regenerarla a
-   partir de la especificación publicada.
+1. ~~**Conservar la revisión de la especificación.**~~ Publicada el 2026-10-27 (sección 6).
 2. **Aprobar o ajustar** las decisiones A–G y P1–P9 (sección 5.2).
 3. **Actualizar la especificación publicada** con las correcciones aprobadas (lista de 14 cambios de la revisión).
 4. ~~**E0:** decidir sobre `composer.lock`.~~ Resuelto el 2026-10-27 (sección 3.1).
@@ -252,5 +249,6 @@ No se implementó nada ni se abrió ninguna rama.
    vendor/bin/phpunit` si falta `pdo_sqlite`) y anotar el resultado. Hoy no hay evidencia de esta sesión.
 4. **Abrir las páginas de la sección 6** con la cuenta de claude.ai del usuario.
 5. **Abrir Claude Code** en `synctaller-backend` y pedirle que lea `CLAUDE.md`, `docs/handoff.md` y este documento,
-   verifique el estado de Git y retome desde la sección 10. Si la revisión de la especificación no se conservó
-   (paso 10.1), compartirla o pedir que se regenere.
+   verifique el estado de Git y retome desde la sección 10. Para el detalle de las correcciones, compartirle la
+   revisión de la sección 6 (Claude Code no lee páginas de claude.ai sin la herramienta de artifacts: si no
+   puede abrirla, pegarle su contenido).
