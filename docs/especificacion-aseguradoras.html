@@ -1,0 +1,1329 @@
+<title>Especificación del módulo de aseguradoras</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: especificación técnica larga; índice fijo a la izquierda en escritorio, columna única en móvil. Misma identidad que los dos informes previos. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1c2330;
+  --muted: #5a6475;
+  --line: #dde1e8;
+  --accent: #1f5fa8;
+  --accent-soft: #e6eef8;
+  --fact: #1d7a4f;   --fact-bg: #e3f3ea;
+  --prop: #7a4fb0;   --prop-bg: #efe7f8;
+  --unk: #a35c00;    --unk-bg: #fbefdc;
+  --warn: #b3261e;   --warn-bg: #fbe5e3;
+  --code-bg: #eef1f5;
+  --display: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161d; --surface: #191f28; --fg: #e3e7ee; --muted: #9aa4b5; --line: #2b3340;
+    --accent: #7fb0ec; --accent-soft: #1d2a3b;
+    --fact: #6fd19f; --fact-bg: #16301f; --prop: #c3a2ee; --prop-bg: #2a2138;
+    --unk: #f0b45e; --unk-bg: #33260f; --warn: #f2897f; --warn-bg: #3a1c19; --code-bg: #212833;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #191f28; --fg: #e3e7ee; --muted: #9aa4b5; --line: #2b3340;
+  --accent: #7fb0ec; --accent-soft: #1d2a3b;
+  --fact: #6fd19f; --fact-bg: #16301f; --prop: #c3a2ee; --prop-bg: #2a2138;
+  --unk: #f0b45e; --unk-bg: #33260f; --warn: #f2897f; --warn-bg: #3a1c19; --code-bg: #212833;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.shell { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; padding-block: 40px 80px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; font-size: 14px; }
+nav.toc p { font-family: var(--display); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc a { display: block; padding: 4px 8px; border-radius: 4px; color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { background: var(--accent-soft); color: var(--accent); outline: none; }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 0 0 12px; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 24px; line-height: 1.25; margin: 0 0 16px; text-wrap: balance; }
+h3 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 30px 0 8px; }
+h4 { font-family: var(--display); font-weight: 600; font-size: 15px; margin: 18px 0 6px; color: var(--muted); }
+.lede { color: var(--muted); max-width: 70ch; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; font-size: 14px; color: var(--muted); }
+.meta b { color: var(--fg); font-weight: 600; }
+section { padding-block: 36px; border-bottom: 1px solid var(--line); scroll-margin-top: 16px; }
+section:last-of-type { border-bottom: 0; }
+.secnum { font-family: var(--mono); font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+p, li { max-width: 74ch; }
+ul, ol.plain { padding-left: 22px; margin: 8px 0; }
+li { margin: 4px 0; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+pre { font-family: var(--mono); font-size: 13px; line-height: 1.55; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; overflow-x: auto; margin: 12px 0; }
+pre.mermaid { text-align: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.tag { display: inline-block; font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; white-space: nowrap; vertical-align: 1px; }
+.tag.h { color: var(--fact); background: var(--fact-bg); }
+.tag.p { color: var(--prop); background: var(--prop-bg); }
+.tag.u { color: var(--unk); background: var(--unk-bg); }
+.tag.w { color: var(--warn); background: var(--warn-bg); }
+.legend span.item { font-size: 14px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.tablewrap { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--display); font-weight: 600; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+tr.rec td { background: var(--accent-soft); }
+tr.grp td { background: var(--bg); font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; border-radius: 0 6px 6px 0; margin: 16px 0; max-width: 78ch; }
+.callout.warn { border-color: var(--warn); background: var(--warn-bg); }
+.callout p { margin: 0; }
+.callout p + p { margin-top: 8px; }
+.yes { color: var(--fact); font-weight: 600; white-space: nowrap; }
+.no { color: var(--warn); font-weight: 600; white-space: nowrap; }
+.later { color: var(--unk); font-weight: 600; white-space: nowrap; }
+.ok { color: var(--fact); font-weight: 600; }
+.bad { color: var(--warn); font-weight: 600; }
+tr.sum td { background: var(--accent-soft); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.example { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; margin: 16px 0; }
+.example h4 { margin-top: 0; color: var(--fg); }
+.inv { counter-reset: inv; list-style: none; padding: 0; display: grid; gap: 8px; margin: 12px 0; }
+.inv li { counter-increment: inv; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; max-width: none; }
+.inv li::before { content: "I" counter(inv); font-family: var(--mono); font-weight: 500; color: var(--accent); }
+.steps { display: grid; gap: 14px; margin-top: 12px; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; }
+.step h4 { margin: 0 0 8px; color: var(--fg); font-size: 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.step h4 small { font-family: var(--body); font-weight: 400; font-size: 14px; color: var(--muted); }
+.step dl { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 4px 14px; margin: 0; font-size: 14.5px; }
+.step dt { color: var(--muted); font-weight: 600; }
+.step dd { margin: 0; min-width: 0; }
+footer { margin-top: 32px; font-size: 14px; color: var(--muted); }
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: 24px 60px; }
+  nav.toc { position: static; max-height: none; border: 1px solid var(--line); border-radius: 6px; padding: 12px; margin-bottom: 24px; background: var(--surface); }
+  nav.toc ol { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+@media (max-width: 560px) {
+  .step dl { grid-template-columns: minmax(0, 1fr); }
+  .step dt { margin-top: 6px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="shell">
+<nav class="toc" aria-label="Índice">
+  <p>Contenido</p>
+  <ol>
+    <li><a href="#s1">1. Resumen ejecutivo</a></li>
+    <li><a href="#s2">2. Hechos comprobados</a></li>
+    <li><a href="#s3">3. Arquitectura multi-tenant</a></li>
+    <li><a href="#s4">4. Entidades y relaciones</a></li>
+    <li><a href="#s5">5. Flujos y estados</a></li>
+    <li><a href="#s6">6. Reglas e invariantes</a></li>
+    <li><a href="#s7">7. Contratos de API</a></li>
+    <li><a href="#s8">8. Seguridad y auditoría</a></li>
+    <li><a href="#s9">9. Plan incremental</a></li>
+    <li><a href="#s10">10. Pendientes y decisiones</a></li>
+    <li><a href="#s11">11. Orden recomendado</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <p class="eyebrow">SyncTaller Backend · Especificación técnica · Versión 2 (incorpora la revisión)</p>
+  <h1>Especificación del módulo de aseguradoras</h1>
+  <p class="lede">Especificación incremental del módulo de aseguradoras y siniestros y de la infraestructura SaaS (base central más una base por taller), construida sobre las decisiones conceptuales aprobadas. Esta versión incorpora las correcciones de la <a href="https://claude.ai/artifact/T1j1B68eKpFZLrub5Jw3vx">revisión de la especificación</a> (hallazgos H1–H15) y las decisiones A–G y P1–P9 aprobadas el 2026-10-27 (§10.2). No se modificó el repositorio. Los nombres de tablas, clases, rutas, permisos y <code>error_code</code> nuevos son <b>propuestas provisorias</b>: lo que ya existe se cita con su archivo y línea.</p>
+  <div class="meta">
+    <span><b>Fecha:</b> 2026-10-27</span>
+    <span><b>Backend:</b> main (f61cb8c; 5e16e37 solo agrega documentación), Laravel 13.38.0</span>
+    <span><b>Frontend revisado:</b> main (cbbb559)</span>
+    <span><b>Estado:</b> decisiones técnicas aprobadas; validaciones externas pendientes (§10.1). <b>No apto para producción</b></span>
+  </div>
+  <div class="legend" aria-label="Leyenda">
+    <span class="item"><span class="tag h">Hecho</span> comprobado en el código o el entorno</span>
+    <span class="item"><span class="tag p">Propuesta</span> diseño técnico sugerido</span>
+    <span class="item"><span class="tag u">Incógnita</span> sin verificar o requiere validación externa</span>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="s1">
+  <span class="secnum">§1</span>
+  <h2>Resumen ejecutivo</h2>
+  <ul>
+    <li><b>Infraestructura SaaS y módulo funcional son dos líneas de trabajo separadas.</b> Con una base por taller, las tablas del taller no llevan <code>tenant_id</code>: el módulo de aseguradoras se puede desarrollar sobre la instalación actual y la infraestructura se suma en paralelo. Lo único del módulo que depende de la central es el directorio compartido de aseguradoras, que no entra en el MVP.</li>
+    <li><b>Paquete de tenancy (P2):</b> la metadata de Packagist declara compatibilidad con Laravel 13 para <code>stancl/tenancy</code> 3.10.1 y <code>spatie/laravel-multitenancy</code> 4.2.x. <b>No está verificado</b> en este proyecto. Se evalúa primero <code>spatie/laravel-multitenancy</code> en un spike descartable (T0) con los criterios S1–S13 y los umbrales de G (§3.13). Aprobar el spike no aprueba la dependencia.</li>
+    <li><b>Clientes (P3):</b> se agrega <code>kind</code> (persona o empresa), <code>business_name</code> y <code>display_name</code> calculado, sin quitar campos; <code>first_name</code>/<code>last_name</code> son nulos solo en empresas. Hoy las validaciones de nombre impiden registrar empresas (no admiten puntos ni números).</li>
+    <li><b>Aseguradora</b> como entidad propia, vinculada 1:1 a un <code>Client</code> de tipo empresa. <b>Siniestro</b> 1:1 con la recepción y con documentos en un disco privado dedicado (E).</li>
+    <li><b>Tres registros independientes:</b> aceptación del cliente (con historial e importe aceptado), autorización de la aseguradora (por presupuesto, versionada, por línea) y excepción interna (con permiso y motivo). Ninguna excepción amplía lo que se cobra a un tercero (B, C).</li>
+    <li><b>Reparto económico</b> por OT, versionado, que nunca toca <code>WorkOrderClosing</code>. Tiene dos capas: porciones en base sin IVA (quién soporta cada importe) y una obligación de deducible sin tratamiento fiscal (§4.5). Las facturas se generan por responsable desde el reparto. El flujo particular no cambia.</li>
+    <li><b>Restricción comercial del MVP (A):</b> solo los siniestros con deducible informado e igual a 0 se facturan y entregan de punta a punta. Con deducible mayor a 0 el reparto se confirma, pero no se emite ninguna factura de esa OT y <b>la OT no se entrega por el flujo habitual</b> (control explícito en la entrega, §7.1) hasta M10 y la respuesta de G1. Con deducible desconocido (nulo) el reparto no se confirma y la OT tampoco se entrega (mismo control).</li>
+    <li><b>Puede avanzar ya, sin supuestos fiscales:</b> aseguradoras, siniestros, documentos, autorizaciones, excepciones, reparto y facturación de las porciones con deducible 0. <b>Espera validación:</b> cómo se factura el deducible (G1), retenciones, anticipos y notas de crédito (G5, del que depende también la corrección de repartos facturados, P6).</li>
+    <li><b>Primeros pasos recomendados:</b> E0 ya está resuelto. Enviar ya las preguntas externas (§10.1), luego las correcciones independientes (E1–E5), en paralelo el spike de tenancy (T0), y después el módulo empezando por M1 (tipo de cliente).</li>
+  </ul>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <span class="secnum">§2</span>
+  <h2>Hechos comprobados y referencias al código</h2>
+
+  <h3>2.1 Entorno, dependencias y documentos de referencia <span class="tag h">Hecho</span></h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tema</th><th>Hecho</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td>Versiones</td><td>Laravel 13.38.0, Sanctum 4.3.3, spatie/laravel-permission 8.3.2, PHP <code>^8.3</code>, dompdf <code>^3.1</code>.</td><td><code>php artisan --version</code>, <code>vendor/composer/installed.json</code>, <code>composer.json:9-14</code></td></tr>
+      <tr><td><code>composer.lock</code></td><td><b>Resuelto (P1, 2026-10-27):</b> se descartaron los cambios locales de parche. El lock vigente es el de <code>9ca9faf</code> (2026-10-24) y <code>composer install --dry-run</code> no tiene nada que instalar: <code>vendor/</code> coincide con el lock.</td><td><code>git status</code>, <code>composer install --dry-run</code></td></tr>
+      <tr><td>Suite de tests (línea base)</td><td>374 tests y 5985 aserciones en verde, en 406 s, en la notebook de desarrollo. Es la línea base del criterio S13 (G).</td><td><code>php artisan test</code> (2026-10-27)</td></tr>
+      <tr><td>Informes de referencia</td><td>Los archivos <code>Aseguradoras y siniestros en SyncTaller.md</code> y <code>Decisiones del módulo de aseguradoras.md</code> <b>no están en el repositorio</b>. Usé los dos informes publicados en esta sesión, que tienen el mismo contenido.</td><td>Búsqueda en el repositorio</td></tr>
+      <tr><td>Paquetes de tenancy (metadata)</td><td><code>stancl/tenancy</code> v3.10.1 (2026-08-05) declara <code>illuminate/support ^10|^11|^12|^13</code>; no hay v4 publicada. <code>spatie/laravel-multitenancy</code>: 4.2.1 (2026-09-22, <code>^11|^12|^13</code>), 4.2.2 (2026-10-19), 4.2.3 y 4.3.0 (2026-10-26); desde 4.2.2 exige PHP <code>^8.3</code> y <code>illuminate/support ^12|^13</code>. La versión del spike se elige al iniciarlo (§3.13, P2). <span class="tag u">Pendiente</span> no se revisó qué cambió en 4.2.2 y 4.2.3.</td><td><code>repo.packagist.org/p2/*.json</code>, <code>composer show -a</code> (2026-10-27)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><span><span class="tag u">Incógnita</span> Que un paquete declare compatibilidad con Laravel 13 en Packagist no lo hace compatible con este proyecto (Sanctum, Spatie Permission, el harness de tests con SQLite y Nginx con php-cgi). Hay que probarlo.</span></p>
+
+  <h3>2.2 Código relevante para el diseño <span class="tag h">Hecho</span></h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Componente</th><th>Hecho</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td>Client (esquema vs validación)</td><td>En la tabla, <code>document_number</code> y <code>email</code> son <code>nullable</code>; <code>first_name</code>, <code>last_name</code> y <code>phone</code> son obligatorios. <code>StoreClientRequest</code> exige documento (5–20, único) y email (único <b>solo por validación</b>: no hay índice en la base). El nombre y el apellido aceptan solo letras y espacios (<code>/^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ]+$/u</code>), así que "Seguros S.A." o "Mapfre 2" se rechazan.</td><td>Migración <code>000005:16-20</code>; <code>StoreClientRequest.php:18-46</code></td></tr>
+      <tr><td>Baja de cliente</td><td><code>ClientController::destroy</code> hace soft delete con sufijo y <b>no verifica si el cliente está en uso</b>. La lógica vive en el controller, no en un Service.</td><td><code>ClientController.php:127-142</code></td></tr>
+      <tr><td>Cierre económico</td><td>Guarda solo totales (venta, costo, margen). <b>No guarda el detalle por origen.</b> El detalle se recalcula desde los ítems y repuestos de la OT, que no se modifican después de completarla.</td><td><code>WorkOrderClosingService.php:68-143</code>; <code>InvoiceService.php:241-285</code></td></tr>
+      <tr><td>Líneas de factura</td><td><code>invoice_items</code> tiene <code>morphs('source')</code> (no nulo) y <code>base_total</code> sin IVA.</td><td>Migración <code>000040:21-25</code></td></tr>
+      <tr><td><code>currentInvoice</code></td><td><code>HasOne</code> con <code>ofMany(max id)</code> sobre facturas vigentes. Lo usan <code>VehicleDeliveryService:168,191</code>, <code>VehicleHistoryService:77</code>, <code>WorkOrderController:172</code>, <code>ShowWorkOrderResource:68-79</code> (clave <code>invoice</code>) y <code>VehicleHistoryReceptionResource:79-84</code>.</td><td><code>WorkOrder.php:89</code></td></tr>
+      <tr><td>Decisión registrada (patrón reutilizable)</td><td>Los extras guardan <code>client_decision</code>, <code>decided_at</code>, <code>decided_by</code>, <code>decision_channel</code> (<code>ClientDecisionChannel</code>), <code>decision_contact</code> y <code>decision_notes</code>; ver <code>WorkOrderPartService::approve/reject</code>.</td><td>Migración <code>000051</code>; <code>WorkOrderPartService.php:90,113</code></td></tr>
+      <tr><td>Autorización de permisos</td><td>No existe <code>app/Policies</code>. Los permisos se aplican con middleware <code>permission:*</code> por método; los roles se definen en <code>RolesAndPermissionsSeeder::workshopRoles()</code>.</td><td><code>RolesAndPermissionsSeeder.php:413-523</code></td></tr>
+      <tr><td>Auditoría</td><td>El trait <code>Auditable</code> registra eventos de modelo. <code>AuditEvent</code> tiene <code>created</code>, <code>updated</code>, <code>deleted</code>, <code>restored</code>, <code>login</code>, <code>login_failed</code>, <code>logout</code>, <code>permissions_synced</code> y <code>roles_synced</code>; no hay evento de descarga.</td><td><code>Auditable.php</code>; <code>AuditEvent.php:7-15</code></td></tr>
+      <tr><td>Almacenamiento</td><td>Disco <code>local</code> privado en <code>storage/app/private</code> con <code>'serve' =&gt; true</code>: Laravel registra <code>GET</code> y <code>PUT storage/{path}</code> con URL firmada (firma con la <code>APP_KEY</code>, sin permiso, taller ni auditoría). Ninguna parte de <code>app/</code> usa ese disco y la carpeta solo contiene <code>.gitignore</code>. Disco <code>public</code> con URL pública permanente (nombre aleatorio) para fotos de recepción, fotos de ítems de diagnóstico, firmas de entrega y branding.</td><td><code>config/filesystems.php:33-45</code>; <code>php artisan route:list --path=storage</code>; <code>ReceptionPhotoController.php:56</code>; <code>DiagnosticItemPhotoController.php:65</code>; <code>VehicleDeliveryService.php:73</code></td></tr>
+      <tr><td>Avisos al cliente</td><td>Los recordatorios de factura van a <code>$invoice-&gt;client</code> (el destinatario de la factura). Con <code>notifications_enabled = false</code> el aviso se registra <code>skipped</code>. El reenvío rechaza un aviso en <code>pending</code> (<code>CLIENT_NOTIFICATION_PENDING</code>, 409) y uno con avisos desactivados (<code>CLIENT_NOTIFICATIONS_DISABLED</code>). El saludo usa <code>first_name</code>: con una empresa queda vacío.</td><td><code>NotificationReminderService.php:54-67</code>; <code>ClientNotificationService.php:69-94,161,176-189</code></td></tr>
+      <tr><td>Búsquedas de cliente</td><td>Once puntos, en seis controllers, buscan al cliente por <code>first_name</code> o por <code>CONCAT(first_name,' ',last_name)</code>: búsquedas libres y los filtros <code>first_name</code> (clientes) y <code>client_first_name</code> (vehículos). Con <code>first_name</code> nulo, <code>CONCAT</code> devuelve <code>NULL</code>: una empresa no aparecería en ninguna búsqueda. La búsqueda del mecánico en <code>DiagnosticController</code> (<code>:96-107</code>) es otra entidad y no se cuenta.</td><td><code>ClientController.php:40,49-50</code>; <code>VehicleController.php:59,95-97</code>; <code>BudgetController.php:77,82</code>; <code>WorkOrderController.php:80,85</code>; <code>ReceptionController.php:76</code>; <code>DiagnosticController.php:64,69</code></td></tr>
+      <tr><td>Nombre del cliente armado a mano</td><td>Concatenan nombre y apellido: <code>InvoiceService:69</code> (<code>customer_name</code>), <code>DocumentPdfService:172</code>, <code>ReportService::clientName</code> (<code>:477-479</code>), <code>MaintenanceService:245</code>, <code>ReceptionResource:30</code> y el saludo de <code>ClientNotificationService:161</code>. Además, <code>VehicleHistoryController:53</code> arma <code>vehicle.client.full_name</code> en la respuesta del historial del vehículo; es una presentación del nombre, no una búsqueda, y no se cuenta entre los once puntos de búsqueda.</td><td>Archivos citados</td></tr>
+      <tr><td>Generadores de códigos</td><td>Seis generadores calculan <code>withTrashed()-&gt;max('id') + 1</code> sin bloqueo (<code>BUD-</code>, <code>OT-</code>, <code>COM-</code>, <code>REP-</code>, <code>SRV-</code>, <code>DIA-</code>). Los códigos tienen índice único: una colisión concurrente terminaría en 500. Ya pueden existir huecos, porque un alta fallida consume el autoincremental de MySQL. <code>REC-</code>, <code>ENT-</code> y <code>PAG-</code> ya usan <code>lockForUpdate</code>.</td><td><code>BudgetService.php:375</code>, <code>WorkOrderService.php:476</code>, <code>PurchaseService.php:413</code>, <code>PartService.php:232</code>, <code>ServiceCatalogService.php:111</code>, <code>DiagnosticItemTemplateService.php:124</code>; migraciones <code>000017</code>, <code>000022</code>, <code>000026</code>, <code>000033</code>, <code>000054</code></td></tr>
+      <tr><td>Consumo de repuestos</td><td>Solo los extras tienen tope en lo aprobado (<code>WORK_ORDER_PART_EXCEEDS_APPROVED</code>); una línea presupuestada puede consumir más de lo presupuestado (6.7 vigente).</td><td><code>WorkOrderPartService.php:199-204</code></td></tr>
+      <tr><td>Línea de factura y concepto ejecutado</td><td><code>unit_price = round(base_unit_price × (100 + tasa) / 100, 0)</code> y <code>total = round(cantidad × unit_price) − descuento</code>; <code>base_total</code> se guarda aparte. El concepto ejecutado de un repuesto de catálogo es la <code>WorkOrderPart</code> (cantidad neta × precio), no el <code>WorkOrderItem</code>; los extras tienen <code>work_order_item_id = null</code>.</td><td><code>InvoiceItem.php:51-64</code>; <code>InvoiceService.php:253,267-282</code>; <code>WorkOrderPart.php:108-125</code></td></tr>
+      <tr><td>Entrega, historial y facturas</td><td>La ruta de entrega es <code>POST receptions/{reception}/delivery</code> (singular). El historial suma todas las facturas emitidas de las OT del vehículo y el timeline usa <code>currentInvoice</code>. El PDF de entrega ya lista todos los números de factura emitidos por OT. El listado de facturas filtra por <code>client_id</code> en el controller.</td><td><code>routes/api.php:196</code>; <code>VehicleHistoryService.php:32-46,77</code>; <code>DocumentPdfService.php:139-147</code>; <code>InvoiceController.php:49-64</code></td></tr>
+      <tr><td>Cola y scheduler</td><td>Cola <code>database</code> con <code>after_commit=false</code> global. El aviso se despacha con <code>-&gt;afterCommit()</code> y lleva solo el id (<code>SendClientNotification</code>, <code>$tries = 1</code>). Hay una sola tarea programada.</td><td><code>config/queue.php:16,44</code>; <code>ClientNotificationService.php:195</code>; <code>SendClientNotification.php</code>; <code>routes/console.php:12</code></td></tr>
+      <tr><td>Cache de permisos</td><td>Clave <code>spatie.permission.cache</code>, store <code>default</code>, 24 h.</td><td><code>config/permission.php:179-200</code></td></tr>
+      <tr><td>Sanctum</td><td>Tokens Bearer sin expiración; <code>stateful</code> = <code>localhost:5173</code>.</td><td><code>config/sanctum.php:25,52</code></td></tr>
+      <tr><td>Tests</td><td><code>TestCase</code> siembra <code>RolesAndPermissionsSeeder</code> una vez por corrida; SQLite en archivo, cola <code>sync</code>, mail <code>array</code>, cache <code>array</code>.</td><td><code>tests/TestCase.php</code>; <code>phpunit.xml:25-38</code></td></tr>
+      <tr><td>Rutas</td><td>Grupo único <code>auth:sanctum</code> con <code>scopeBindings()</code>.</td><td><code>routes/api.php:59</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>2.3 Contrato que consume el frontend <span class="tag h">Hecho</span></h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Área</th><th>Lo que espera el frontend</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td>Clientes</td><td><code>ClientSummary</code> con <code>document_number</code>, <code>first_name</code>, <code>last_name</code>, <code>phone</code> y <code>email</code> como <code>string</code> (no nulos). <code>clientName()</code> concatena nombre y apellido; hay 33 usos de <code>first_name</code>/<code>clientName</code> en 18 archivos.</td><td><code>synctaller-frontend/src/features/clients/api.ts:6-37</code></td></tr>
+      <tr><td>Facturas</td><td><code>InvoiceSummary</code> y <code>Invoice</code> con <code>work_order_id</code>, <code>client_id</code>, <code>customer_name</code> y <code>items[].source {type, id}</code>. Se crean con <code>POST /work-orders/{id}/invoice</code> (en singular).</td><td><code>src/features/invoices/api.ts:12-133</code></td></tr>
+      <tr><td>OT</td><td><code>invoice?: {id, number, status, total} | null</code> en singular, solo con <code>invoices.show</code>. Si es <code>null</code> y la OT está completada, la pantalla muestra el botón "Facturar". El historial del vehículo también muestra <code>workOrder.invoice</code>.</td><td><code>src/features/work-orders/api.ts:123-124</code>; <code>src/features/invoices/WorkOrderInvoice.tsx:20-46</code>; <code>src/features/vehicle-history/VehicleDetailPage.tsx:241-246</code></td></tr>
+      <tr><td>Imágenes</td><td>Fotos y firma se muestran con la URL pública que devuelve la API (<code>&lt;img src&gt;</code>), que no puede enviar la cabecera <code>Authorization</code>.</td><td><code>src/components/ui/PhotoGallery.tsx</code>; <code>src/features/deliveries/DeliveryDetailPage.tsx</code></td></tr>
+      <tr><td>Conexión</td><td>Una sola URL base (<code>VITE_API_URL</code>) y token Bearer.</td><td><code>src/services/api.ts:34,48</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>2.4 Discrepancias nuevas (no resueltas, solo informadas)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Discrepancia</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td>D7</td><td><code>CLAUDE.md</code> 6.1 dice "email único"; la unicidad existe solo en la validación, no en la base.</td><td>Migración <code>000005:20</code></td></tr>
+      <tr><td>D8</td><td>Documento y email son opcionales en la base pero obligatorios en la API.</td><td>Migración <code>000005:16,20</code> vs <code>StoreClientRequest</code></td></tr>
+      <tr><td>D9</td><td>"Datos maestros en uso no se eliminan" (6.1) no incluye a los clientes, y la baja de cliente vive en el controller, no en un Service.</td><td><code>ClientController.php:127</code></td></tr>
+      <tr><td>D10</td><td>El pedido cita dos informes <code>.md</code> que no están en el repositorio.</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <span class="secnum">§3</span>
+  <h2>Arquitectura multi-tenant <span class="tag p">Propuesta</span></h2>
+
+<pre class="mermaid">
+flowchart LR
+  FE["Frontend SPA&lt;br/&gt;taller1.synctaller.app"] -->|Host + Bearer| MW["EnsureJsonResponse&lt;br/&gt;IdentifyTenant&lt;br/&gt;auth:sanctum"]
+  MW -->|busca dominio| C[("Base central&lt;br/&gt;tenants · tenant_domains&lt;br/&gt;tenant_migrations · jobs&lt;br/&gt;platform_users")]
+  MW -->|conecta| T1[("Base taller 1&lt;br/&gt;esquema actual completo")]
+  MW -.-> T2[("Base taller 2")]
+  W["Worker de cola"] -->|lee jobs con tenant_id| C
+  W -->|restaura contexto| T1
+  S["Scheduler"] -->|un job por taller activo| C
+  ST["storage/app/tenants/{id}/…"] --- T1
+</pre>
+  <p>Hay una base central (<i>landlord</i>) con el registro de talleres y la infraestructura compartida, y una base por taller con el esquema actual completo, sin cambios de columnas. El taller se identifica por el host antes de autenticar. Desde ese punto, la conexión por defecto, la cache, el almacenamiento y la configuración apuntan a ese taller.</p>
+
+  <h3>3.1 Registro de talleres (base central)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tabla (propuesta)</th><th>Campos principales</th><th>Notas</th></tr></thead>
+    <tbody>
+      <tr><td><code>tenants</code></td><td><code>id</code> (ULID), <code>slug</code> único, <code>name</code>, <code>database</code> único, <code>db_host</code>/<code>db_connection_ref</code> (nulos = servidor por defecto), <code>status</code> (<code>provisioning|active|suspended|cancelled|deleted|provisioning_failed</code>), <code>schema_version</code>, <code>plan</code>, <code>suspended_at</code>, <code>cancelled_at</code>, <code>data_retention_until</code>, timestamps</td><td>Las credenciales de base van en el <code>.env</code> o un gestor de secretos, nunca en la tabla.</td></tr>
+      <tr><td><code>tenant_domains</code></td><td><code>tenant_id</code>, <code>domain</code> único, <code>is_primary</code></td><td>Permite un dominio propio por taller más adelante.</td></tr>
+      <tr><td><code>tenant_migrations</code></td><td><code>tenant_id</code>, <code>migration</code>, <code>status</code> (<code>ok|failed</code>), <code>error</code>, <code>ran_at</code></td><td>Registro por taller para detectar bases desparejas.</td></tr>
+      <tr><td><code>jobs</code>, <code>job_batches</code>, <code>failed_jobs</code></td><td>Como hoy, más <code>tenant_id</code> en el payload</td><td>Una sola cola central: un pool de workers atiende a todos los talleres.</td></tr>
+      <tr><td><code>platform_users</code>, <code>platform_audit_logs</code></td><td>Operadores de la plataforma, con su propio guard</td><td>Separados de los usuarios de cada taller.</td></tr>
+      <tr><td><code>insurer_directory</code> (posterior)</td><td>Razón social y RUC de referencia</td><td>Fuera del MVP. Cada taller tendría una referencia opcional, sin clave foránea entre bases.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>3.2 Resolución del taller antes de autenticar</h3>
+  <ul>
+    <li><b>Producción:</b> por <code>Host</code> (subdominio o dominio propio) en <code>tenant_domains</code>.</li>
+    <li><b>Local y tests:</b> además se acepta la cabecera <code>X-Tenant</code>, solo si <code>APP_ENV</code> es <code>local</code> o <code>testing</code>.</li>
+    <li>Middleware nuevo <code>IdentifyTenant</code>: va <b>después</b> de <code>EnsureJsonResponse</code> y <b>antes</b> de <code>auth:sanctum</code>, en todas las rutas <code>api/*</code>. Eso incluye las públicas <code>POST login</code> y <code>GET branding</code>.</li>
+    <li>Respuestas propuestas, con el contrato JSON actual:
+      <ul>
+        <li><code>404 TENANT_NOT_FOUND</code>: dominio desconocido;</li>
+        <li><code>403 TENANT_SUSPENDED</code>: taller suspendido;</li>
+        <li><code>503 TENANT_UNAVAILABLE</code>: la base no responde (sin detalles técnicos);</li>
+        <li><code>503 TENANT_MAINTENANCE</code>: migración en curso.</li>
+      </ul>
+    </li>
+    <li>Frontend: <code>VITE_API_URL</code> se arma desde el host del SPA (por ejemplo <code>https://{slug}.api…</code>) o se usa la misma URL con proxy. Implica un cambio de configuración en el frontend, no de código de negocio.</li>
+  </ul>
+
+  <h3>3.3 Conexión dinámica y aislamiento</h3>
+  <ul>
+    <li>Dos conexiones: <code>central</code> (fija) y <code>tenant</code> (plantilla). Al identificar el taller se fija <code>database.connections.tenant.database</code>, se hace <code>DB::purge('tenant')</code> y la conexión por defecto pasa a ser <code>tenant</code>.</li>
+    <li>Los modelos actuales usan la conexión por defecto, así que <b>no cambian</b>. Los modelos de plataforma declaran <code>$connection = 'central'</code>.</li>
+    <li>Las reglas <code>exists:</code>/<code>unique:</code>, el SQL crudo y los bindings resuelven contra la base del taller sin tocar las ~100 reglas.</li>
+    <li>Nginx con php-cgi atiende un proceso por request, sin estado compartido. El riesgo de que el contexto de un taller quede pegado aparece solo en los <b>workers de cola</b> (proceso largo): ver 3.5.</li>
+  </ul>
+
+  <h3>3.4 Autenticación Sanctum</h3>
+  <ul>
+    <li>Los tokens siguen en <code>personal_access_tokens</code> de <b>cada base de taller</b> (no cambia el esquema).</li>
+    <li>Un token del taller A presentado en el host del taller B no existe en B y responde <code>401 UNAUTHENTICATED</code>. Aunque coincida el id, el hash no.</li>
+    <li><code>users.email</code> sigue siendo único dentro de cada taller. La misma persona en dos talleres tiene dos cuentas en el MVP. Una identidad central (SSO) queda para después.</li>
+    <li><code>stateful</code> (cookies) no se usa en el flujo Bearer actual. Se mantiene, pero no se amplía a dominios de taller.</li>
+  </ul>
+
+  <h3>3.5 Colas, jobs y scheduler</h3>
+  <ul>
+    <li><b>Despacho:</b> todo job lleva <code>tenant_id</code> en su payload, que se agrega automáticamente al despachar en contexto de taller.</li>
+    <li><b>Ejecución:</b> un middleware de job restaura el taller antes de <code>handle</code> y lo <b>limpia después</b>: conexión, cache, configuración del taller, registrador de permisos y mailer.</li>
+    <li><b><code>SendClientNotification</code>:</b> recibe un id entero, no un modelo serializado, así que es compatible. Si la base del taller no está disponible, el job se libera con espera sin consumir su único intento, para que el aviso no quede <code>failed</code> por un problema de infraestructura.</li>
+    <li><b><code>afterCommit()</code>:</b> sigue funcionando porque la transacción ocurre en la conexión <code>tenant</code>, que en ese momento es la conexión por defecto.</li>
+    <li><b>Scheduler:</b> <code>notifications:send-reminders</code> pasa a despachar <b>un job por taller activo</b>, para que la falla de un taller no detenga a los demás. La hora diaria sigue global en el MVP; una hora propia por taller queda para después.</li>
+    <li><b>Taller suspendido (P9):</b> el scheduler no despacha sus jobs. Un job de aviso al cliente descartado por la suspensión deja el aviso en <code>failed</code> con el motivo <code>Taller suspendido</code>, <b>nunca en <code>pending</code></b>: el reenvío rechaza los avisos <code>pending</code> (<code>CLIENT_NOTIFICATION_PENDING</code>) y el aviso quedaría sin reenvío posible. Después de reactivar el taller se puede reenviar con las reglas vigentes. No cambia ninguna otra regla de avisos.</li>
+  </ul>
+
+  <h3>3.6 Cache, permisos Spatie y configuración</h3>
+  <ul>
+    <li><b>Prefijo de cache por taller</b> (<code>tenant:{id}:</code>). La clave <code>spatie.permission.cache</code> queda aislada por el prefijo. Al cambiar de taller en un worker se llama a <code>forgetCachedPermissions()</code>.</li>
+    <li><b>Spatie:</b> <code>teams</code> sigue en <code>false</code>, porque cada base tiene sus propios roles. <code>RolesAndPermissionsSeeder</code> ya es idempotente y corre al crear el taller y en cada despliegue.</li>
+    <li><b>Configuración por taller:</b> <code>company.*</code> (razón social, RUC, dirección…), <code>invoice.default_tax_rate</code>, el remitente de email y <code>notifications.*</code> pasan del <code>.env</code> a <code>system_settings</code> y se aplican con <code>config()-&gt;set</code> al identificar el taller. El <code>.env</code> queda como valor por defecto. Es la entrega T1.</li>
+  </ul>
+
+  <h3>3.7 Almacenamiento por taller</h3>
+  <ul>
+    <li><b>Privado (E):</b> un disco <b>dedicado</b> (propuesto <code>tenant_private</code>) con <code>'serve' =&gt; false</code> y raíz por taller (<code>storage/app/tenants/{tenant_id}/private/…</code>), para documentos de siniestros y adjuntos futuros. Nunca <code>temporaryUrl</code> ni URL firmada: la firma no conoce el permiso, el taller ni la auditoría. Solo se descarga a través de un controller con permiso (requisitos en §8).</li>
+    <li><b>Disco <code>local</code> actual:</b> no se modifica ni se usa para el módulo. Mantiene <code>'serve' =&gt; true</code> sin uso en la aplicación; su revisión queda como deuda técnica para el handoff, sin desactivarlo en esta etapa.</li>
+    <li><b>Público:</b> <code>storage/app/public/tenants/{tenant_id}/…</code>, para logo y favicon, y para las fotos y firmas actuales hasta su migración (P8). <b>No se agregan nuevos tipos de archivo al disco <code>public</code></b>, salvo los recursos de branding que deben ser públicos.</li>
+    <li>El módulo no arma rutas a mano: usa un helper de rutas por taller desde la primera entrega (M4). Así la infraestructura (T4) cambia solo la raíz.</li>
+    <li><span class="tag w">Riesgo</span> <b>Deuda de seguridad (P8):</b> las fotos de recepción, las fotos de ítems de diagnóstico y las firmas de entrega tienen URL pública permanente (nombre aleatorio, sin permiso ni auditoría; una URL filtrada no se puede revocar). Se migran a almacenamiento privado en una <b>tarea independiente después de T4</b>, coordinando archivos, contrato de la API y frontend (<code>&lt;img&gt;</code> no envía el token, así que el frontend necesitaría descargar con <code>fetch</code> y mostrar un <code>blob:</code>), para no mover los archivos dos veces. Prioridad: primero la firma, después las fotos. <b>Debe estar resuelta antes del primer taller comercial:</b> mientras siga abierta, el requisito de seguridad del lanzamiento no se considera cumplido. Hasta entonces, fotos, firmas y branding funcionan como hoy.</li>
+  </ul>
+
+  <h3>3.8 Migraciones y versiones</h3>
+  <ul>
+    <li><b>Ubicación:</b> las migraciones de taller siguen en <code>database/migrations</code> (sin mover archivos). Las centrales van en <code>database/migrations/central</code>.</li>
+    <li><b>Comando de taller</b> (propuesto <code>tenants:migrate</code>): recorre los talleres con un lock por taller, registra el resultado en <code>tenant_migrations</code> y marca <code>schema_version</code>. Si un taller falla, queda en mantenimiento (<code>503 TENANT_MAINTENANCE</code>) y los demás continúan.</li>
+    <li><b>Regla de despliegue:</b> migraciones compatibles hacia atrás (agregar primero, quitar en un despliegue posterior). Se migra y después se publica el código.</li>
+    <li>La regla vigente "las migraciones no llaman a código de la aplicación" se mantiene.</li>
+  </ul>
+
+  <h3>3.9 Ciclo de vida, backups y restauración</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Operación</th><th>Pasos</th></tr></thead>
+    <tbody>
+      <tr><td>Alta</td><td><code>provisioning</code> → crear base → migraciones → <code>RolesAndPermissionsSeeder</code> → administrador inicial → <code>system_settings</code> → <code>active</code>. Cada paso es idempotente; si falla queda <code>provisioning_failed</code> y se puede limpiar.</td></tr>
+      <tr><td>Suspensión (P9)</td><td><code>suspended</code>: <b>bloqueo total y reversible</b>. Todas las rutas del dominio del taller, incluidas las públicas (<code>POST login</code>, <code>GET branding</code>), responden <code>403 TENANT_SUSPENDED</code>. El scheduler lo salta y los jobs pendientes se descartan con registro (avisos en <code>failed</code>, §3.5). No se borran datos ni se revocan tokens: al reactivar, las sesiones existentes vuelven a funcionar. La plataforma dispone de un <b>procedimiento operativo</b> de exportación asistida de datos y documentos cuando corresponda (no es una funcionalidad del MVP). El modo solo lectura y los modos según el motivo quedan como alternativa futura, sujeta a decisión comercial; no se implementan. <span class="tag u">Pendiente</span> obligaciones de conservación y acceso a documentos fiscales y datos personales durante la suspensión (contador o asesor legal).</td></tr>
+      <tr><td>Baja</td><td><code>cancelled</code>: exportación (JSON/CSV y archivos) y período de retención; después se borra la base y queda <code>deleted</code>. <span class="tag u">Incógnita</span> El plazo legal de conservación de facturas en Paraguay condiciona la retención.</td></tr>
+      <tr><td>Backup</td><td>Por taller (<code>mysqldump</code> de su base y su directorio en <code>storage</code>) más la central. Hay que fijar retención y probar la restauración periódicamente.</td></tr>
+      <tr><td>Restauración</td><td>Se restaura en una base con otro nombre, se verifica y se cambia <code>tenants.database</code> (cambio atómico de puntero). No afecta a los demás talleres.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>3.10 Migración de la instalación actual como primer taller</h3>
+  <ol class="plain">
+    <li>Vaciar la cola (<code>queue:work --stop-when-empty</code>) y hacer backup completo.</li>
+    <li>Crear la base central y migrarla.</li>
+    <li>Registrar el taller #1 con <code>database = synctaller</code>: <b>la base actual no se toca ni se renombra</b>.</li>
+    <li>Pasar los archivos a <code>tenants/{id}/</code>, o configurar para el taller #1 la raíz anterior para no mover nada en el primer paso.</li>
+    <li>Copiar <code>company.*</code> del <code>.env</code> a <code>system_settings</code> del taller #1 (T1).</li>
+    <li>Vuelta atrás: como la base del taller no cambia, alcanza con volver a la versión anterior del código.</li>
+  </ol>
+
+  <h3>3.11 Errores y recuperación</h3>
+  <ul>
+    <li>Si falla la conexión a la base del taller, la API responde <code>503 TENANT_UNAVAILABLE</code>. Se registra el detalle en el log central, nunca en la respuesta. No hay fallback a otra base.</li>
+    <li>Un worker que no logra conectar libera el job con espera, sin consumir intentos. Tras N fallas consecutivas, el taller se marca para revisión.</li>
+    <li>Healthcheck por taller (conexión y versión de esquema) para el monitoreo.</li>
+  </ul>
+
+  <h3>3.12 Pruebas de aislamiento</h3>
+  <ul>
+    <li><b>Suite actual sin cambios:</b> <code>TestCase</code> arranca en contexto de un taller de prueba (SQLite en archivo, como hoy). Los 374 tests no deberían notar el cambio.</li>
+    <li><b>Suite nueva <code>tests/Feature/Tenancy</code></b> con dos talleres (dos archivos SQLite), que verifica:
+      <ul>
+        <li>token de A en el host de B → 401;</li>
+        <li>un id que existe en A responde 404 en B;</li>
+        <li>las reglas <code>exists</code> no ven datos de otro taller;</li>
+        <li>un job despachado en A corre en A y deja el contexto limpio;</li>
+        <li>la cache y los permisos no se cruzan;</li>
+        <li>el almacenamiento escribe bajo la raíz del taller;</li>
+        <li>taller suspendido → 403 <code>TENANT_SUSPENDED</code>, también en login y branding; dominio desconocido → 404; base caída → 503 sin detalles;</li>
+        <li>un aviso en cola al suspender queda <code>failed</code> con motivo <code>Taller suspendido</code> y se puede reenviar después de reactivar;</li>
+        <li>el scheduler despacha un job por taller activo.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>3.13 Paquete o solución propia</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Opción</th><th>A favor</th><th>En contra y riesgos</th></tr></thead>
+    <tbody>
+      <tr class="rec"><td><b><code>spatie/laravel-multitenancy</code> 4.2.x</b> (primer candidato del spike, P2)</td><td>Pequeño y explícito: según su documentación, identifica por dominio, cambia de base, pone prefijo a la cache, tiene colas que conocen el taller y comandos por taller. Es del mismo autor que la librería de permisos que ya usamos.</td><td>Lo que no cubra (storage, configuración, scheduler) se escribe a mano. La 4.3.0 es demasiado reciente. Compatibilidad real sin probar.</td></tr>
+      <tr><td><code>stancl/tenancy</code> 3.10.1</td><td>Muy completo: bootstrappers de base, cache, filesystem y colas; comandos <code>tenants:*</code>.</td><td>Más "magia": el bootstrapper de filesystem cambia <code>storage_path</code> y afecta al disco <code>public</code> y a los enlaces simbólicos; más superficie que verificar. Sin v4 estable.</td></tr>
+      <tr><td>Solución propia</td><td>Sin dependencia; control total (middleware, job middleware, comando de migración, helper de storage).</td><td>Más código propio que mantener, y es justo el código donde un error causa fugas entre talleres.</td></tr>
+    </tbody>
+  </table></div>
+  <h4>Condiciones del spike T0 (P2, aprobadas)</h4>
+  <ol class="plain">
+    <li><b>Rama descartable</b> que no se mergea; <code>main</code> no se modifica. Primer candidato: <code>spatie/laravel-multitenancy</code>.</li>
+    <li><b>Selección de versión:</b> no se fija 4.2.1 de antemano. Al empezar se revisan el changelog y las notas de las versiones disponibles, en especial lo relativo a Laravel 13, PHP 8.3, conexiones, cache, colas y migraciones. Se elige preferentemente el último parche de la rama 4.2 con <b>al menos dos semanas publicado</b>; uno más reciente solo si el changelog muestra una corrección relevante de seguridad o compatibilidad. La versión exacta y su justificación se registran <b>antes</b> de instalarla.</li>
+    <li><b>Versión fija</b> durante toda la evaluación. Cambiarla exige documentar el motivo y consultar antes.</li>
+    <li><b>Evaluación:</b> todos los criterios S1–S13 y los umbrales de G; suite completa y pruebas de aislamiento entre talleres; informe con resultados, limitaciones y desviaciones.</li>
+    <li><b>Criterios críticos:</b> si falla S1, S2, S4, S5 o S7, se detiene la evaluación y se presentan los resultados. <b>No se pasa automáticamente</b> a <code>stancl/tenancy</code> ni a una solución propia: la siguiente alternativa requiere una decisión explícita.</li>
+    <li><b>La dependencia no queda aprobada</b> por el spike. Adoptarla en el producto o en <code>main</code> es una decisión aparte, tomada con el informe.</li>
+    <li><b>Acoplamiento:</b> si se adopta, su uso se concentra en pocos puntos (middleware, tareas de cambio de taller, helper de storage), sin dispersar sus APIs por modelos, controllers ni services de negocio. El almacenamiento respeta E.</li>
+  </ol>
+
+  <h4>Criterios S1–S13</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Debe demostrar</th></tr></thead>
+    <tbody>
+      <tr><td>S1</td><td>Composer lo resuelve sin cambiar <code>laravel/framework</code>, <code>laravel/sanctum</code> ni <code>spatie/laravel-permission</code>. Se informa el diff del lock y las dependencias transitivas</td></tr>
+      <tr><td>S2</td><td>La suite actual (374 tests) pasa con el paquete instalado y un taller activo en <code>TestCase</code></td></tr>
+      <tr><td>S3</td><td>Identificación por host: A usa la base A. Host desconocido → <code>404 TENANT_NOT_FOUND</code> con el contrato JSON (con <code>EnsureJsonResponse</code> primero)</td></tr>
+      <tr><td>S4</td><td>Token de A en el host de B → 401. Login en B con credenciales de A → rechazado</td></tr>
+      <tr><td>S5</td><td><code>exists:</code>/<code>unique:</code>, el binding con <code>scopeBindings</code> y el SQL crudo de <code>ReportService</code> ven solo la base actual</td></tr>
+      <tr><td>S6</td><td>Si los modelos actuales funcionan con la conexión por defecto o necesitan el trait del paquete. Se informa la lista de archivos a tocar</td></tr>
+      <tr><td>S7</td><td>Colas: un job despachado con <code>afterCommit</code> en A corre en A. Un worker alterna A/B/A sin cruces de base, configuración, cache ni permisos</td></tr>
+      <tr><td>S8</td><td>Base del taller caída: el job se libera sin consumir el intento de <code>SendClientNotification</code> (<code>$tries = 1</code>), y la API responde <code>503</code> sin detalles</td></tr>
+      <tr><td>S9</td><td>Cache y Spatie: cambiar permisos en A no afecta a B</td></tr>
+      <tr><td>S10</td><td>Migraciones por taller: una falla en un taller no detiene a los demás. Las migraciones centrales van separadas</td></tr>
+      <tr><td>S11</td><td>Scheduler: <code>notifications:send-reminders</code> corre por taller</td></tr>
+      <tr><td>S12</td><td>Qué no cubre el paquete (storage, configuración del taller) y cuánto código propio hace falta</td></tr>
+      <tr><td>S13</td><td>Sobrecarga por request en Nginx con php-cgi y aumento del tiempo de la suite, medidos con los umbrales de G (abajo)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>Umbrales de rendimiento para S13 (G, aprobados)</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Medida</th><th>Umbral</th><th>Cómo se mide</th></tr></thead>
+    <tbody>
+      <tr><td>Línea base</td><td>—</td><td><b>Antes</b> de instalar el paquete, en la notebook de desarrollo, con la configuración existente de Nginx y php-cgi</td></tr>
+      <tr><td>Sobrecarga por request</td><td>p95 de la sobrecarga ≤ el mayor entre <b>15 ms</b> y el <b>10 %</b> de la latencia de la línea base</td><td><code>GET /api/me</code>, el listado de OT, el detalle de una OT y un reporte, con requests autenticados</td></tr>
+      <tr><td>Endpoints públicos</td><td>p95 de la sobrecarga ≤ <b>15 ms</b></td><td>Endpoints públicos representativos (<code>POST /api/login</code>, <code>GET /api/branding</code>)</td></tr>
+      <tr><td>Tiempo de la suite</td><td>≤ <b>+20 %</b> sobre la línea base de 406 s (límite inicial: <b>487,2 s</b>)</td><td><code>php artisan test</code> completo, repetido en condiciones comparables</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Método:</b> las mismas solicitudes antes y después, en condiciones equivalentes y con suficientes muestras. Se informan p50 y p95 cuando la herramienta lo permita, los resultados de cada endpoint y un resumen. La cantidad de solicitudes y la herramienta se definen dentro del spike, <b>sin agregar dependencias al proyecto</b>.</li>
+    <li><b>Superar un umbral no descarta el paquete:</b> obliga a investigar la causa y evaluar una mitigación. Si se propone una, se vuelve a medir y se documenta su impacto en rendimiento, complejidad y mantenimiento antes de recomendar.</li>
+    <li><b>El rendimiento no sustituye a la seguridad:</b> un fallo crítico de aislamiento (S1, S2, S4, S5 o S7) sigue siendo motivo para no recomendar el paquete, sea cual sea su rendimiento.</li>
+    <li>El informe aclara que la medición local compara el antes y el después, pero <b>no garantiza el rendimiento en producción</b>.</li>
+  </ul>
+  <p class="callout"><span><b>Entregable del spike:</b> un informe con la tabla S1–S13 completa (cumple / no cumple, con evidencia), la versión elegida y su justificación, y las mediciones de S13. Si falla S1, S2, S4, S5 o S7, no se recomienda el paquete. <code>stancl/tenancy</code> 3.10.1 y la solución propia quedan como alternativas, sin autorización para evaluarlas ni implementarlas automáticamente. Instalar cualquier paquete en <code>main</code> requiere tu aprobación previa.</span></p>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <span class="secnum">§4</span>
+  <h2>Modelo de entidades y relaciones <span class="tag p">Propuesta</span></h2>
+  <p>Todo lo de esta sección vive en la base de cada taller. Las entidades existentes conservan sus columnas; las nuevas son propuestas.</p>
+
+<pre class="mermaid">
+erDiagram
+  CLIENT ||--o{ VEHICLE : "es dueño (existente)"
+  CLIENT ||--o{ RECEPTION : "cliente (existente)"
+  CLIENT ||--o| INSURER : "contraparte de facturación"
+  INSURER ||--o{ INSURER_CONTACT : tiene
+  INSURER ||--o{ CLAIM : gestiona
+  RECEPTION ||--o| CLAIM : "1:1 en el MVP"
+  CLAIM ||--o{ CLAIM_DOCUMENT : adjunta
+  RECEPTION ||--o{ BUDGET : "existente"
+  BUDGET ||--o{ BUDGET_ITEM : "existente (+responsibility)"
+  BUDGET ||--o{ BUDGET_CLIENT_ACCEPTANCE : "historial"
+  BUDGET ||--o{ INSURER_AUTHORIZATION : "versiones"
+  INSURER_AUTHORIZATION ||--o{ INSURER_AUTHORIZATION_ITEM : "por línea"
+  BUDGET_ITEM ||--o{ INSURER_AUTHORIZATION_ITEM : "autoriza"
+  BUDGET ||--o| WORK_ORDER : "existente"
+  WORK_ORDER ||--o| WORK_ORDER_CLOSING : "existente, inmutable"
+  WORK_ORDER ||--o{ ALLOCATION : "versiones"
+  CLAIM ||--o{ ALLOCATION : "deducible compartido"
+  ALLOCATION ||--o{ ALLOCATION_LINE : "porciones"
+  ALLOCATION_LINE }o--o| CLIENT : "responsable (nulo = taller)"
+  WORK_ORDER ||--o{ INVOICE : "existente"
+  INVOICE ||--o{ INVOICE_ITEM : "existente"
+  ALLOCATION_LINE ||--o{ INVOICE_ITEM : "factura"
+  INVOICE ||--o{ PAYMENT : "existente"
+  INTERNAL_EXCEPTION }o--|| WORK_ORDER : "habilita (polimórfico)"
+</pre>
+  <p><b>Cómo se lee:</b></p>
+  <ul>
+    <li>El <b>cliente</b> sigue siendo el dueño del vehículo y de la recepción.</li>
+    <li>Una <b>aseguradora</b> es un cliente de tipo empresa con datos propios y sus siniestros.</li>
+    <li>El <b>siniestro</b> cuelga de la recepción.</li>
+    <li>Las <b>autorizaciones</b> cuelgan de cada presupuesto, línea por línea.</li>
+    <li>El <b>reparto</b> cuelga de la OT y divide cada importe ejecutado en porciones: aseguradora, dueño o taller (absorción). Además registra la parte del deducible del siniestro que le toca, fuera de esas porciones.</li>
+    <li>Cada <b>línea de factura</b> apunta a la porción del reparto que factura.</li>
+  </ul>
+  <p>Cierre, factura y pago conservan su modelo.</p>
+
+  <h3>4.1 Clientes</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Cambio en <code>clients</code></th><th>Detalle</th><th>Compatibilidad</th></tr></thead>
+    <tbody>
+      <tr><td><code>kind</code> (nuevo, enum <code>ClientKind</code>: <code>person|company</code>)</td><td>Default <code>person</code>. Los registros existentes quedan <code>person</code> sin migrar datos.</td><td>Aditivo</td></tr>
+      <tr><td><code>business_name</code> (nuevo, nulo)</td><td>Obligatorio si es <code>company</code>; prohibido si es <code>person</code>.</td><td>Aditivo</td></tr>
+      <tr><td><code>first_name</code>, <code>last_name</code> → <code>nullable</code></td><td>Obligatorios si es <code>person</code> (con la regex actual); prohibidos si es <code>company</code>.</td><td>Cambio de columna no destructivo. Las personas siguen igual. <b>El frontend debe aceptar <code>null</code> solo para empresas.</b></td></tr>
+      <tr><td><code>display_name</code> (calculado, no columna)</td><td>Persona: <code>trim(first_name + ' ' + last_name)</code> (igual que hoy). Empresa: <code>business_name</code>.</td><td>Para personas el texto es idéntico al actual</td></tr>
+      <tr><td><code>document_number</code></td><td>Se mantiene único: CI para personas, RUC para empresas. <span class="tag u">Incógnita</span> No se valida el dígito verificador del RUC hasta confirmar el algoritmo.</td><td>Sin cambios</td></tr>
+      <tr><td><code>address</code> (nuevo, nulo)</td><td>Hoy el cliente no tiene dirección; la factura la toma como texto editable. <span class="tag u">Incógnita</span> ¿Es obligatoria en la factura a una empresa? Se propone como opcional.</td><td>Aditivo</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Cambio de tipo:</b> solo si el cliente no tiene recepciones ni facturas (propuesto <code>CLIENT_KIND_NOT_EDITABLE</code>, 422). Las facturas ya emitidas copian <code>customer_name</code>, así que tampoco se alterarían.</li>
+    <li><b>Validación de empresa:</b> <code>business_name</code> con la misma regex que <code>customer_name</code> de la factura (<code>/^[\pL\pN\s.,\-&amp;()']+$/u</code>, <code>UpdateInvoiceRequest.php:25</code>). Email y teléfono, como hoy.</li>
+    <li><b>Baja:</b> un cliente vinculado a una aseguradora no se elimina (propuesto <code>CLIENT_LINKED_TO_INSURER</code>, 409). Propongo pasar esa regla a un Service, sin cambiar el resto de la baja actual (D9).</li>
+    <li><b>Uso de <code>display_name</code> (P3):</b> reemplaza las concatenaciones manuales del nombre <b>del cliente</b> identificadas en §2.2: factura (<code>InvoiceService::generate</code>, <code>:69</code>), PDF, reportes (<code>ReportService::clientName</code>), mantenimiento, recepciones, el saludo de los avisos y el historial del vehículo (<code>VehicleHistoryController</code> usa <code>Client.display_name</code> para <code>vehicle.client.full_name</code>; la clave no cambia). No se tocan los nombres de usuarios ni de mecánicos. Para personas la salida no cambia; para empresas se muestra <code>business_name</code>.</li>
+    <li><b>Búsquedas (P3):</b> las búsquedas de cliente de <code>ClientController</code>, <code>VehicleController</code>, <code>BudgetController</code>, <code>WorkOrderController</code>, <code>ReceptionController</code> y <code>DiagnosticController</code> (los once puntos de §2.2) se amplían a <code>business_name</code>. Se mantienen los parámetros existentes, con sus nombres y contratos, y la estructura de las respuestas; la búsqueda actual por nombre y apellido sigue funcionando igual. La búsqueda del mecánico en <code>DiagnosticController</code> no cambia.</li>
+    <li><b>Habilitación (P3):</b> no se crean clientes empresa en producción hasta que el frontend admita <code>null</code> en <code>first_name</code>/<code>last_name</code> y presente el nombre con <code>display_name</code>. Los cambios se coordinan entre los dos repositorios.</li>
+    <li><b>Compatibilidad (P3):</b> los datos existentes y el contrato de los clientes particulares no cambian. La aprobación de P3 no aprueba el resto de M1: la validación del RUC y los requisitos fiscales de la factura a empresas siguen pendientes (§10.1).</li>
+  </ul>
+
+  <h3>4.2 Aseguradoras</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tabla (propuesta)</th><th>Campos</th><th>Reglas</th></tr></thead>
+    <tbody>
+      <tr><td><code>insurers</code></td><td><code>client_id</code> (único, FK a un cliente <code>company</code>), <code>code</code> <code>ASE-000001</code>, <code>status</code> (<code>active|inactive</code>), <code>payment_term_days</code> (nulo), <code>deductible_billing_mode</code> (nulo hasta validar; ver §6.6), <code>notes</code>, <code>created_by</code>, timestamps, soft delete</td><td>Razón social, RUC, email y teléfono se leen del <code>Client</code>: <b>no se duplican</b>. Con siniestros no se elimina (<code>INSURER_IN_USE</code>, 409): se desactiva. Inactiva: no admite siniestros nuevos (<code>INSURER_INACTIVE</code>, 422). <code>Auditable</code>.</td></tr>
+      <tr><td><code>insurer_contacts</code></td><td><code>insurer_id</code>, <code>name</code>, <code>role</code> (<code>claims|billing|adjuster_coordination|other</code>), <code>phone</code>, <code>email</code>, <code>is_primary</code>, <code>notes</code></td><td>Contactos operativos. Un solo principal por aseguradora. <code>Auditable</code>.</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Alta:</b> se envía <code>client_id</code> de un cliente <code>company</code> existente, <b>o</b> los datos del cliente para crear los dos registros en una transacción. Se exige uno de los dos, no ambos.</li>
+    <li><b>Errores:</b> cliente persona → <code>INSURER_CLIENT_NOT_COMPANY</code> (422); cliente ya vinculado → <code>INSURER_CLIENT_ALREADY_LINKED</code> (409).</li>
+    <li><b>Activar y desactivar:</b> mismo patrón que el catálogo de ítems de diagnóstico (6.3). Repetir la transición → <code>INSURER_INVALID_STATUS_TRANSITION</code> (422).</li>
+    <li><b>Avisos automáticos (D):</b> el cliente vinculado a una aseguradora queda con <code>notifications_enabled = false</code>, tanto si se crea en el alta como si se vincula un cliente existente (el cambio queda auditado por <code>Client</code>). El taller puede activarlos manualmente desde la ficha del cliente. Es una medida prudencial, no una prohibición. Los avisos del dueño no cambian, y una factura a nombre de la aseguradora nunca genera un recordatorio al dueño. Plantillas para aseguradoras, contacto de facturación y preferencias por tipo de aviso quedan para M11. <span class="tag u">Pendiente</span> antes de implementar, verificar el impacto de desactivar la preferencia global cuando el cliente vinculado ya se usa en otros flujos (recepciones o vehículos propios, sus facturas, mantenimiento).</li>
+  </ul>
+
+  <h3>4.3 Siniestros y documentos</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tabla (propuesta)</th><th>Campos</th></tr></thead>
+    <tbody>
+      <tr><td><code>claims</code></td><td>
+        <ul>
+          <li><b>Identificación:</b> <code>code</code> <code>SIN-000001</code>, <code>reception_id</code> (único), <code>insurer_id</code>, <code>claim_number</code> (nulo al abrir), <code>policy_number</code> (nulo).</li>
+          <li><b>Hecho:</b> <code>claim_type</code> (<code>own|third_party</code>), <code>loss_date</code>, <code>loss_description</code>.</li>
+          <li><b>Asegurado:</b> <code>insured_client_id</code> (nulo; si el asegurado ya es cliente), <code>insured_name</code>, <code>insured_document</code>, <code>insured_phone</code>, <code>insured_email</code>.</li>
+          <li><b>Perito:</b> <code>adjuster_name</code>, <code>adjuster_phone</code>, <code>adjuster_email</code>, <code>inspection_scheduled_at</code>, <code>inspected_at</code>.</li>
+          <li><b>Deducible:</b> <code>deductible_amount</code> decimal(14,2) (nulo = desconocido; 0 = sin deducible).</li>
+          <li><b>Estado:</b> <code>coverage_notes</code>, <code>status</code>, <code>closed_at</code>, <code>cancelled_at</code>, <code>cancelled_by</code>, <code>cancellation_reason</code>, <code>created_by</code>, timestamps.</li>
+        </ul>
+      </td></tr>
+      <tr><td><code>claim_documents</code></td><td>
+        <ul>
+          <li><b>Vínculo:</b> <code>claim_id</code>, <code>insurer_authorization_id</code> (nulo).</li>
+          <li><b>Clasificación:</b> <code>type</code> (<code>loss_report|policy|adjuster_report|authorization|photo|other</code>).</li>
+          <li><b>Archivo:</b> <code>original_name</code>, <code>path</code> (privado), <code>mime</code>, <code>size</code>, <code>sha256</code>.</li>
+          <li><b>Registro:</b> <code>notes</code>, <code>uploaded_by</code>, timestamps; soft delete con <code>deleted_by</code> y <code>deletion_reason</code>.</li>
+        </ul>
+      </td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Un siniestro por recepción (MVP).</b> Ampliarlo después: si un siniestro pasa a abarcar varias recepciones (por ejemplo, el vehículo vuelve por un complementario), se crea un pivote <code>claim_receptions</code> copiando <code>claims.reception_id</code>. Es una migración aditiva, sin borrar la columna en el mismo despliegue.</li>
+    <li><b>Número de siniestro:</b> único por aseguradora entre siniestros no cancelados, cuando está informado (<code>CLAIM_NUMBER_DUPLICATE</code>, 409).</li>
+    <li><b>Siniestro de tercero:</b> la aseguradora es la del otro conductor y el asegurado son datos de esa persona. El cliente de la recepción sigue siendo el dueño.</li>
+    <li><b>Documentos:</b>
+      <ul>
+        <li>En el disco privado dedicado de §3.7 (E), en <code>tenants/{id}/private/claims/{claim}/{uuid}.{ext}</code>: el nombre interno lo genera el servidor; el nombre original va solo en los metadatos.</li>
+        <li>Se validan la extensión, el tipo MIME real y el tamaño. Se admiten PDF, JPG, PNG y WEBP; <b>SVG y HTML quedan excluidos</b>. Límite <b>provisorio de 10 MB</b> por archivo, a validar con talleres. Se guarda el <code>sha256</code>.</li>
+        <li>Descarga solo por <code>GET …/download</code> con permiso, usando el trait <code>FileResponse</code> existente. Sin URL pública, <code>temporaryUrl</code> ni descarga directa. Requisitos completos en §8.</li>
+        <li>Un documento vinculado a una autorización registrada no se elimina (<code>CLAIM_DOCUMENT_IN_USE</code>, 409).</li>
+        <li><span class="tag w">Riesgo</span> El análisis antivirus queda fuera del alcance actual y se documenta como riesgo técnico pendiente. La validación de tipo y tamaño <b>no sustituye</b> un antivirus.</li>
+      </ul>
+    </li>
+    <li><b>Auditoría de acceso:</b> cada descarga se registra con <code>AuditLogger::record</code> y un evento nuevo (propuesto <code>AuditEvent::DOWNLOADED</code>), porque son datos personales y pólizas.</li>
+    <li><b>Relaciones entre talleres:</b> con una base por taller, las claves foráneas y las reglas <code>exists</code> ya impiden relaciones cruzadas. No hace falta validación adicional; la suite de aislamiento (3.12) lo comprueba.</li>
+  </ul>
+
+  <h3>4.4 Aceptación del cliente, autorización y excepción</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tabla (propuesta)</th><th>Campos</th><th>Notas</th></tr></thead>
+    <tbody>
+      <tr><td><code>budget_client_acceptances</code></td><td><code>budget_id</code>, <code>kind</code> (<code>approval|rejection|re_acceptance</code>), <code>decided_by</code> (usuario que registra), <code>decided_at</code>, <code>channel</code> (<code>ClientDecisionChannel</code>, reutilizado), <code>contact</code>, <code>notes</code>, <code>insurer_authorization_id</code> (nulo; versión de la autorización vigente al aceptar), <code>owner_amount</code> (base sin IVA a cargo del dueño, <b>calculada por el sistema</b>, ver §6.2), <code>deductible_amount</code> (deducible del siniestro vigente al aceptar)</td><td>Evidencia de cada aceptación (B): importe, usuario, fecha y hora, canal, presupuesto aceptado y versión de la autorización. Sin autorización todavía, <code>insurer_authorization_id</code> queda nulo y <code>owner_amount</code> cubre solo los ítems del dueño. La re-aceptación es una fila nueva (<code>re_acceptance</code>); las anteriores no se modifican. Historial: <code>reopen</code> borra <code>budgets.approved_at</code> (regla vigente) pero estas filas quedan. <code>budgets.approved_at</code> se mantiene por compatibilidad.</td></tr>
+      <tr><td><code>budget_items.responsibility</code> (nuevo, enum <code>owner|insurer</code>, default <code>owner</code>)</td><td>Qué se le pide a la aseguradora. Editable solo en borrador (regla vigente). <code>insurer</code> se permite solo si la recepción tiene siniestro abierto.</td><td>Aditivo. Sin siniestro, siempre <code>owner</code>.</td></tr>
+      <tr><td><code>insurer_authorizations</code></td><td><code>budget_id</code>, <code>claim_id</code>, <code>version</code> (por presupuesto), <code>status</code> (<code>current|superseded|invalidated</code>), <code>result</code> (<code>full|partial|rejected</code>, <b>calculado</b> a partir de las líneas), <code>authorization_number</code>, <code>decided_at</code> (fecha de la aseguradora), <code>channel</code>, <code>adjuster_name</code>, <code>authorized_total</code> (base sin IVA), <code>notes</code>, <code>registered_by</code>, <code>superseded_by_id</code>, <code>superseded_at</code>, <code>invalidated_at</code>, <code>invalidation_reason</code></td><td>Inmutable salvo los campos de sustitución o invalidación (patrón de <code>Invoice::booted</code>; <code>INSURER_AUTHORIZATION_IMMUTABLE</code>, 409). <code>Auditable</code>.</td></tr>
+      <tr><td><code>insurer_authorization_items</code></td><td><code>insurer_authorization_id</code>, <code>budget_item_id</code> (del <b>mismo</b> presupuesto), <code>decision</code> (<code>authorized|partial|not_covered</code>), <code>authorized_quantity</code>, <code>authorized_unit_price</code>, <code>authorized_total</code>, <code>notes</code></td><td>Totales con BCMath (<code>Decimal::round</code>). Tope por línea (P7): <code>authorized_total</code> ≤ <code>budget_items.total</code> y <code>authorized_quantity</code> ≤ <code>budget_items.quantity</code> (§5.3).</td></tr>
+      <tr><td><code>internal_exceptions</code></td><td><code>type</code> (<code>start_without_authorization|workshop_absorption</code>), <code>subject_type</code>/<code>subject_id</code> (presupuesto, OT o reparto), <code>amount</code> (nulo; obligatorio en absorción), <code>reason</code> (obligatorio, mínimo 10 caracteres), <code>granted_by</code>, <code>granted_at</code>, <code>consumed_at</code>, <code>consumed_by_type</code>/<code>consumed_by_id</code> (la operación que habilitó)</td><td>Inmutable. Permiso específico (§8). Una excepción habilita una operación concreta. <b>Ninguna excepción aumenta lo asignado o facturado a la aseguradora por encima de su autorización (C), ni el importe cobrable al dueño (B).</b> <code>start_without_authorization</code> solo habilita crear la OT sin autorización previa: no sustituye la autorización ni habilita importes. <code>workshop_absorption</code> solo reemplaza porciones del dueño por porciones del taller, con permiso, motivo y trazabilidad.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>4.5 Reparto económico</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tabla (propuesta)</th><th>Campos</th></tr></thead>
+    <tbody>
+      <tr><td><code>work_order_allocations</code></td><td><code>work_order_id</code>, <code>work_order_closing_id</code>, <code>claim_id</code>, <code>version</code>, <code>status</code> (<code>draft|confirmed|superseded</code>), <code>sale_total</code> (copia de control del cierre), <code>deductible_amount</code> (capa B: parte del deducible del siniestro asignada a esta OT, en guaraníes, tal como se informa. En un reparto confirmado tiene valor y es ≥ 0, porque con el deducible del siniestro desconocido el reparto no se confirma (<code>CLAIM_DEDUCTIBLE_UNKNOWN</code>) y R7 suma este campo. <b>No es un importe en base ni facturable:</b> no genera líneas de factura ni habilita la facturación, y su tratamiento fiscal queda pendiente hasta M10 (§6.6). El mecanismo de la marca "tratamiento fiscal pendiente" se define en M8.), <code>notes</code>, <code>created_by</code>, <code>confirmed_by</code>, <code>confirmed_at</code>, <code>superseded_by_id</code>, <code>superseded_at</code></td></tr>
+      <tr><td><code>work_order_allocation_lines</code> (porciones)</td><td><code>allocation_id</code>, <code>portion_type</code> (<code>insurer_covered|owner_responsibility|owner_uncovered|workshop_absorbed</code>), <code>source_type</code>/<code>source_id</code> (el concepto ejecutado: el mismo morph que <code>invoice_items.source</code>, <code>WorkOrderItem</code> o <code>WorkOrderPart</code>), <code>budget_item_id</code> (nulo en extras), <code>client_id</code> (responsable; nulo = taller, solo en <code>workshop_absorbed</code>), <code>insurer_authorization_item_id</code> (en <code>insurer_covered</code>), <code>internal_exception_id</code> (obligatorio en <code>workshop_absorbed</code>), <code>amount</code> (base sin IVA, siempre &gt; 0), <code>description</code>. Índice único por (<code>allocation_id</code>, concepto, <code>portion_type</code>): como máximo una porción por tipo y concepto</td></tr>
+    </tbody>
+  </table></div>
+  <p>El reparto tiene <b>dos capas</b> separadas (revisión H1–H3, H15):</p>
+  <ul>
+    <li><b>Capa A, porciones:</b> en base sin IVA y conciliables con el cierre. Cada concepto ejecutado se divide en porciones positivas por tipo:
+      <ul>
+        <li><code>insurer_covered</code>: la paga la aseguradora, hasta lo autorizado;</li>
+        <li><code>owner_responsibility</code>: la línea ya era del dueño, o es un extra;</li>
+        <li><code>owner_uncovered</code>: lo no autorizado o el exceso sobre lo autorizado, a cargo del dueño;</li>
+        <li><code>workshop_absorbed</code>: la absorbe el taller con una excepción.</li>
+      </ul>
+      No hay ajustes con signo ni <code>adjustment_group</code>: el exceso y la absorción son porciones del concepto, no transferencias.</li>
+    <li><b>Capa B, deducible:</b> una obligación del dueño por el importe informado, ligada al siniestro y consumida por los repartos confirmados (R7). Se guarda tal como se informa, marcada como <b>tratamiento fiscal pendiente</b>; no participa de las sumas en base, no se convierte a base sin IVA y no se factura en el MVP (M10). Tres campos comparten el nombre <code>deductible_amount</code> con significados distintos: en <code>claims</code>, el deducible del siniestro; en <code>budget_client_acceptances</code>, el deducible vigente al aceptar; en <code>work_order_allocations</code>, la parte del deducible asignada a una OT.</li>
+  </ul>
+  <p class="callout"><span><b>Refactor necesario y justificado:</b> el detalle por origen hoy se calcula dentro de <code>InvoiceService::linesFromWorkOrder</code> (privado). Reparto y factura deben salir del mismo cálculo para no divergir. Propongo moverlo a un componente compartido (por ejemplo <code>WorkOrderSaleBreakdown</code>) <b>sin cambiar el resultado</b>, con un test de igualdad contra el comportamiento actual antes de usarlo en otro lado.</span></p>
+
+  <h3>4.6 Facturas</h3>
+  <ul>
+    <li><code>invoices.allocation_id</code> (nuevo, nulo): versión del reparto que factura. Nulo en el flujo particular.</li>
+    <li><code>invoice_items.allocation_line_id</code> (nuevo, nulo): porción del reparto que factura.</li>
+    <li><code>source</code> sigue siendo el concepto ejecutado. El deducible <b>no</b> genera líneas de factura en el MVP; su tratamiento en la factura (y cualquier <code>source</code> propio) se define en M10, con la respuesta de G1.</li>
+    <li><b>Redondeo al facturar una porción</b> (revisión H10): si el importe de la porción no es igual a <code>cantidad × precio unitario base</code>, la línea va con cantidad 1 y base igual al importe, y la cantidad real se indica en la descripción (Ejemplo 5, §6.2). R8 compara <code>base_total</code>, que así siempre es exacto.</li>
+    <li><code>invoices.client_id</code> pasa a significar <b>destinatario</b>. En las facturas existentes el valor no cambia; la regla 6.10 se documenta.</li>
+  </ul>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <span class="secnum">§5</span>
+  <h2>Flujos y estados <span class="tag p">Propuesta</span></h2>
+
+  <h3>5.1 Reparación asegurada de punta a punta</h3>
+<pre class="mermaid">
+sequenceDiagram
+  participant R as Recepción
+  participant S as Siniestro
+  participant B as Presupuesto
+  participant A as Autorización
+  participant C as Aceptación cliente
+  participant W as OT
+  participant D as Reparto
+  participant F as Facturas
+  R->>S: abrir siniestro (aseguradora, deducible, documentos)
+  R->>B: crear presupuesto, marcar líneas "aseguradora"
+  B->>B: send (exige diagnósticos cerrados, regla vigente)
+  B->>A: registrar autorización v1 (por línea)
+  A-->>B: total, parcial o rechazada
+  B->>C: approve (registra canal, monto a cargo del dueño y versión de autorización)
+  B->>W: createFromBudget (verifica autorización y aceptación, o excepción)
+  W->>W: ejecutar y completar (cierre inmutable, sin cambios)
+  W->>D: generar reparto en borrador desde cierre, autorización y deducible
+  D->>D: confirmar (verifica R1 a R7, con resumen previo)
+  D->>F: una factura por responsable (solo con deducible 0 en el MVP)
+  F->>F: emitir, cobrar y entregar (reglas vigentes por factura)
+</pre>
+  <p>El flujo particular es el mismo sin los pasos de siniestro, autorización y reparto. El presupuesto se aprueba como hoy, la OT se crea como hoy y la factura se genera con <code>POST work-orders/{id}/invoice</code> como hoy.</p>
+  <p class="callout warn"><span><b>Restricción del MVP (A):</b> los pasos de facturación y entrega del diagrama solo se completan con el deducible del siniestro informado e igual a 0. Con deducible mayor a 0, el reparto se confirma pero no se emite ninguna factura de esa OT, y <b>la OT no se entrega por el flujo habitual</b> hasta M10: la entrega lo rechaza explícitamente (<code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>, §7.1). No hay excepción para entregar sin cumplir ese control. Con deducible nulo, el reparto no se confirma (§6.6) y la entrega también se rechaza con el mismo control.</span></p>
+
+  <h3>5.2 Siniestro</h3>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> open: alta (recepción abierta, aseguradora activa)
+  open --> closed: recepción entregada (sync)
+  open --> cancelled: cancelación manual con motivo / recepción cancelada
+  closed --> open: entrega anulada (sync)
+  closed --> [*]
+  cancelled --> [*]
+</pre>
+  <ul>
+    <li>Solo tres estados explícitos. El avance (esperando autorización, autorizado, facturado…) se <b>calcula</b> a partir de las autorizaciones, el reparto y las facturas. No se mezcla en un único estado.</li>
+    <li>La sincronización usa el mismo criterio que <code>ReceptionStatusService::sync()</code>: el siniestro se cierra o se reabre cuando la recepción se entrega o se anula la entrega.</li>
+    <li><b>Cancelación manual</b> (por ejemplo, la aseguradora niega la cobertura y el dueño paga como particular):
+      <ul>
+        <li>no se permite con porciones <code>insurer_covered</code> en un reparto confirmado o con facturas vigentes a la aseguradora (<code>CLAIM_HAS_INSURER_ALLOCATIONS</code>, 422);</li>
+        <li>las líneas <code>insurer</code> de presupuestos en borrador vuelven a <code>owner</code>.</li>
+      </ul>
+    </li>
+    <li><b>Edición:</b> solo <code>open</code> y con la recepción editable (<code>RECEPTION_CLOSED</code> vigente). Con una factura vigente a la aseguradora, el deducible no se puede cambiar (<code>CLAIM_DEDUCTIBLE_LOCKED</code>, 422). Para cambiarlo, esa factura se resuelve antes con el procedimiento vigente: se elimina el borrador, o se anula la factura emitida (previa anulación de sus pagos, si los tiene). <span class="tag u">Pendiente G5</span> la validez fiscal de anular una factura emitida depende de G5. Si el deducible pasa a ser mayor a 0, no se puede generar ni emitir ninguna factura del siniestro (§6.6): la emisión revalida el deducible del siniestro (A; <code>issue</code>, §7.1). Una factura ya emitida al dueño no se modifica por el cambio de deducible; su adecuación fiscal depende de G1 y esta especificación no la da por válida ni por inválida. Aunque esa factura exista, la OT no se entrega mientras el deducible sea mayor a 0 o nulo (<code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>, §7.1). Editar el deducible bloquea el siniestro (orden de §6.3).</li>
+    <li><b>Deducible y aceptación:</b> si el deducible sube, hace falta una re-aceptación del dueño antes de confirmar un reparto (<code>CLAIM_DEDUCTIBLE_NOT_ACCEPTED</code>, 422; §5.4).</li>
+  </ul>
+
+  <h3>5.3 Autorización de la aseguradora</h3>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> current: registrar v(n) (presupuesto sent o approved)
+  current --> superseded: se registra v(n+1)
+  current --> invalidated: presupuesto reabierto o cancelado
+  superseded --> [*]
+  invalidated --> [*]
+</pre>
+  <ul>
+    <li><b>Cuándo se registra:</b> con el presupuesto <code>sent</code> o <code>approved</code> (la aseguradora puede responder tarde) y la recepción con siniestro <code>open</code>. En <code>draft</code>, <code>rejected</code> o <code>cancelled</code> → <code>INSURER_AUTHORIZATION_BUDGET_NOT_AUTHORIZABLE</code> (422). Sin siniestro → <code>BUDGET_WITHOUT_CLAIM</code> (422).</li>
+    <li><b>Líneas:</b> se requiere una por cada ítem <code>responsibility = insurer</code>. Las líneas a cargo del dueño no llevan autorización. Una línea de otro presupuesto → <code>INSURER_AUTHORIZATION_ITEM_MISMATCH</code> (422).</li>
+    <li><b>Rechazo total:</b> se registra sin líneas y todas quedan <code>not_covered</code>.</li>
+    <li><b>Tope por línea (P7):</b> <code>authorized_total</code> ≤ <code>budget_items.total</code> y <code>authorized_quantity</code> ≤ <code>budget_items.quantity</code>, validados juntos (<code>INSURER_AUTHORIZATION_EXCEEDS_BUDGET</code>, 422). Sin excepciones ni parámetros configurables. Lo que exceda lo presupuestado se cubre con un <b>presupuesto complementario</b>, con su propia aceptación y autorización. Así <code>owner_amount</code> nunca es negativo. <span class="tag u">Pendiente</span> el tope es una decisión interna aprobada; su adecuación a la práctica de las aseguradoras se valida con la pregunta V1 de §10.1 (no con G6).</li>
+    <li><b>Unidades (P7, para M6):</b> <code>authorized_total</code> se guarda en base sin IVA, como el presupuesto. La pantalla y la API identifican explícitamente si el importe ingresado incluye IVA. <span class="tag u">Pendiente</span> en qué unidad comunican sus importes las aseguradoras (aseguradoras y contador) antes de cerrar esa parte de M6.</li>
+    <li><b>Aumento de la autorización (C):</b> si la aseguradora acepta un importe mayor (dentro del tope), se registra una nueva versión de la autorización con su evidencia (documento vinculado). Ninguna excepción interna lo reemplaza.</li>
+    <li><b>Una sola vigente</b> por presupuesto. Registrar una nueva versión sustituye la anterior en la misma transacción, con bloqueo del presupuesto.</li>
+    <li><b>Invalidación automática:</b> al reabrir el presupuesto (<code>BudgetService::reopen</code>) o cancelarlo.</li>
+  </ul>
+
+  <h3>5.4 Aceptación del cliente</h3>
+  <ul>
+    <li><code>POST budgets/{budget}/approve</code> sigue igual y <b>sin body obligatorio</b>. Acepta opcionalmente <code>channel</code>, <code>contact</code> y <code>notes</code>. Además crea una fila <code>approval</code> con el usuario, el monto a cargo del dueño y la autorización vigente. <code>reject</code> crea una fila <code>rejection</code>.</li>
+    <li><b>Re-aceptación</b> (propuesta <code>POST budgets/{budget}/client-acceptances</code>): cuando el presupuesto ya está <code>approved</code> y la parte del dueño <b>aumenta</b> (autorización que baja, deducible que sube o consumo mayor al presupuestado), hay que registrar que el dueño acepta el nuevo monto. Es una fila nueva con la misma evidencia que la aceptación. El estado del presupuesto no cambia.</li>
+  </ul>
+
+  <h4>Control estricto de la aceptación del dueño (B, aprobado)</h4>
+  <ul>
+    <li><b>Tope aceptado de una OT</b> = <code>owner_amount</code> de la última aceptación de su presupuesto + Σ extras aprobados por el cliente (cantidad × precio aprobados). Los extras no pueden consumir más de lo aprobado (<code>WORK_ORDER_PART_EXCEEDS_APPROVED</code>, vigente).</li>
+    <li><b><code>owner_amount</code> lo calcula el sistema:</b> Σ ítems a cargo del dueño + Σ (total − autorizado) de los ítems a cargo de la aseguradora, según la versión de autorización vigente.</li>
+    <li><b>Al confirmar el reparto</b>, la suma de las porciones del dueño no puede superar el tope aceptado (R5, <code>ALLOCATION_OWNER_AMOUNT_NOT_ACCEPTED</code>). <b>Sin tolerancia automática.</b></li>
+    <li><b>Formas de resolver la diferencia:</b> una re-aceptación del dueño, una excepción <code>workshop_absorption</code> autorizada y justificada, o un presupuesto complementario con su propia aceptación, según corresponda.</li>
+    <li><b>Una excepción interna nunca aumenta el tope</b> ni evita R5. Solo puede bajar lo que paga el dueño (absorción) o permitir empezar sin autorización.</li>
+    <li><b>La ejecución no se detiene:</b> el control se aplica al confirmar el reparto. Lo que queda bloqueado es la facturación y, por lo tanto, la entrega.</li>
+    <li><b>Advertencia en la OT (B):</b> cuando el importe potencial a cargo del dueño, calculado con la ejecución actual, supera lo aceptado, el detalle de la OT con siniestro muestra una advertencia visible para que el taller lo resuelva durante la reparación. Es informativa: no bloquea ni cambia ninguna regla. El nombre del campo en la API se define en M7–M8.</li>
+    <li>No se modifica la regla actual de consumo de repuestos (6.7) y el flujo particular no tiene este control.</li>
+  </ul>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Cambio</th><th>Efecto</th></tr></thead>
+    <tbody>
+      <tr><td>La autorización baja</td><td>Antes de la OT: bloquea la creación (<code>WORK_ORDER_CLIENT_ACCEPTANCE_OUTDATED</code>). Después: R5 al confirmar el reparto</td></tr>
+      <tr><td>La autorización sube</td><td>Nada (la parte del dueño baja)</td></tr>
+      <tr><td>El deducible del siniestro sube</td><td>Re-aceptación antes de confirmar un reparto (<code>CLAIM_DEDUCTIBLE_NOT_ACCEPTED</code>)</td></tr>
+      <tr><td>Consumo mayor al presupuestado</td><td>El exceso va al dueño como <code>owner_uncovered</code> y se aplica R5 (Ejemplo 2)</td></tr>
+      <tr><td>Extra de repuesto</td><td>Su decisión del cliente (vigente) suma al tope</td></tr>
+      <tr><td>Mano de obra adicional</td><td>Presupuesto complementario con su propia aceptación y autorización</td></tr>
+      <tr><td>Complementario</td><td>Tope propio: el reparto de la OT2 usa solo las aceptaciones de P2</td></tr>
+      <tr><td>Nueva versión del reparto</td><td>Se vuelve a controlar R5 contra el mismo tope</td></tr>
+      <tr><td>Excepción interna</td><td><b>Nunca</b> aumenta el tope ni evita R5</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.5 Interacción con la OT</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Momento</th><th>Condición (solo con siniestro)</th><th>Error propuesto</th><th>Excepción</th></tr></thead>
+    <tbody>
+      <tr><td>Crear la OT (<code>WorkOrderService::createFromBudget</code>)</td><td>Cada ítem <code>insurer</code> está <code>authorized</code> o <code>partial</code> en la autorización vigente</td><td><code>WORK_ORDER_INSURER_AUTHORIZATION_REQUIRED</code> (422)</td><td><code>start_without_authorization</code> sobre el presupuesto</td></tr>
+      <tr><td>Crear la OT</td><td>La última aceptación del dueño cubre su parte bajo la autorización vigente (<code>owner_amount</code> aceptado ≥ parte actual del dueño)</td><td><code>WORK_ORDER_CLIENT_ACCEPTANCE_OUTDATED</code> (422)</td><td>No: se registra una re-aceptación. <code>start_without_authorization</code> no la reemplaza</td></tr>
+      <tr><td>Iniciar, pausar, completar</td><td>Sin cambios. Si la autorización baja o se consume más de lo presupuestado durante la ejecución, no se bloquea: la OT muestra la advertencia de B (§5.4) y la diferencia se resuelve al confirmar el reparto (R5)</td><td>—</td><td>—</td></tr>
+      <tr><td>Extras (<code>WorkOrderPart</code> sin <code>budget_item</code>, P5)</td><td>Flujo vigente (<code>awaiting_approval</code> con decisión del cliente), sin cambios. En el reparto quedan <b>a cargo del dueño</b>, salvo absorción autorizada del taller; no pueden asignarse a la aseguradora en el MVP. <b>Antes de confirmar el alta</b> de un extra en una OT con siniestro, se muestra: «Este repuesto quedará a cargo del dueño. Si debe cubrirlo la aseguradora, cargalo en un presupuesto complementario». La advertencia informa el criterio: no autoriza excepciones ni cambia las reglas de aprobación del extra</td><td><code>ALLOCATION_EXTRA_NOT_COVERABLE</code> (422)</td><td>No: para cubrirlos se hace un complementario</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5.6 Presupuestos complementarios</h3>
+  <ul>
+    <li><span class="tag h">Hecho</span> Una recepción admite N presupuestos (<code>BudgetService::create</code> solo exige la recepción abierta) y cada presupuesto aprobado genera su propia OT (<code>work_orders.budget_id</code> único). No existe un tipo "complementario" ni un vínculo al original.</li>
+    <li><b>Propuesta:</b> no se crea un tipo nuevo. El complementario es otro presupuesto de la misma recepción, con <b>su propia</b> autorización (FK <code>budget_id</code>) y su propia OT.</li>
+    <li><b>Por qué la cobertura no se arrastra:</b>
+      <ul>
+        <li>la autorización solo puede referenciar ítems de su presupuesto;</li>
+        <li>el reparto de una OT solo lee la autorización del presupuesto de esa OT;</li>
+        <li>los extras nunca se cubren automáticamente.</li>
+      </ul>
+    </li>
+    <li><b>Criterio operativo (P5):</b> un daño oculto, un repuesto o un trabajo adicional que deba cubrir la aseguradora se tramita con un complementario, <b>no como extra</b>. Un complementario no corrige retroactivamente un extra ya consumido: ese extra sigue a cargo del dueño o se absorbe con excepción. <span class="tag u">Pendiente</span> validar con talleres y aseguradoras si exigen complementario para daños ocultos y si es operativo con un solo repuesto.</li>
+    <li><b>Deducible compartido:</b> el deducible es uno por siniestro aunque haya varias OT. Se controla a nivel de siniestro (R7 y concurrencia en §6.3; Ejemplo 4).</li>
+    <li>Más adelante se podría agregar <code>budgets.supplements_budget_id</code> (nulo) para reportes. No hace falta en el MVP.</li>
+  </ul>
+
+  <h3>5.7 Reparto económico</h3>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> draft: generar (OT completada con siniestro)
+  draft --> draft: reasignar / dividir / agregar absorción
+  draft --> confirmed: confirmar (R1 a R7)
+  draft --> [*]: descartar borrador
+  confirmed --> superseded: nueva versión confirmada (sin facturas vigentes en la anterior)
+  superseded --> [*]
+</pre>
+  <ul>
+    <li><b>Generación en borrador</b> (propuesta <code>POST work-orders/{id}/allocations</code>). Por cada concepto ejecutado, desde el componente compartido de 4.5:
+      <ul>
+        <li>si su ítem es <code>insurer</code>, la aseguradora recibe porciones <code>insurer_covered</code> hasta lo autorizado. El tope se aplica <b>por <code>budget_item</code>, sumando todos sus conceptos</b> (por ejemplo, el <code>WorkOrderItem</code> y su <code>WorkOrderPart</code>), y el resto va al dueño como <code>owner_uncovered</code> (revisión H9);</li>
+        <li>los extras y las líneas <code>owner</code>, al dueño como <code>owner_responsibility</code>;</li>
+        <li>el deducible (capa B) se propone con el deducible restante del siniestro. Es solo una <b>sugerencia</b>: los borradores no reservan deducible y se revalida al confirmar (R7, §6.3).</li>
+      </ul>
+    </li>
+    <li><b>Edición del borrador:</b> reasignar, dividir importes o agregar una absorción del taller (requiere excepción). No hay más de un borrador por OT (<code>ALLOCATION_DRAFT_EXISTS</code>, 409).</li>
+    <li><b>Confirmación:</b> antes de confirmar se muestra un <b>resumen de responsables e importes</b> (P6), para reducir errores. Al confirmar se validan R1–R7 con el bloqueo de §6.3.</li>
+    <li><b>Corrección (P6):</b> se genera una nueva versión desde la confirmada. Para confirmarla, la versión anterior <b>no puede tener facturas vigentes</b> (<code>ALLOCATION_HAS_INVOICES</code>, 409). El error incluye en <code>errors</code> el detalle de cada factura a resolver: número, destinatario, estado y si tiene pagos. El orden es:
+      <ol class="plain">
+        <li>los borradores de factura se eliminan;</li>
+        <li>las facturas emitidas sin pagos se anulan con motivo (procedimiento vigente);</li>
+        <li>si hay pagos, primero se anulan con el procedimiento vigente (<code>INVOICE_HAS_PAYMENTS</code> sigue vigente) y después la factura;</li>
+        <li>se confirma la nueva versión, se vuelve a facturar y se registran nuevamente los pagos.</li>
+      </ol>
+      Las versiones sustituidas, las facturas anuladas y los pagos anulados quedan vinculados: no se pierde historial. Los números de factura anulados no se reutilizan. No cambia ninguna otra regla de facturación o pagos.</li>
+    <li><span class="tag u">Pendiente G5</span> La validez fiscal de anular facturas emitidas y entregadas como método de corrección <b>depende de G5</b> (contador). Si G5 determina que corresponde una nota de crédito, este circuito se revisa <b>antes de implementarlo</b>.</li>
+    <li><b>Sin siniestro, o sin líneas a cargo de la aseguradora:</b> no se genera reparto. Se usa el flujo actual.</li>
+  </ul>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <span class="secnum">§6</span>
+  <h2>Reglas de negocio e invariantes <span class="tag p">Propuesta</span></h2>
+
+  <h3>6.1 Definición de importes (en base sin IVA, como el cierre, salvo el deducible)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Importe</th><th>Fuente</th></tr></thead>
+    <tbody>
+      <tr><td>Presupuestado</td><td>Σ <code>budget_items.total</code> de los presupuestos de la recepción</td></tr>
+      <tr><td>Autorizado</td><td>Σ <code>insurer_authorization_items.authorized_total</code> de las versiones vigentes</td></tr>
+      <tr><td>Tope aceptado por el dueño</td><td><code>owner_amount</code> de la última aceptación del presupuesto de la OT + Σ extras aprobados por el cliente (§5.4)</td></tr>
+      <tr><td>Ejecutado</td><td><code>work_order_closings.sale_total</code> (inmutable) y su detalle por concepto (componente compartido, §4.5)</td></tr>
+      <tr><td>Cubierto</td><td>Σ porciones <code>insurer_covered</code> del reparto confirmado</td></tr>
+      <tr><td>A cargo del dueño</td><td>Σ porciones <code>owner_responsibility</code> + <code>owner_uncovered</code></td></tr>
+      <tr><td>Absorbido por el taller</td><td>Σ porciones <code>workshop_absorbed</code> (sin cliente)</td></tr>
+      <tr><td>Deducible (capa B)</td><td><code>deductible_amount</code> de los repartos confirmados del siniestro, <b>como importe informado</b>: no se suma a los importes en base</td></tr>
+      <tr><td>Facturado</td><td>Σ <code>invoice_items.base_total</code> de facturas vigentes, por <code>allocation_line_id</code></td></tr>
+      <tr><td>Cobrado y saldo</td><td>Como hoy, por factura (<code>Invoice::paidTotal()</code>, <code>balance()</code>), con IVA</td></tr>
+      <tr><td>Pendiente de facturar</td><td>Porción − facturado vigente, por porción</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><span><span class="tag u">Pendiente G1</span> Se desconoce si el importe del deducible incluye IVA y cómo se factura (G1–G2). Por eso <code>deductible_amount</code> se guarda tal cual se informa, no se convierte a base sin IVA, no se compara con lo cubierto y no se factura (§6.6). Comparar el deducible con lo cubierto queda para M10; en el MVP solo se controla R7, que compara importes en las mismas unidades.</span></p>
+
+  <h3>6.2 Invariantes verificables (R1–R10, reemplazan a I1–I8)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Regla</th><th>Error propuesto</th></tr></thead>
+    <tbody>
+      <tr><td>R1</td><td><b>Una sola asignación por concepto:</b> por cada concepto ejecutado <code>c</code>, Σ porciones = <code>b(c)</code>. Ningún concepto queda fuera del desglose ni tiene porciones en cero o negativas</td><td><code>ALLOCATION_INCOMPLETE</code> (422)</td></tr>
+      <tr><td>R2</td><td><b>Conciliación con el cierre:</b> Σ porciones = Σ <code>b(c)</code> = <code>closing.sale_total</code>, y la copia de control <code>allocation.sale_total</code> coincide (mismo criterio que <code>INVOICE_TOTAL_MISMATCH</code>)</td><td><code>ALLOCATION_TOTAL_MISMATCH</code> (409)</td></tr>
+      <tr><td>R3</td><td><b>Tope de autorización:</b> por cada <code>budget_item</code> a cargo de la aseguradora, Σ <code>insurer_covered</code> de sus conceptos ≤ <code>authorized_total</code> de la autorización referenciada. <b>Ninguna excepción lo habilita</b> (C)</td><td><code>ALLOCATION_EXCEEDS_AUTHORIZATION</code> (422)</td></tr>
+      <tr><td>R4</td><td>Los conceptos a cargo del dueño y los extras solo admiten porciones del dueño o del taller (P5)</td><td><code>ALLOCATION_EXTRA_NOT_COVERABLE</code> (422)</td></tr>
+      <tr><td>R5</td><td>Σ porciones del dueño ≤ tope aceptado de la OT (§5.4, B), sin tolerancia</td><td><code>ALLOCATION_OWNER_AMOUNT_NOT_ACCEPTED</code> (422)</td></tr>
+      <tr><td>R6</td><td><code>workshop_absorbed</code> reemplaza solo porciones del dueño. Exige una excepción <code>workshop_absorption</code> de esta OT con importe ≥ lo absorbido, que se consume al confirmar</td><td><code>ALLOCATION_ABSORPTION_NOT_AUTHORIZED</code> (422)</td></tr>
+      <tr><td>R7</td><td>Σ <code>deductible_amount</code> de los repartos confirmados del siniestro (excluidas las versiones sustituidas) ≤ <code>claims.deductible_amount</code>, en las mismas unidades (importe informado). Así no se cobra dos veces con varias OT</td><td><code>ALLOCATION_DEDUCTIBLE_EXCEEDS_CLAIM</code> (422)</td></tr>
+      <tr><td>R8</td><td><b>Facturación acotada:</b> por porción, Σ <code>base_total</code> en facturas vigentes ≤ importe; el destinatario es el cliente de la porción; las porciones del taller y el deducible nunca se facturan en el MVP</td><td><code>INVOICE_EXCEEDS_ALLOCATION</code> (409)</td></tr>
+      <tr><td>R9</td><td><b>Reconciliación final:</b> con todo facturado, Σ base de facturas vigentes + Σ absorbido = <code>sale_total</code></td><td>Control al consultar el reparto (no bloquea)</td></tr>
+      <tr><td>R10</td><td><b>Particular intacto:</b> sin siniestro vigente o sin ítems a cargo de la aseguradora, no se guarda reparto. <code>POST work-orders/{id}/invoice</code> sigue con sus validaciones y <code>error_code</code> actuales (<code>WORK_ORDER_ALREADY_INVOICED</code>, <code>INVOICE_TOTAL_MISMATCH</code>, <code>WORK_ORDER_NOT_INVOICEABLE</code>)</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+  <p>Además, al confirmar: deducible nulo → <code>CLAIM_DEDUCTIBLE_UNKNOWN</code>; deducible mayor que el aceptado → <code>CLAIM_DEDUCTIBLE_NOT_ACCEPTED</code> (§6.6, §5.4).</p>
+
+  <h4>Ejemplos numéricos</h4>
+  <p>Importes en guaraníes, en base sin IVA salvo que se indique. Tasa 10 % y redondeo según <code>InvoiceItem::recalculate</code>.</p>
+
+  <div class="example">
+    <h4>Ejemplo 1: autorización parcial, extra aprobado y deducible 0</h4>
+    <p><b>Presupuesto P1</b></p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Ítem</th><th>Responsable pedido</th><th>Cantidad × precio</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        <tr><td>i1 Chapería puerta (mano de obra)</td><td>aseguradora</td><td>1 × 1.000.000</td><td class="num">1.000.000</td></tr>
+        <tr><td>i2 Paragolpe (repuesto de catálogo)</td><td>aseguradora</td><td>2 × 500.000</td><td class="num">1.000.000</td></tr>
+        <tr><td>i3 Pintura (servicio)</td><td>aseguradora</td><td>1 × 600.000</td><td class="num">600.000</td></tr>
+        <tr><td>i4 Alineación (mano de obra)</td><td>dueño</td><td>1 × 150.000</td><td class="num">150.000</td></tr>
+      </tbody>
+    </table></div>
+    <ul>
+      <li><b>Autorización v1:</b> i1 800.000 (parcial), i2 1.000.000 (total), i3 no cubierto. Autorizado: 1.800.000.</li>
+      <li><b>Aceptación del dueño A1</b> (calculada por el sistema): i4 150.000 + diferencia de i1 200.000 + i3 600.000 = <b>950.000</b>. Deducible del siniestro: 0 (informado).</li>
+      <li><b>Ejecución:</b> como se presupuestó, más un extra E (4 clips × 5.000 = 20.000) aprobado por el cliente. <code>sale_total</code> = 2.770.000.</li>
+    </ul>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Concepto</th><th class="num">Base</th><th class="num">insurer_covered</th><th class="num">owner_uncovered</th><th class="num">owner_responsibility</th></tr></thead>
+      <tbody>
+        <tr><td>c1 <code>WorkOrderItem</code> i1</td><td class="num">1.000.000</td><td class="num">800.000</td><td class="num">200.000</td><td class="num"></td></tr>
+        <tr><td>c2 <code>WorkOrderPart</code> i2 (neto 2)</td><td class="num">1.000.000</td><td class="num">1.000.000</td><td class="num"></td><td class="num"></td></tr>
+        <tr><td>c3 <code>WorkOrderItem</code> i3</td><td class="num">600.000</td><td class="num"></td><td class="num">600.000</td><td class="num"></td></tr>
+        <tr><td>c4 <code>WorkOrderItem</code> i4</td><td class="num">150.000</td><td class="num"></td><td class="num"></td><td class="num">150.000</td></tr>
+        <tr><td>c5 <code>WorkOrderPart</code> extra E</td><td class="num">20.000</td><td class="num"></td><td class="num"></td><td class="num">20.000</td></tr>
+        <tr class="sum"><td>Total</td><td class="num">2.770.000</td><td class="num">1.800.000</td><td class="num">800.000</td><td class="num">170.000</td></tr>
+      </tbody>
+    </table></div>
+    <p><b>Validaciones:</b> <span class="ok">R1</span> cada fila suma su base. <span class="ok">R2</span> 2.770.000 = <code>sale_total</code>. <span class="ok">R3</span> i1 800.000 ≤ 800.000; i2 1.000.000 ≤ 1.000.000; i3 0 ≤ 0. <span class="ok">R5</span> parte del dueño 970.000; tope 950.000 (A1) + 20.000 (extra aprobado) = 970.000.</p>
+    <p><b>Facturas</b> (permitidas porque el deducible es 0):</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Factura</th><th>Líneas con IVA</th><th class="num">Total</th><th class="num">IVA 10</th><th class="num">Base</th></tr></thead>
+      <tbody>
+        <tr><td>Aseguradora (crédito)</td><td>c1 1 × 880.000; c2 2 × 550.000</td><td class="num">1.980.000</td><td class="num">180.000</td><td class="num">1.800.000</td></tr>
+        <tr><td>Dueño</td><td>c1 1 × 220.000; c3 660.000; c4 165.000; c5 4 × 5.500</td><td class="num">1.067.000</td><td class="num">97.000</td><td class="num">970.000</td></tr>
+      </tbody>
+    </table></div>
+    <p><span class="ok">R9</span> 1.800.000 + 970.000 + 0 = 2.770.000.</p>
+  </div>
+
+  <div class="example">
+    <h4>Ejemplo 2: consumo mayor al presupuestado</h4>
+    <p>Se consumen 3 paragolpes en lugar de 2: c2 = 1.500.000 y <code>sale_total</code> = 3.270.000. El borrador asigna a la aseguradora 1.000.000 (su tope por R3) y al dueño 500.000 como <code>owner_uncovered</code>. Durante la ejecución, la OT ya mostraba la advertencia de B.</p>
+    <ul>
+      <li><span class="bad">R5 falla:</span> la parte del dueño es 1.470.000, mayor que el tope de 970.000 → <code>ALLOCATION_OWNER_AMOUNT_NOT_ACCEPTED</code>.</li>
+      <li><b>Salida (a):</b> el dueño acepta 1.470.000 (re-aceptación registrada) y se confirma.</li>
+      <li><b>Salida (b):</b> el taller absorbe 500.000 con una excepción. c2 queda en 1.000.000 aseguradora + 500.000 taller y el dueño sigue en 970.000. R9: 2.770.000 facturado + 500.000 absorbido = 3.270.000.</li>
+      <li><b>No es salida:</b> una autorización nueva de 1.500.000 para i2 supera lo presupuestado (1.000.000) y la rechaza el tope de P7. El tercer paragolpe se cubre con un complementario.</li>
+      <li><b>Flujo particular:</b> este control no se aplica; consumir más de lo presupuestado sigue siendo válido sin aceptación (6.7 vigente).</li>
+    </ul>
+  </div>
+
+  <div class="example">
+    <h4>Ejemplo 3: la autorización baja después de la aceptación</h4>
+    <p>Una autorización v2 baja i2 a 700.000. La parte del dueño pasa a 1.250.000.</p>
+    <ul>
+      <li><b>Antes de crear la OT:</b> se bloquea con <code>WORK_ORDER_CLIENT_ACCEPTANCE_OUTDATED</code>. La excepción <code>start_without_authorization</code> no lo resuelve: solo cubre la falta de autorización y no reemplaza la aceptación. Hace falta una re-aceptación A2 por 1.250.000.</li>
+      <li><b>Con la OT en curso:</b> la ejecución no se detiene y la OT muestra la advertencia. Al confirmar el reparto, R5 exige A2 o una absorción.</li>
+      <li><b>Si la autorización sube</b> (la parte del dueño baja): no hace falta re-aceptar.</li>
+    </ul>
+  </div>
+
+  <div class="example">
+    <h4>Ejemplo 4: deducible compartido entre dos OT</h4>
+    <p>El siniestro tiene un deducible informado de 500.000, con dos OT: OT1 (P1) y OT2 (complementario P2). Los dos borradores se generan con el deducible restante: 500.000 cada uno.</p>
+    <ol class="plain">
+      <li>Se confirma OT1 con el siniestro bloqueado: Σ confirmado = 500.000, cumple R7.</li>
+      <li>Se confirma OT2: espera el bloqueo, recalcula y obtiene 500.000 + 500.000 &gt; 500.000 → <code>ALLOCATION_DEDUCTIBLE_EXCEEDS_CLAIM</code>. Hay que regenerar el borrador con deducible 0.</li>
+    </ol>
+    <p>La facturación de las dos OT sigue bloqueada (<code>ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED</code>) hasta M10, porque el deducible del siniestro es mayor a 0 (A). Por la misma razón, la recepción no se entrega por el flujo habitual.</p>
+  </div>
+
+  <div class="example">
+    <h4>Ejemplo 5: redondeo al repartir por importe</h4>
+    <p>La aseguradora cubre 1.000.000 de 3 unidades. Facturado como 3 × 333.333,33, el precio con IVA es 366.667 y el total 1.100.001: un guaraní más que base × 1,1.</p>
+    <p><b>Regla:</b> si <code>importe ≠ cantidad × precio unitario base</code>, la línea va con cantidad 1 y base igual al importe (1 × 1.100.000), con la cantidad real en la descripción. R8 compara <code>base_total</code>, que siempre es exacto.</p>
+  </div>
+
+  <div class="example">
+    <h4>Ejemplo 6: flujo particular</h4>
+    <p>OT sin siniestro con venta de 1.000.000: no hay reparto. <code>POST work-orders/{id}/invoice</code> genera una factura de 1.100.000 con las mismas validaciones y <code>error_code</code> de hoy.</p>
+  </div>
+  <p class="callout"><span><b>Consecuencia sobre el margen:</b> el cierre sigue mostrando la venta ejecutada. Si el taller absorbe una parte, el margen congelado <b>sobrestima</b> lo cobrable. Propongo mostrar "venta facturable" (venta − absorbido) en el reparto y en los reportes, sin tocar el cierre.</span></p>
+
+  <h3>6.3 Concurrencia y orden de bloqueo</h3>
+  <ul>
+    <li><b>Orden de bloqueo nuevo:</b> <b>siniestro → OT → reparto → factura → pago</b>. Es compatible con los vigentes (OT → línea → <code>part_stocks</code>; factura → pago). Lo siguen: confirmar un reparto, editar el deducible, cancelar el siniestro, y generar o emitir facturas del reparto. Así se evita el deadlock entre confirmar (OT → reparto → siniestro) y editar el deducible (siniestro → repartos) (revisión H8).</li>
+    <li><b>Al confirmar:</b> se bloquea el siniestro con <code>lockForUpdate</code>, se recalcula Σ deducible confirmado excluyendo las versiones sustituidas y se valida R7 en la misma transacción.</li>
+    <li><b>Los borradores no reservan deducible.</b> El valor del borrador es una sugerencia que se revalida al confirmar. Si se sustituye una versión, su deducible queda libre porque se excluye del cálculo.</li>
+    <li><b>Facturas del reparto:</b> generar o emitir revalida R8 con la OT y el reparto bloqueados. Emitir con el reparto sustituido → 409.</li>
+    <li>Registrar una autorización bloquea el presupuesto (no hay un orden vigente que lo contradiga).</li>
+    <li><b>Pruebas:</b> secuencial en SQLite (la segunda confirmación falla por R7); concurrente real solo en MySQL. <span class="tag u">Pendiente</span> la suite actual no tiene tests contra MySQL: queda como prueba manual o de integración aparte.</li>
+  </ul>
+
+  <h3>6.4 Correlativos (P4)</h3>
+  <ul>
+    <li><b>Política:</b> SyncTaller <b>no garantiza continuidad absoluta</b> en los códigos internos no fiscales, y ninguna funcionalidad debe depender de que no haya huecos.</li>
+    <li><b>Alcance:</b> las ocho series internas <code>BUD-</code>, <code>OT-</code>, <code>COM-</code>, <code>REP-</code>, <code>SRV-</code>, <code>DIA-</code>, <code>ASE-</code> y <code>SIN-</code>, con su formato actual y continuidad con los datos existentes. No se modifican la numeración fiscal de facturas ni los mecanismos de <code>REC-</code>, <code>ENT-</code> y <code>PAG-</code>, ni se establece ninguna garantía de continuidad fiscal.</li>
+    <li><b>Generador (E3):</b> los códigos nuevos (<code>ASE-</code>, <code>SIN-</code>) y los seis existentes usan <code>document_sequences</code> con clave única por serie. El contador se lee y actualiza con bloqueo <b>de la fila de esa serie</b> dentro de la <b>misma transacción</b> que crea el documento: si el alta falla, el incremento se revierte. No se bloquea la tabla ni se serializan las demás series.</li>
+    <li><b>Duplicado imprevisto:</b> se responde con el contrato de error controlado existente, HTTP 409, nunca 500. No sustituye la prevención del generador.</li>
+    <li>La versión de autorización y de reparto se calcula con el presupuesto o la OT bloqueados.</li>
+  </ul>
+
+  <h3>6.5 Qué puede implementarse de forma neutral</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Parte</th><th>¿Neutral?</th><th>Motivo</th></tr></thead>
+    <tbody>
+      <tr><td>Aseguradoras, siniestros, documentos, autorizaciones, excepciones</td><td><span class="yes">Sí</span></td><td>No generan documentos fiscales</td></tr>
+      <tr><td>Reparto (porciones y deducible como asignación económica)</td><td><span class="yes">Sí</span></td><td>Solo dice quién soporta qué importe; no genera documentos fiscales</td></tr>
+      <tr><td>Facturar las porciones a cada responsable, <b>con deducible 0 informado</b></td><td><span class="yes">Sí, con matiz</span></td><td>Es facturar trabajo ejecutado a quien lo paga. <span class="tag u">Incógnita</span> G2 (¿se factura a la aseguradora o al asegurado?) puede cambiar el destinatario, pero no el mecanismo</td></tr>
+      <tr><td>Facturar cualquier porción con deducible mayor a 0</td><td><span class="no">No</span></td><td>La factura de la aseguradora depende de la modalidad (total o neta del deducible), así que tampoco es neutral (G1)</td></tr>
+      <tr><td>Facturar el deducible</td><td><span class="no">No</span></td><td>Concepto, tasa, unidad y destinatario dependen de G1</td></tr>
+      <tr><td>Retenciones, anticipos, notas de crédito</td><td><span class="no">No</span></td><td>Fuera del MVP</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>6.6 Deducible: asignación económica y facturación fiscal separadas (A, aprobada)</h3>
+  <ul>
+    <li><b>Asignación (MVP):</b> obligación del dueño por el importe informado, ligada al siniestro y consumida por los repartos confirmados (R7). Es solo un dato económico y no genera ningún documento fiscal.</li>
+    <li><code>insurers.deductible_billing_mode</code> nace <b>nulo</b> y su enum se define vacío o con valores no habilitados. No se supone ninguna modalidad fiscal. Mientras no exista M10:
+      <ul>
+        <li><b>deducible nulo (desconocido):</b> no se puede confirmar el reparto (<code>CLAIM_DEDUCTIBLE_UNKNOWN</code>, 422). <b>Nulo no equivale a 0</b>: facturar así podría cobrarle de más a la aseguradora;</li>
+        <li><b>deducible mayor a 0:</b> se puede registrar y confirmar el reparto, pero <b>no se puede generar ni emitir ninguna factura de esa OT</b>, tampoco la de la aseguradora (<code>ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED</code>, 422);</li>
+        <li><b>deducible informado explícitamente como 0:</b> se factura según el Ejemplo 1.</li>
+      </ul>
+    </li>
+    <li><b>Consecuencia sobre la entrega:</b> la entrega exige que cada OT completada esté facturada (6.12 vigente, generalizado en §7.1). Además, una OT de siniestro con deducible mayor a 0 (hasta implementar M10) o nulo (mientras siga desconocido) <b>no se puede entregar por el flujo habitual</b>: la entrega lo rechaza con un control explícito (<code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>, 422; §7.1), independientemente de las facturas existentes. Con deducible informado e igual a 0, este control no bloquea. <b>No se introduce ninguna excepción</b> para entregar sin cumplir estos controles.</li>
+    <li><b>Restricción comercial:</b> el MVP solo factura y entrega de punta a punta los siniestros con deducible 0. La respuesta de G1 (contador y talleres, consultados desde ya) es <b>requisito</b> para habilitar comercialmente la facturación de siniestros con deducible mayor a 0.</li>
+    <li>Agregar modalidades validadas es la entrega M10. Hasta entonces quedan fuera: líneas de deducible en <code>invoice_items</code>, toda conversión del deducible a base sin IVA y la comparación del deducible con lo cubierto.</li>
+    <li>El flujo particular no cambia.</li>
+  </ul>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <span class="secnum">§7</span>
+  <h2>Contratos de API y compatibilidad</h2>
+
+  <h3>7.1 Endpoints existentes que cambian</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Endpoint existente</th><th>Cambio propuesto</th><th>¿Rompe el contrato?</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET/POST/PATCH clients</code></td><td>Agrega <code>kind</code> <code>{value,label}</code>, <code>business_name</code>, <code>display_name</code> y <code>address</code>. <code>first_name</code>/<code>last_name</code> pueden ser <code>null</code> <b>solo en empresas</b> (P3). Sin <code>kind</code>, el alta asume <code>person</code> (el body actual sigue siendo válido).</td><td>No para los datos existentes. No se crean empresas en producción hasta adaptar el frontend</td></tr>
+      <tr><td>Búsquedas de cliente en <code>clients</code>, <code>vehicles</code>, <code>budgets</code>, <code>work-orders</code>, <code>receptions</code> y <code>diagnostics</code></td><td>Además de nombre y apellido, buscan por <code>business_name</code> (P3, §2.2). En <code>diagnostics</code> solo cambia la búsqueda del cliente de la recepción; la del mecánico queda igual.</td><td>No: mismos parámetros y respuestas</td></tr>
+      <tr><td><code>POST budgets/{id}/approve</code>, <code>/reject</code></td><td>Body opcional <code>channel</code>, <code>contact</code>, <code>notes</code>. La respuesta agrega <code>client_acceptances</code> en el detalle.</td><td>No</td></tr>
+      <tr><td><code>budgets/{id}/items</code></td><td>Campo <code>responsibility</code> (default <code>owner</code>). <code>insurer</code> sin siniestro → 422.</td><td>No</td></tr>
+      <tr><td><code>POST work-orders</code></td><td>Con siniestro: nuevas validaciones (<code>WORK_ORDER_INSURER_AUTHORIZATION_REQUIRED</code>, <code>WORK_ORDER_CLIENT_ACCEPTANCE_OUTDATED</code>) y <code>internal_exception_id</code> opcional.</td><td>No (solo aplica a recepciones con siniestro, que hoy no existen)</td></tr>
+      <tr><td><code>POST work-orders/{id}/invoice</code> (<code>InvoiceService::generate</code>)</td><td>Sin cambios para particulares (R10). Rechaza <b>toda OT que requiere reparto</b> (siniestro no cancelado e ítems a cargo de la aseguradora), haya o no reparto confirmado → <code>WORK_ORDER_REQUIRES_ALLOCATION_INVOICING</code> (422); esas OT se facturan con el endpoint nuevo (§7.2). Así una OT con siniestro nunca se factura completa al dueño (revisión H7).</td><td>No. Criterio: OT con siniestro → 422 antes y después de confirmar; particular con respuesta idéntica a la actual (test de snapshot del JSON)</td></tr>
+      <tr><td><code>InvoiceService::issue</code></td><td>Revalida R8 con el bloqueo de §6.3 y el deducible del siniestro (A): con deducible mayor a 0 → <code>ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED</code> (422), como en §6.6.</td><td>No. Emitir con el reparto sustituido → 409</td></tr>
+      <tr><td><code>InvoiceService::cancel</code> y <code>delete</code></td><td>Sin cambio de reglas; liberan el saldo de sus porciones.</td><td>No. Anular sin pagos y volver a facturar el mismo importe funciona; con pagos, <code>INVOICE_HAS_PAYMENTS</code> (vigente)</td></tr>
+      <tr><td><code>GET work-orders/{id}</code> (<code>ShowWorkOrderResource</code>, F)</td><td>
+        <ul>
+          <li>Se mantienen <code>WorkOrder::currentInvoice()</code> y la clave heredada <code>invoice</code>, que sigue siendo la última factura vigente, con el cálculo actual.</li>
+          <li>Se agrega la relación <code>currentInvoices()</code> (<code>HasMany</code>) y las claves <code>invoices[]</code> (vigentes, con destinatario) e <code>invoices_count</code>. Ambas consideran solo facturas vigentes: excluyen las anuladas.</li>
+          <li>Las tres claves aparecen solo con <code>invoices.show</code>; sin el permiso no aparece ninguna.</li>
+          <li>Se agrega <code>allocation</code> (resumen de la versión confirmada) y la advertencia de B en OT con siniestro.</li>
+        </ul>
+        Con <code>null</code> en lugar de la última factura, el frontend actual mostraría "Facturar" en una OT ya facturada (§2.3).</td><td>No. En el particular, los campos existentes no cambian; solo se agregan claves. <code>invoice</code> queda como heredada y el frontend nuevo usa <code>invoices[]</code></td></tr>
+      <tr><td>Historial del vehículo (<code>VehicleHistoryService</code>, <code>VehicleHistoryReceptionResource</code>)</td><td>Mismo criterio que la OT (F): se mantiene <code>invoice</code> y se agrega <code>invoices[]</code> en el timeline. El resumen conserva los totales actuales y agrega el desglose <code>by_recipient</code> (dueño / otros). <code>VehicleHistoryController</code> muestra el cliente con <code>display_name</code> en <code>vehicle.client.full_name</code> (P3), sin cambiar la clave.</td><td>No. Particular: mismos números</td></tr>
+      <tr><td>Recursos de factura</td><td>Agregan <code>allocation_id</code> y <code>items[].allocation_line_id</code>. El PDF de la factura muestra los datos del destinatario (razón social y RUC de la aseguradora).</td><td>No</td></tr>
+      <tr><td><code>GET invoices</code> (<code>InvoiceController::index</code>)</td><td>Se mantiene el filtro <code>client_id</code> y se agrega <code>work_order_id</code>.</td><td>No</td></tr>
+      <tr><td><code>POST receptions/{reception}/delivery</code> (entrega, <code>VehicleDeliveryService::ensureWorkOrdersResolved</code>)</td><td>Recorre <b>todas</b> las facturas vigentes por OT. Con reparto: toda parte con porciones debe estar facturada (<code>DELIVERY_WORK_ORDER_NOT_FULLY_INVOICED</code>, 422). Las reglas de contado y crédito se aplican por factura vigente: dueño al contado impago → <code>DELIVERY_INVOICE_NOT_PAID</code> (vigente); aseguradora a crédito impaga → se entrega. <b>Control explícito por deducible (A):</b> si la recepción tiene un siniestro cuyo deducible actual es mayor a 0 o desconocido (nulo), la entrega se rechaza con <code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code> (422): con deducible mayor a 0, hasta implementar M10; con deducible nulo, mientras siga desconocido. El control es <b>independiente de las facturas existentes</b> y se aplica aunque todas las porciones del reparto estén facturadas (por ejemplo, una factura del dueño emitida con deducible 0 y el deducible cambiado después a un valor mayor a 0 o a nulo; §5.2). No hay excepción. Con deducible informado e igual a 0, este control no bloquea y rigen los demás requisitos de entrega. Nulo no equivale a 0 (§6.6).</td><td>No para particulares (una factura, mismo resultado)</td></tr>
+      <tr><td>PDF de entrega (<code>DocumentPdfService</code>)</td><td>Sin cambio: ya lista todos los números de factura emitidos por OT.</td><td>No</td></tr>
+      <tr><td><code>GET reports/*</code> (<code>ReportService</code>)</td><td><code>clientName()</code> pasa a <code>display_name</code>. Ya agrupan por <code>invoices.client_id</code>, que pasa a ser el destinatario: cada factura se cuenta una vez y la deuda de la aseguradora queda en la aseguradora. El total no cambia.</td><td>No</td></tr>
+      <tr><td>Recordatorios y avisos (<code>NotificationReminderService</code>, <code>ClientNotificationService</code>)</td><td>El recordatorio va al destinatario de la factura (ya es así). El cliente de una aseguradora tiene los avisos desactivados por defecto (D, §4.2), así que queda <code>skipped</code>; nunca se avisa al dueño por una factura de la aseguradora. El saludo usa <code>display_name</code>. La corrección E2 protege el caso actual de edición manual.</td><td>No</td></tr>
+      <tr><td><code>PaymentService</code> y recursos de pagos</td><td>Sin cambios: los pagos son por factura. Pagar la factura de la aseguradora no cambia el saldo del dueño; recibo <code>REC-</code> en crédito como hoy.</td><td>No</td></tr>
+      <tr><td>Seeders de ejemplo</td><td>Sembrados por los Services, de forma idempotente:
+        <ul>
+          <li><b>Escenario obligatorio</b> (pedido por la revisión): siniestro con reparto confirmado y dos facturas (aseguradora y dueño), sujeto a las reglas aprobadas.</li>
+          <li><b>Escenario adicional opcional</b>, que representa un caso comercialmente bloqueado: deducible informado y mayor a 0; reparto confirmado que respeta las invariantes económicas; sin facturas emitidas ni borradores; recepción completada sin entrega. La OT no puede facturarse ni entregarse por el flujo normal (A).</li>
+          <li>No se siembra un reparto confirmado con deducible nulo: esa combinación es inválida.</li>
+          <li>Los errores y bloqueos de las operaciones se verifican con pruebas específicas (M8–M9); el seeder no las sustituye.</li>
+          <li>Los escenarios de los estados nuevos de enums siguen la regla de <code>CLAUDE.md</code> §3.</li>
+        </ul></td><td>No. <code>DatabaseSeederTest</code> en dos corridas</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><span><b>Regresión obligatoria:</b> los tests existentes de facturas, pagos, entregas, historial, reportes y avisos pasan sin modificarse. Al implementar M9, <code>invoice</code> se documenta como clave heredada en <code>CLAUDE.md</code> y en <code>docs/testing/guia-postman.md</code>.</span></p>
+
+  <h3>7.2 Endpoints nuevos (propuestos)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Ruta</th><th>Permiso</th><th>Notas</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="3">Aseguradoras</td></tr>
+      <tr><td><code>GET|POST insurers</code>, <code>GET|PATCH|DELETE insurers/{insurer}</code></td><td><code>insurers.index|store|show|update|destroy</code></td><td><code>InsurerResource</code> / <code>ShowInsurerResource</code> (con los datos del cliente embebidos)</td></tr>
+      <tr><td><code>POST insurers/{insurer}/activate|deactivate</code></td><td><code>insurers.change-status</code></td><td>—</td></tr>
+      <tr><td><code>insurers/{insurer}/contacts</code> (anidado, <code>scopeBindings</code>)</td><td><code>insurers.update</code> (alta, edición y baja); <code>insurers.show</code> (lectura)</td><td>—</td></tr>
+      <tr class="grp"><td colspan="3">Siniestros y documentos</td></tr>
+      <tr><td><code>GET|POST claims</code>, <code>GET|PATCH claims/{claim}</code>, <code>POST claims/{claim}/cancel</code></td><td><code>claims.index|store|show|update|cancel</code></td><td>También <code>GET receptions/{reception}/claim</code></td></tr>
+      <tr><td><code>GET|POST claims/{claim}/documents</code>, <code>GET …/{document}/download</code>, <code>DELETE …/{document}</code></td><td><code>claim-documents.index|store|download|destroy</code></td><td>Descarga auditada; baja con motivo</td></tr>
+      <tr class="grp"><td colspan="3">Autorizaciones y excepciones</td></tr>
+      <tr><td><code>GET|POST budgets/{budget}/insurer-authorizations</code>, <code>GET …/{authorization}</code></td><td><code>insurer-authorizations.index|store|show</code></td><td>Sin <code>PATCH</code> ni <code>DELETE</code>: es inmutable</td></tr>
+      <tr><td><code>GET|POST budgets/{budget}/client-acceptances</code></td><td><code>budgets.show</code> (lectura); <code>budgets.approve</code> (re-aceptación)</td><td>Reutiliza el permiso existente</td></tr>
+      <tr><td><code>GET|POST internal-exceptions</code>, <code>GET internal-exceptions/{exception}</code></td><td><code>internal-exceptions.index|grant|show</code></td><td>Inmutable</td></tr>
+      <tr class="grp"><td colspan="3">Reparto y facturación</td></tr>
+      <tr><td><code>GET|POST work-orders/{workOrder}/allocations</code>, <code>GET|PATCH …/{allocation}</code>, <code>POST …/{allocation}/confirm</code>, <code>DELETE …/{allocation}</code> (solo borrador)</td><td><code>work-order-allocations.index|store|show|update|confirm|destroy</code></td><td><code>PATCH</code> reemplaza las porciones del borrador. <code>confirm</code> valida R1–R7; con facturas vigentes en la versión anterior → <code>ALLOCATION_HAS_INVOICES</code> (409) con el detalle de las facturas (P6)</td></tr>
+      <tr><td><code>POST work-orders/{workOrder}/allocations/{allocation}/invoices</code> con body <code>{client_id}</code></td><td><code>invoices.store</code> (existente)</td><td>Borrador de factura para un responsable, desde las porciones de ese cliente en el reparto confirmado. El nombre evita la confusión con el <code>/invoice</code> existente (revisión H14). Errores: segunda factura vigente del mismo cliente → <code>409 WORK_ORDER_ALREADY_INVOICED</code>; cliente sin porciones → <code>422 ALLOCATION_CLIENT_NOT_RESPONSIBLE</code>; deducible mayor a 0 → <code>422 ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED</code> (A)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>7.3 Impacto en el frontend (<code>../synctaller-frontend</code>)</h3>
+  <ul>
+    <li><b>Clientes:</b>
+      <ul>
+        <li>los tipos <code>first_name</code>/<code>last_name</code> pasan a <code>string | null</code>;</li>
+        <li><code>clientName()</code> pasa a usar <code>display_name</code> (33 usos en 18 archivos; el cambio se concentra en la función);</li>
+        <li>el formulario de cliente necesita el selector persona/empresa.</li>
+      </ul>
+      Se puede hacer <b>antes</b> de que exista la primera empresa, sin romper nada. <b>Es condición para crear empresas en producción</b> (P3).
+    </li>
+    <li><b>OT:</b> usar <code>invoices[]</code>, <code>invoices_count</code> y <code>allocation</code>. <code>invoice</code> sigue funcionando como clave heredada (F); el frontend nuevo no construye funciones sobre ella. Mismo criterio en el historial del vehículo.</li>
+    <li><b>Advertencias:</b> la de B en el detalle de la OT con siniestro (importe potencial del dueño mayor que lo aceptado) y la de P5 antes de confirmar el alta de un extra en una OT con siniestro.</li>
+    <li><b>Reparto:</b> resumen de responsables e importes antes de confirmar, y presentación del detalle de <code>ALLOCATION_HAS_INVOICES</code> (P6).</li>
+    <li><b>Autorizaciones (M6):</b> el formulario identifica explícitamente si el importe ingresado incluye IVA (P7).</li>
+    <li><b>Pantallas nuevas:</b> aseguradoras, siniestro (en la recepción), autorizaciones (en el presupuesto), reparto (en la OT), excepciones.</li>
+    <li><b>Multi-tenant:</b> URL base por host del taller (configuración, no lógica). Distinguir <code>403 TENANT_SUSPENDED</code> de un <code>FORBIDDEN</code> común y mostrar una pantalla específica, también cuando ocurre en el login (P9).</li>
+    <li><b>Fotos y firmas (P8):</b> sin cambios hasta la tarea independiente posterior a T4, que requerirá descargar las imágenes con el token (<code>fetch</code> + <code>blob:</code>).</li>
+  </ul>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <span class="secnum">§8</span>
+  <h2>Seguridad, permisos y auditoría <span class="tag p">Propuesta</span></h2>
+  <p>No propongo roles nuevos: los permisos se reparten entre los roles existentes. El administrador tiene todo por <code>Gate::before</code>. Cada permiso nuevo debe existir exactamente en <code>RolesAndPermissionsSeeder</code>, y <code>WorkshopRolesTest</code> lo verifica.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Permiso</th><th>recepcionista</th><th>jefe-taller</th><th>cajero</th><th>deposito</th><th>mechanic</th></tr></thead>
+    <tbody>
+      <tr><td><code>insurers.index</code>, <code>insurers.show</code></td><td class="yes">sí</td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td></tr>
+      <tr><td><code>insurers.store|update|destroy|change-status</code></td><td class="yes">sí</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td><code>claims.index</code>, <code>claims.show</code></td><td class="yes">sí</td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td></tr>
+      <tr><td><code>claims.store|update|cancel</code></td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td><code>claim-documents.index|download</code></td><td class="yes">sí</td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td></tr>
+      <tr><td><code>claim-documents.store</code></td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td><code>claim-documents.destroy</code></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td><code>insurer-authorizations.index|show</code></td><td class="yes">sí</td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td></tr>
+      <tr><td><code>insurer-authorizations.store</code></td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td><code>internal-exceptions.index|show</code></td><td>—</td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td></tr>
+      <tr><td><code>internal-exceptions.grant</code> (solo <code>start_without_authorization</code> y <code>workshop_absorption</code>)</td><td>—</td><td class="yes">sí</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td><code>work-order-allocations.index|show</code></td><td class="yes">sí</td><td class="yes">sí</td><td class="yes">sí</td><td>—</td><td>—</td></tr>
+      <tr><td><code>work-order-allocations.store|update|confirm|destroy</code></td><td>—</td><td>—</td><td class="yes">sí</td><td>—</td><td>—</td></tr>
+      <tr><td>Facturar por responsable (<code>invoices.store</code>, existente)</td><td>—</td><td>—</td><td class="yes">sí</td><td>—</td><td>—</td></tr>
+      <tr><td>Costos y margen (<code>work-orders.view-economics</code>, existente)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><b>Sin acceso:</b> el mecánico y el depósito no ven siniestros ni documentos (datos personales y pólizas). <code>claim-documents.destroy</code> queda solo para el administrador.</li>
+    <li><b>Reparto y costos:</b> el reparto muestra importes de venta, no costos. No requiere <code>view-economics</code>, y el resumen económico de la OT sigue protegido como hoy.</li>
+    <li><b>Auditoría:</b>
+      <ul>
+        <li>usan <code>Auditable</code>: <code>Insurer</code>, <code>InsurerContact</code>, <code>Claim</code>, <code>ClaimDocument</code> (metadatos), <code>InsurerAuthorization</code> y sus ítems, <code>BudgetClientAcceptance</code>, <code>InternalException</code>, <code>WorkOrderAllocation</code> y sus líneas, y también <code>Budget</code> (hoy no auditado);</li>
+        <li>las descargas de documentos se registran con <code>AuditLogger::record</code> (evento nuevo <code>downloaded</code>);</li>
+        <li>la lista de modelos auditados de <code>CLAUDE.md</code> 6.19 se actualiza en la misma rama.</li>
+      </ul>
+    </li>
+  </ul>
+  <h3>Documentos privados de siniestros (E, aprobada)</h3>
+  <ol class="plain">
+    <li><b>Disco dedicado</b> (propuesto <code>tenant_private</code>) con <code>'serve' =&gt; false</code> y raíz preparada para el aislamiento por taller (§3.7). Sin URL pública, <code>temporaryUrl</code> ni mecanismos de descarga directa: toda descarga pasa por la API y sus controles de autorización.</li>
+    <li><b>Ruta interna</b> generada por el servidor (UUID), nunca con el nombre original. El nombre original va solo en los metadatos.</li>
+    <li><b>Validación:</b> extensión, tipo MIME real y tamaño. PDF, JPG, PNG y WEBP; sin SVG ni HTML. Límite provisorio de 10 MB por archivo, a validar con talleres. Se registra el <code>sha256</code>.</li>
+    <li><b>Descarga solo por controller:</b> permiso <code>claim-documents.download</code>; <code>scopeBindings</code>; el archivo se resuelve <b>por su registro en la base</b>, nunca por una ruta enviada por el cliente; <code>Content-Disposition: attachment</code> con nombre saneado y <code>X-Content-Type-Options: nosniff</code> (reutilizar <code>FileResponse</code>). Un documento dado de baja no se descarga (404).</li>
+    <li><b>Auditoría:</b> subida y baja con <code>Auditable</code>; cada descarga con <code>AuditLogger::record</code> y el evento nuevo <code>downloaded</code> (usuario, IP, agente, documento, siniestro). <b>Ningún Resource devuelve <code>path</code></b> ni otra ruta interna de almacenamiento.</li>
+    <li><b>Aislamiento entre talleres:</b> la base y la raíz de archivos son del taller. Un id de documento de A responde 404 en B, y el archivo de A no se puede leer con la raíz de B.</li>
+    <li><b>Fuera de alcance:</b> <span class="tag w">Riesgo</span> el antivirus queda como riesgo técnico pendiente documentado (la validación no lo sustituye) y <span class="tag u">Pendiente</span> la retención legal depende de G10.</li>
+    <li><b>Lo existente no cambia:</b> el disco <code>local</code> y su configuración, y el funcionamiento de fotos, firmas, logo y favicon (ver P8 en §3.7).</li>
+  </ol>
+  <h3>Pruebas de acceso y fuga</h3>
+  <ul>
+    <li><b>Por endpoint:</b> 403 con un rol sin el permiso. Se prueba con un rol propio, no con el administrador (patrón de <code>tests/Feature/Access</code>).</li>
+    <li><b>Documentos:</b> un documento de otro siniestro por URL anidada → 404 (<code>scopeBindings</code>). Descarga sin permiso → 403. Documento dado de baja → 404. La descarga deja un registro <code>downloaded</code> en <code>audit_logs</code>. La respuesta nunca trae <code>path</code> ni URL pública. Un SVG, un HTML o un archivo con extensión que no coincide con su MIME real → 422.</li>
+    <li><b>Mecánico:</b> los listados de recepción y OT no exponen datos del asegurado.</li>
+    <li><b>Entre talleres:</b> suite de aislamiento de 3.12, con los nuevos modelos incluidos (un siniestro, una autorización y un documento de A son invisibles e inutilizables desde B).</li>
+  </ul>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <span class="secnum">§9</span>
+  <h2>Plan incremental con criterios de aceptación <span class="tag p">Propuesta</span></h2>
+  <p>Tres líneas: <b>E</b>, correcciones técnicas independientes; <b>T</b>, infraestructura SaaS; <b>M</b>, módulo funcional. Cada entrega va en su propia rama desde <code>origin/main</code> y termina con tu revisión. No se encadenan automáticamente.</p>
+
+<pre class="mermaid">
+flowchart LR
+  E0[E0 composer.lock resuelto] --> E1[E1 docs]
+  E0 --> E2[E2 recordatorios]
+  E0 --> E3[E3 correlativos]
+  E0 --> E4[E4 decimales]
+  E0 --> E5[E5 aceptación cliente]
+  E0 --> T0[T0 spike tenancy]
+  T0 --> T1[T1 config en BD]
+  T1 --> T2[T2 central + identificación]
+  T2 --> T3[T3 colas/cache/scheduler]
+  T3 --> T4[T4 storage]
+  T4 --> T5[T5 ciclo de vida]
+  T5 --> T6[T6 migrar instalación]
+  E0 --> M1[M1 tipo de cliente]
+  M1 --> M2[M2 aseguradoras]
+  M2 --> M3[M3 siniestros]
+  M3 --> M4[M4 documentos]
+  E3 --> M2
+  M3 --> M5[M5 responsabilidad por línea]
+  M4 --> M6[M6 autorizaciones]
+  M5 --> M6
+  E5 --> M7[M7 bloqueo de OT + excepciones]
+  M6 --> M7
+  M7 --> M8[M8 reparto]
+  M8 --> M9[M9 facturas por responsable]
+  G1{{Validación G1}} -.-> M10[M10 deducible facturado]
+  M9 --> M10
+  M9 --> M11[M11 reportes y avisos]
+  T4 --> P8T[Fotos y firmas a privado P8]
+  P8T --> T6
+</pre>
+  <p>E1, E2, E4 y E5 no dependen entre sí. La línea T no bloquea a la M. Producción SaaS requiere T6, y T6 requiere la migración de fotos y firmas a privado (P8). M10 es la única entrega bloqueada por completo por una validación externa (G1). M6 necesita la respuesta de V2 para cerrar la carga de importes (P7). Además: la habilitación comercial de siniestros con deducible mayor a 0 depende de G1 (A), y el circuito de corrección de repartos facturados (M8–M9) depende de G5 (P6): si G5 exige nota de crédito, se revisa antes de implementarlo.</p>
+
+  <h3>Línea E: correcciones independientes</h3>
+  <div class="steps">
+    <div class="step"><h4>E0 · <code>composer.lock</code> <small>resuelto el 2026-10-27 (P1)</small></h4><dl>
+      <dt>Resultado</dt><dd>Se descartaron los cambios locales de parche. El lock commiteado (<code>9ca9faf</code>) coincide con <code>vendor/</code>; 374 tests en verde (406 s). Actualizar dependencias queda para una tarea <code>chore/</code> aparte, con la suite completa.</dd>
+    </dl></div>
+    <div class="step"><h4>E1 · Discrepancias documentales <small><code>docs/</code></small></h4><dl>
+      <dt>Objetivo</dt><dd>Registrar D1–D10 en el handoff §14 y alinear <code>CLAUDE.md</code> §7 (deuda #13 abierta), sin cambiar código. Registrar también las deudas aprobadas: disco <code>local</code> con <code>serve</code> activo sin uso (E), fotos y firmas con URL pública (P8, prioridad la firma) y antivirus fuera de alcance (E)</dd>
+      <dt>Afecta</dt><dd><code>CLAUDE.md</code>, <code>docs/handoff.md</code></dd>
+      <dt>Aceptación</dt><dd>Cada discrepancia con su evidencia y "a decidir"</dd>
+      <dt>Revisión</dt><dd>Lectura del diff</dd>
+    </dl></div>
+    <div class="step"><h4>E2 · Recordatorios al destinatario correcto <small><code>fix/</code></small></h4><dl>
+      <dt>Objetivo</dt><dd>Que una factura con <code>customer_tax_id</code> distinto del documento del cliente no genere recordatorios al dueño</dd>
+      <dt>Decisión previa</dt><dd>Propongo registrar el aviso como <code>skipped</code> con el motivo "destinatario distinto del cliente". Es el mecanismo existente, sin email nuevo</dd>
+      <dt>Afecta</dt><dd><code>NotificationReminderService::invoiceReminders</code>, tests de notificaciones</dd>
+      <dt>Pruebas</dt><dd>Factura a crédito editada → <code>skipped</code>; factura sin editar → aviso como hoy</dd>
+      <dt>Aceptación</dt><dd>Suite en verde; ningún cambio de contrato</dd>
+    </dl></div>
+    <div class="step"><h4>E3 · Correlativos con bloqueo <small><code>fix/</code></small></h4><dl>
+      <dt>Objetivo</dt><dd>Reemplazar los 6 generadores <code>max(id)+1</code> sin bloqueo por un generador por serie, sin cambiar el formato de los códigos (política de §6.4, P4)</dd>
+      <dt>Afecta</dt><dd><code>BudgetService</code>, <code>WorkOrderService</code>, <code>PurchaseService</code>, <code>PartService</code>, <code>ServiceCatalogService</code>, <code>DiagnosticItemTemplateService</code>. No afecta facturas, <code>REC-</code>, <code>ENT-</code> ni <code>PAG-</code></dd>
+      <dt>Migraciones</dt><dd>Tabla <code>document_sequences</code> (<code>key</code> único, <code>next_value</code>). El valor inicial se calcula en la migración con SQL (máximo id + 1, incluidas las eliminadas), sin llamar a la aplicación</dd>
+      <dt>Diseño</dt><dd>Contador leído y actualizado con bloqueo de la fila de la serie dentro de la misma transacción del alta: un alta fallida revierte el incremento. Solo se serializan las altas de la misma serie. Un duplicado imprevisto responde 409 controlado, nunca 500</dd>
+      <dt>Riesgo</dt><dd>Bajo. Se aceptan huecos excepcionales (no se garantiza continuidad en códigos no fiscales)</dd>
+      <dt>Pruebas</dt><dd>Formato idéntico; continuidad con los códigos existentes; altas concurrentes de la misma serie y de series distintas (concurrencia real en MySQL; SQLite no la reproduce); rollback del contador ante un alta fallida; respuesta 409 ante un duplicado imprevisto</dd>
+      <dt>Aceptación</dt><dd>Mismos códigos para los mismos escenarios; <code>DatabaseSeederTest</code> en verde</dd>
+    </dl></div>
+    <div class="step"><h4>E4 · Decimales del presupuesto <small><code>fix/</code></small></h4><dl>
+      <dt>Objetivo</dt><dd>Pasar <code>budgets.subtotal|tax|total</code> y <code>budget_items.unit_price|total</code> de <code>decimal(10,2)</code> a <code>decimal(14,2)</code></dd>
+      <dt>Migraciones</dt><dd><code>ALTER</code> que amplía columnas (sin pérdida)</dd>
+      <dt>Riesgo</dt><dd>Bajo. Hay que verificar el <code>down</code> (podría truncar si hay importes grandes)</dd>
+      <dt>Pruebas</dt><dd>Presupuesto de 150.000.000 Gs se guarda y recalcula igual con BCMath</dd>
+      <dt>Aceptación</dt><dd>Suite en verde; contrato sin cambios</dd>
+    </dl></div>
+    <div class="step"><h4>E5 · Trazabilidad de la aceptación del cliente <small><code>feature/</code></small></h4><dl>
+      <dt>Objetivo</dt><dd><code>budget_client_acceptances</code> (sin campos de aseguradora todavía), body opcional en <code>approve</code>/<code>reject</code> y <code>Auditable</code> en <code>Budget</code></dd>
+      <dt>Afecta</dt><dd><code>BudgetService::approve|reject</code>, <code>BudgetController</code>, Request nuevo, <code>ShowBudgetResource</code></dd>
+      <dt>Migraciones</dt><dd>Tabla nueva</dd>
+      <dt>Pruebas</dt><dd><code>approve</code> sin body igual que hoy, más una fila; con canal inválido → 422; reabrir conserva el historial</dd>
+      <dt>Aceptación</dt><dd>Tests de presupuestos existentes en verde sin modificarlos</dd>
+    </dl></div>
+  </div>
+
+  <h3>Línea T: infraestructura SaaS</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Entrega</th><th>Alcance</th><th>Migraciones</th><th>Riesgos</th><th>Aceptación / revisión</th></tr></thead>
+    <tbody>
+      <tr><td><b>T0</b> Spike (no se mergea)</td><td>Instalar <code>spatie/laravel-multitenancy</code> en una rama descartable, con la versión elegida según P2 (§3.13); medir antes la línea base de S13; identificación, conexión y un job</td><td>Central mínima</td><td>Incompatibilidad con Sanctum o Spatie Permission, o con el harness de tests</td><td>Informe con S1–S13, versión y justificación, y mediciones con los umbrales de G; suite completa + pruebas de aislamiento. Si falla un criterio crítico, se detiene y se consulta. <b>La dependencia se aprueba aparte</b></td></tr>
+      <tr><td><b>T1</b> Configuración del taller en la base</td><td><code>company.*</code>, tasa de IVA, remitente y horarios de avisos a <code>system_settings</code>, con el <code>.env</code> como valor por defecto</td><td>Ninguna (la tabla existe)</td><td>Los PDF y emails deben leer la configuración nueva</td><td>Mismos PDF y totales con los valores por defecto; tests de PDF en verde. Sirve también sin SaaS</td></tr>
+      <tr><td><b>T2</b> Central e identificación</td><td>Base central, <code>tenants</code>, <code>tenant_domains</code>, <code>IdentifyTenant</code>, conexión dinámica, errores <code>TENANT_*</code></td><td>Centrales</td><td>Orden de middleware y rutas públicas</td><td>Suite actual en verde en contexto de un taller; suite de aislamiento (tokens, ids, <code>exists</code>)</td></tr>
+      <tr><td><b>T3</b> Colas, cache, permisos, scheduler</td><td>Jobs con taller, limpieza de contexto, prefijo de cache, recordatorios por taller</td><td><code>jobs</code> en la central</td><td>Contexto que queda pegado en el worker</td><td>Tests de job y de cache entre talleres; un worker procesa jobs de A y B alternados sin cruces</td></tr>
+      <tr><td><b>T4</b> Storage por taller</td><td>Raíces <code>tenants/{id}</code>, disco privado dedicado (E), helper de rutas y adaptación de las raíces de branding, fotos y firmas (siguen públicas en esta entrega)</td><td>Ninguna</td><td>URLs públicas existentes</td><td>Archivos de A no accesibles por rutas de B</td></tr>
+      <tr><td><b>Tarea P8</b> Fotos y firmas a privado</td><td>Tarea independiente después de T4: migrar primero las firmas de entrega y después las fotos de recepción y de diagnóstico; contrato de la API y frontend (descarga con token)</td><td>Según el diseño de esa tarea</td><td>Cambio de contrato con el frontend; URLs ya compartidas dejan de funcionar</td><td>Se aprueba e implementa por separado. <b>Requisito antes del primer taller comercial</b></td></tr>
+      <tr><td><b>T5</b> Ciclo de vida</td><td>Comandos de alta, suspensión (bloqueo total y reversible, P9), baja, <code>tenants:migrate</code>, backup y restauración, y procedimiento operativo de exportación asistida (runbook)</td><td>Centrales</td><td>Fallas a mitad de una migración</td><td>Alta desde cero y restauración probadas en un entorno de prueba. Suspensión: 403 <code>TENANT_SUSPENDED</code> en todas las rutas, avisos en cola → <code>failed</code> con motivo <code>Taller suspendido</code> y reenviables tras reactivar, tokens conservados</td></tr>
+      <tr><td><b>T6</b> Migrar la instalación actual</td><td>Taller #1 apuntando a la base <code>synctaller</code>, plan de vuelta atrás</td><td>Ninguna en la base del taller</td><td>Pérdida de jobs pendientes si no se vacía la cola</td><td>Ensayo en una copia; checklist firmado por vos antes de producción, que incluye la tarea P8 resuelta</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Línea M: módulo funcional</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Entrega</th><th>Alcance y archivos</th><th>Migraciones</th><th>Depende de</th><th>Pruebas</th><th>Aceptación / revisión</th></tr></thead>
+    <tbody>
+      <tr><td><b>M1</b> Tipo de cliente</td><td><code>Client</code> (<code>kind</code>, <code>business_name</code>, <code>address</code>, <code>display_name</code>), Store/Update Request por tipo, <code>ClientResource</code>/<code>ShowClientResource</code>, <code>display_name</code> en lugar de las concatenaciones de nombre del cliente (§2.2: factura, PDF, reportes, mantenimiento, recepciones, avisos e historial del vehículo en <code>VehicleHistoryController</code>); búsquedas por <code>business_name</code> en los seis controllers de §4.1 (incluido <code>DiagnosticController</code>, solo para el cliente); baja de cliente vinculado</td><td><code>clients</code>: columnas nuevas y nombre/apellido nulos</td><td>E0 (resuelto)</td><td>Alta de persona sin <code>kind</code> igual que hoy; empresa con "Seguros S.A."; validaciones condicionadas por <code>kind</code>; cambio de tipo bloqueado; <code>display_name</code> de persona idéntico al texto actual en cada punto reemplazado; en el historial del vehículo, <code>vehicle.client.full_name</code> idéntico al actual para una persona y igual a <code>business_name</code> (vía <code>display_name</code>) para una empresa; búsqueda por razón social en cada listado, incluida la de un cliente empresa desde diagnósticos; la búsqueda por nombre y apellido y los filtros existentes responden igual que hoy; la búsqueda del mecánico en diagnósticos sin cambios</td><td>Tests de clientes y facturas sin modificar, en verde. <b>No se crean empresas en producción hasta adaptar el frontend</b> (P3). La validación del RUC y los requisitos fiscales de la factura a empresas siguen pendientes</td></tr>
+      <tr><td><b>M2</b> Aseguradoras</td><td>Modelos <code>Insurer</code> e <code>InsurerContact</code>, <code>InsurerService</code>, Requests, Resources, controllers, rutas, permisos, <code>InsurerException</code>, seeder de ejemplo; <code>notifications_enabled = false</code> en el cliente vinculado (D)</td><td><code>insurers</code>, <code>insurer_contacts</code></td><td>M1, E3</td><td>Alta con <code>client_id</code> o con datos; errores <code>INSURER_*</code>; avisos desactivados en ambos caminos de alta y reactivables desde la ficha; 403 por rol; auditoría</td><td><code>WorkshopRolesTest</code> y <code>DatabaseSeederTest</code> (dos corridas) en verde. <b>Antes:</b> verificar el impacto de desactivar los avisos de un cliente existente que se usa en otros flujos (D)</td></tr>
+      <tr><td><b>M3</b> Siniestros</td><td><code>Claim</code>, <code>ClaimService</code> (sincronizado con la recepción), rutas, permisos, <code>ClaimException</code>; recepción con <code>claim</code> en el detalle</td><td><code>claims</code></td><td>M2</td><td>1:1 con recepción; recepción cerrada → <code>RECEPTION_CLOSED</code>; sincronización con entrega y anulación; número duplicado</td><td>Tests de recepciones y entregas existentes en verde</td></tr>
+      <tr><td><b>M4</b> Documentos privados</td><td>Disco privado dedicado sin <code>serve</code> (E), <code>ClaimDocument</code>, subida, descarga con <code>FileResponse</code>, helper de rutas por taller, <code>AuditEvent::DOWNLOADED</code></td><td><code>claim_documents</code></td><td>M3</td><td>MIME real, extensión y tamaño (10 MB provisorio; SVG y HTML rechazados); nombre interno UUID y <code>sha256</code>; descarga con y sin permiso; documento dado de baja → 404; registro <code>downloaded</code>; ningún Resource con <code>path</code>; sin URL pública</td><td>Archivos solo bajo la raíz privada. Disco <code>local</code>, fotos, firmas y branding sin cambios</td></tr>
+      <tr><td><b>M5</b> Responsabilidad por línea</td><td><code>budget_items.responsibility</code>, validación con o sin siniestro, Resource del ítem</td><td>Columna nueva con default</td><td>M3</td><td>Sin siniestro, <code>insurer</code> → 422; ítems existentes quedan <code>owner</code></td><td>Tests de presupuestos sin cambios</td></tr>
+      <tr><td><b>M6</b> Autorizaciones</td><td><code>InsurerAuthorization</code> e ítems, <code>InsurerAuthorizationService</code> (versiones, sustitución, invalidación en <code>reopen</code>/<code>cancel</code>), vínculo con documentos</td><td>Dos tablas</td><td>M4, M5</td><td>Total, parcial, rechazo; ítem de otro presupuesto; tope por importe y por cantidad (<code>INSURER_AUTHORIZATION_EXCEEDS_BUDGET</code>, P7); inmutabilidad; reabrir invalida; nueva versión con documento cuando la aseguradora acepta más</td><td>Escenarios sembrados por estado (regla de seeders). <b>Antes de cerrar la carga:</b> unidad de los importes (con o sin IVA) validada externamente (P7)</td></tr>
+      <tr><td><b>M7</b> Bloqueo de OT y excepciones</td><td><code>InternalException</code> (solo <code>start_without_authorization</code> y <code>workshop_absorption</code>, C), verificación en <code>createFromBudget</code>, re-aceptación con evidencia, campos de aseguradora en las aceptaciones (<code>owner_amount</code> calculado, autorización y deducible), advertencias de B y P5</td><td><code>internal_exceptions</code>; columnas en las aceptaciones</td><td>M6, E5</td><td>OT bloqueada sin autorización; con excepción permitida y consumida; la excepción no reemplaza la aceptación (Ejemplo 3); aceptación desactualizada; re-aceptación por deducible mayor; advertencia de la OT y del extra; particular sin cambios</td><td><b>Revisión del flujo completo hasta la OT</b></td></tr>
+      <tr><td><b>M8</b> Reparto</td><td>Refactor <code>WorkOrderSaleBreakdown</code> (test de igualdad primero), <code>WorkOrderAllocation</code> y porciones (capa A) con deducible separado (capa B), generación con tope por <code>budget_item</code>, edición, confirmación con R1–R7 y resumen previo, bloqueo siniestro → OT → reparto, versiones y corrección con <code>ALLOCATION_HAS_INVOICES</code> detallado (P6)</td><td>Dos tablas</td><td>M7</td><td>Cada regla R1–R7 con su caso de falla; ejemplos 1–4 como tests; deducible nulo → <code>CLAIM_DEDUCTIBLE_UNKNOWN</code>; deducible repartido entre varias OT (secuencial en SQLite; concurrencia en MySQL como prueba aparte); absorción con excepción; extra no asignable a la aseguradora</td><td>El particular no persiste reparto (R10); los tests del cierre no cambian. <b>Circuito de corrección sujeto a G5</b> (P6)</td></tr>
+      <tr><td><b>M9</b> Facturas por responsable</td><td><code>POST work-orders/{wo}/allocations/{allocation}/invoices</code>, <code>allocation_id</code>/<code>allocation_line_id</code>, R8–R9 en generación y emisión, rechazo de toda OT que requiere reparto en <code>/invoice</code>, regla de cantidad 1 (Ejemplo 5), bloqueo de facturación por deducible mayor a 0 y bloqueo de entrega por deducible mayor a 0 o nulo (<code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>, A), <code>currentInvoices</code>, <code>invoices[]</code>/<code>invoices_count</code> (F), entrega, historial del vehículo y demás componentes de §7.1</td><td>Columnas nulas en <code>invoices</code> e <code>invoice_items</code></td><td>M8</td><td>Criterios de §7.1: OT con siniestro → <code>WORK_ORDER_REQUIRES_ALLOCATION_INVOICING</code> antes y después de confirmar; particular con JSON idéntico (snapshot); dos facturas sin duplicar (<code>WORK_ORDER_ALREADY_INVOICED</code>); cliente sin porciones → <code>ALLOCATION_CLIENT_NOT_RESPONSIBLE</code>; deducible mayor a 0 → <code>ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED</code> y entrega rechazada con <code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>, incluido el caso de una factura del dueño emitida con deducible 0, el deducible cambiado después a un valor mayor a 0 y ninguna factura vigente a la aseguradora; el mismo caso con el deducible cambiado a nulo → entrega rechazada con <code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>; deducible informado igual a 0 → este control no bloquea; emitir con reparto sustituido → 409; anular y volver a facturar; entrega con contado y crédito mezclados; <code>invoice</code> heredada igual; claves sin <code>invoices.show</code> ausentes; anuladas excluidas; recordatorio a la aseguradora <code>skipped</code> y nunca al dueño</td><td>Tests de facturas, pagos, entregas, historial, reportes y avisos existentes en verde sin modificarlos. <code>invoice</code> documentada como heredada en <code>CLAUDE.md</code> y la guía de Postman. <b>Revisión económica</b></td></tr>
+      <tr><td><b>M10</b> Deducible facturado</td><td>Modalidades validadas de <code>deductible_billing_mode</code>; habilita facturar y entregar siniestros con deducible mayor a 0</td><td>Según la validación</td><td>M9, <b>G1</b></td><td>Según la modalidad</td><td>Respuesta del contador por escrito. Requisito para habilitar comercialmente el deducible mayor a 0 (A)</td></tr>
+      <tr><td><b>M11</b> Reportes y avisos</td><td>Cuentas por cobrar por tipo de destinatario, resumen del siniestro (presupuestado → cobrado), avisos a la aseguradora (plantillas, contacto de facturación y preferencias por tipo de aviso, D)</td><td>Ninguna prevista</td><td>M9</td><td>Etiquetas nuevas en <code>ReportExportService::LABELS</code></td><td>CSV y PDF de reportes en verde. Las comunicaciones a aseguradoras dependen de la decisión comercial (D)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><span><b>Regresión en cada entrega:</b> suite completa, <code>DatabaseSeederTest</code> (sembrar dos veces) y <code>WorkshopRolesTest</code>. Cada fase actualiza <code>CLAUDE.md</code>, <code>docs/handoff.md</code>, <code>README.md</code> y <code>docs/testing/guia-postman.md</code> en la misma rama, como pide <code>CLAUDE.md</code> §2.</span></p>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <span class="secnum">§10</span>
+  <h2>Validaciones pendientes, decisiones aprobadas y riesgos</h2>
+
+  <p>Ninguna validación externa está respondida. Ninguna se considera completada por la aprobación de las decisiones internas de §10.2.</p>
+  <h3>10.1 Validaciones externas pendientes <span class="tag u">Pendiente</span></h3>
+  <h4>Preguntas G1–G10</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Asunto (contador, talleres o aseguradoras)</th><th>Qué parte depende</th><th>Qué puede avanzar sin la respuesta</th></tr></thead>
+    <tbody>
+      <tr><td>G1</td><td>Tratamiento fiscal del deducible: ¿una factura o dos, qué concepto, qué tasa, si el importe incluye IVA? (contador y talleres; complementa si la aseguradora acepta una factura neta del deducible)</td><td>M10; conversión del deducible a base sin IVA. <b>Camino crítico:</b> requisito para habilitar comercialmente la facturación y la entrega de siniestros con deducible mayor a 0 (A)</td><td>Todo M1–M9; el deducible se reparte pero no se factura; solo se facturan siniestros con deducible 0</td></tr>
+      <tr><td>G2</td><td>Destinatario de la factura: ¿aseguradora o asegurado? ¿Y en siniestros de tercero?</td><td>A quién se asignan por defecto las líneas cubiertas en M8</td><td>El mecanismo (factura por responsable); el destinatario es un dato de la línea</td></tr>
+      <tr><td>G3</td><td>Retenciones de IVA o renta por parte de las aseguradoras</td><td>Pagos parciales con comprobante de retención (posterior)</td><td>Todo: el saldo queda visible como pendiente</td></tr>
+      <tr><td>G4</td><td>Anticipos: ¿exigen factura o recibo? ¿Cómo se imputan?</td><td>Módulo de anticipos (posterior)</td><td>Todo</td></tr>
+      <tr><td>G5</td><td>Notas de crédito y obligación de SIFEN. ¿Es válido anular una factura emitida y entregada, o corresponde una nota de crédito?</td><td>Validez fiscal del circuito de corrección de repartos facturados (P6): si exige nota de crédito, el circuito se revisa antes de implementarlo. También afecta a la anulación vigente (6.10)</td><td>Todo; la corrección sigue siendo anular (sin pagos, o después de anular los pagos)</td></tr>
+      <tr><td>G6</td><td>¿Autorizan por línea o por importe total?</td><td>Interfaz de carga (M6); el modelo por línea cubre los dos casos (total = una línea por ítem). <b>No</b> responde si se puede autorizar más de lo presupuestado (ver V1)</td><td>M6 completo</td></tr>
+      <tr><td>G7</td><td>Tarifas acordadas, descuentos y repuestos provistos por la aseguradora</td><td>Convenios (posterior); repuestos sin costo para el taller</td><td>Todo; el descuento por línea de la factura ya existe</td></tr>
+      <tr><td>G8</td><td>Forma y plazo de liquidación (por OT o periódica)</td><td>Facturas consolidadas de varias OT (posterior)</td><td>M9 por OT; <code>payment_term_days</code> en la aseguradora</td></tr>
+      <tr><td>G9</td><td>Coaseguro</td><td>Más de una aseguradora por siniestro (posterior)</td><td>Todo: el reparto ya admite N responsables; el MVP limita a uno</td></tr>
+      <tr><td>G10</td><td>Plazo legal de conservación de documentos fiscales</td><td>Baja de talleres (T5), retención de documentos de siniestros (E) y acceso durante la suspensión (P9)</td><td>Todo lo demás</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>Otras validaciones surgidas de las decisiones</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Pregunta</th><th>A quién</th><th>Decisión relacionada</th></tr></thead>
+    <tbody>
+      <tr><td>V1</td><td>«¿Una aseguradora puede autorizar un importe o una cantidad superiores a lo presupuestado por el taller? ¿En qué circunstancias y cómo se documenta?» Independiente de G6</td><td>Talleres y aseguradoras</td><td>P7 (tope)</td></tr>
+      <tr><td>V2</td><td>¿En qué unidad (con o sin IVA) comunican las aseguradoras los importes autorizados?</td><td>Aseguradoras y contador</td><td>P7 (carga en M6)</td></tr>
+      <tr><td>V3</td><td>¿Qué proporción de los siniestros tiene deducible mayor a 0? ¿Les sirve el MVP sin M10?</td><td>Talleres</td><td>A</td></tr>
+      <tr><td>V4</td><td>¿Hace falta una tolerancia para diferencias chicas a cargo del dueño? ¿Es aceptable volver a consultarlo?</td><td>Talleres</td><td>B</td></tr>
+      <tr><td>V5</td><td>¿La normativa de defensa del consumidor (Ley 1334/98) exige consentimiento previo para cobrar más de lo presupuestado? No se da por confirmado</td><td>Asesor legal</td><td>B</td></tr>
+      <tr><td>V6</td><td>¿Las autorizaciones suelen ser verbales antes del documento? ¿Cuánto tarda el documento?</td><td>Talleres y aseguradoras</td><td>C (tiempos de facturación)</td></tr>
+      <tr><td>V7</td><td>¿Conviene enviar recordatorios a las aseguradoras, con qué texto y a qué contacto?</td><td>Decisión comercial, con talleres y aseguradoras (relacionado con G8)</td><td>D, M11</td></tr>
+      <tr><td>V8</td><td>Tamaño real de los documentos (para confirmar o ajustar el límite provisorio de 10 MB). ¿Las aseguradoras exigen algún formato o canal?</td><td>Talleres y aseguradoras</td><td>E</td></tr>
+      <tr><td>V9</td><td>Infraestructura de producción (hosting, servidor de base, red) y volumen esperado de talleres y usuarios</td><td>Decisión comercial y técnica, no definida</td><td>G, P2</td></tr>
+      <tr><td>V10</td><td>Algoritmo del dígito verificador del RUC; ¿la factura a una empresa exige dirección?</td><td>Contador o documentación oficial de la SET</td><td>P3, M1</td></tr>
+      <tr><td>V11</td><td>¿Algún código interno (por ejemplo <code>COM-</code> o <code>REC-</code>) tiene exigencia legal de numeración continua? No se da por confirmado que no</td><td>Contador</td><td>P4</td></tr>
+      <tr><td>V12</td><td>¿Exigen complementario para daños ocultos? ¿Es operativo cuando se trata de un solo repuesto?</td><td>Talleres y aseguradoras</td><td>P5</td></tr>
+      <tr><td>V13</td><td>¿Se comparten hoy las URLs de fotos y firmas con clientes o peritos? Requisitos de protección de imágenes y firmas de clientes en Paraguay</td><td>Talleres; asesor legal</td><td>P8</td></tr>
+      <tr><td>V14</td><td>Obligaciones de conservación y acceso a documentos fiscales y datos personales durante una suspensión, y plazos. Términos comerciales de la suspensión (aviso, gracia, solo lectura)</td><td>Contador o asesor legal; decisión comercial</td><td>P9</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>10.2 Decisiones aprobadas (2026-10-27) <span class="tag h">Aprobada</span></h3>
+  <p>Decisiones internas, aprobadas una por una. Su aprobación no resuelve las validaciones externas de §10.1.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Decisión</th><th>Resumen de lo aprobado</th><th>Dónde se aplica</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="4">Revisión de la especificación</td></tr>
+      <tr><td>A</td><td>Facturación de siniestros con deducible</td><td>Solo se factura con deducible informado e igual a 0. Con deducible mayor a 0 el reparto se confirma, pero no se emite ninguna factura de la OT ni se entrega por el flujo habitual hasta M10 (control explícito <code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>, 422, independiente de las facturas existentes); sin excepción de entrega. Deducible nulo: el reparto no se confirma y la entrega se rechaza con el mismo control. G1 se consulta ya y es requisito comercial. No se supone ninguna modalidad fiscal</td><td>§1, §5.1, §5.2, §6.6, §7.1, M9, M10</td></tr>
+      <tr><td>B</td><td>Aceptación del dueño</td><td>Control estricto (R5) sin tolerancia automática; tope = conceptos del dueño + su parte de lo no autorizado + extras aprobados; re-aceptación con evidencia; resolución por re-aceptación, absorción o complementario; la absorción nunca sube el tope; advertencia visible en la OT; regla de consumo 6.7 sin cambios</td><td>§4.4, §5.4, §5.5, R5, M7, M8</td></tr>
+      <tr><td>C</td><td>Excepción <code>exceed_authorization</code></td><td>Eliminada. Ninguna excepción sube lo asignado o facturado a la aseguradora por encima de su autorización; si acepta más, nueva versión de la autorización con evidencia</td><td>§4.4, §5.3, R3, §8</td></tr>
+      <tr><td>D</td><td>Avisos a aseguradoras</td><td>Cliente vinculado con <code>notifications_enabled = false</code> al crear o vincular; reactivable; no es una prohibición; el dueño nunca recibe recordatorios por facturas de la aseguradora; comunicaciones específicas en M11</td><td>§4.2, §7.1, M2, M11</td></tr>
+      <tr><td>E</td><td>Documentos privados</td><td>Disco dedicado sin <code>serve</code>, sin URLs ni <code>temporaryUrl</code>; resolución por registro; validación MIME, extensión y tamaño (10 MB provisorio); UUID y <code>sha256</code>; auditoría con <code>downloaded</code>; 404 entre talleres y en bajas; disco <code>local</code> sin cambios (deuda registrada); antivirus como riesgo pendiente</td><td>§3.7, §4.3, §8, M4</td></tr>
+      <tr><td>F</td><td>Facturas de la OT</td><td><code>invoice</code> heredada = última vigente; <code>currentInvoices()</code>, <code>invoices[]</code> e <code>invoices_count</code> (solo vigentes, solo con <code>invoices.show</code>); mismo criterio en el historial; documentar <code>invoice</code> como heredada en M9</td><td>§7.1, §7.3, M9</td></tr>
+      <tr><td>G</td><td>Umbral de rendimiento del spike</td><td>Combinado: p95 ≤ máx(15 ms, 10 % de la base); públicos ≤ 15 ms; suite ≤ +20 % (487,2 s); superar obliga a investigar y mitigar, no descarta; la seguridad prevalece</td><td>§3.13, T0</td></tr>
+      <tr class="grp"><td colspan="4">Especificación</td></tr>
+      <tr><td>P1</td><td><code>composer.lock</code></td><td>Resuelta: se descartaron los cambios locales (no se commiteó el lock modificado)</td><td>§2.1, E0</td></tr>
+      <tr><td>P2</td><td>Paquete de tenancy</td><td>Spike con <code>spatie/laravel-multitenancy</code> en rama descartable; versión elegida al iniciar (último parche 4.2.x con ≥ 2 semanas); versión fija; S1–S13 y G; detenerse ante un fallo crítico; no aprueba la dependencia; acoplamiento acotado</td><td>§3.13, T0</td></tr>
+      <tr><td>P3</td><td>Nombre y apellido de empresas</td><td>Nulos solo para empresas; <code>business_name</code> y <code>display_name</code> (también en el historial del vehículo); búsquedas por razón social; ninguna empresa en producción antes de adaptar el frontend; tests de igualdad para personas</td><td>§4.1, §7.1, M1</td></tr>
+      <tr><td>P4</td><td>Correlativos no fiscales</td><td>Se aceptan huecos (sin garantía de continuidad); contador en la misma transacción con bloqueo de fila por serie; ocho series internas; 409 ante un duplicado imprevisto</td><td>§6.4, E3</td></tr>
+      <tr><td>P5</td><td>Extras en siniestros</td><td>A cargo del dueño, salvo absorción autorizada; lo que deba cubrir la aseguradora va a un complementario; advertencia antes de confirmar el extra; un complementario no corrige un extra ya consumido</td><td>§5.5, §5.6, R4, M7</td></tr>
+      <tr><td>P6</td><td>Corrección de un reparto</td><td>Exige resolver todas las facturas vigentes de la versión anterior; 409 <code>ALLOCATION_HAS_INVOICES</code> con detalle; resumen previo a confirmar; trazabilidad; <b>sujeta a G5</b></td><td>§5.7, M8</td></tr>
+      <tr><td>P7</td><td>Tope de la autorización</td><td>Por línea, en importe y en cantidad; el exceso va a un complementario; pregunta externa V1 (no G6); unidades explícitas en M6</td><td>§4.4, §5.3, M6</td></tr>
+      <tr><td>P8</td><td>Fotos y firmas públicas</td><td>Deuda de seguridad; tarea independiente después de T4, primero la firma; resuelta antes del primer taller comercial; ningún tipo nuevo de archivo en <code>public</code> salvo branding</td><td>§3.7, §9 (tarea P8), T6</td></tr>
+      <tr><td>P9</td><td>Taller suspendido</td><td>Bloqueo total y reversible, también en rutas públicas; avisos en cola → <code>failed</code> con <code>Taller suspendido</code>; pantalla específica en el frontend; exportación asistida como procedimiento operativo; solo lectura como alternativa futura</td><td>§3.5, §3.9, §3.12, §7.3, T5</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>10.3 Tareas internas pendientes</h3>
+  <ul>
+    <li><b>Antes de M2:</b> verificar el impacto de desactivar los avisos de un cliente existente que ya se usa en otros flujos (D).</li>
+    <li><b>Al iniciar T0:</b> revisar el changelog de <code>spatie/laravel-multitenancy</code> (4.2.2 y 4.2.3 incluidas), elegir y registrar la versión (P2) y medir la línea base de S13 (G).</li>
+    <li><b>E1 (handoff):</b> registrar la deuda del disco <code>local</code> con <code>serve</code> activo (E), la deuda de seguridad de fotos y firmas públicas (P8), el antivirus como riesgo pendiente (E) y la discrepancia entre <code>CLAUDE.md</code> §7 y la deuda #13.</li>
+    <li><b>M7–M8:</b> definir el nombre del campo de la advertencia de B en la API.</li>
+    <li><b>M8:</b> la concurrencia real del deducible compartido se prueba en MySQL, fuera de la suite SQLite.</li>
+  </ul>
+
+  <h3>10.4 Riesgos</h3>
+  <ul>
+    <li><b>Regresión económica:</b> el refactor del detalle de venta (M8) y la generalización de la entrega (M9) tocan código estable. Mitigación: test de igualdad antes del refactor y tests existentes sin modificar.</li>
+    <li><b>Frontend fuera de sincronía:</b> M1 y M9 cambian tipos. Mitigación: campos aditivos, <code>invoice</code> heredada y coordinación antes de crear la primera empresa.</li>
+    <li><b>Contexto de taller pegado en los workers (T3):</b> mitigación con tests de jobs alternados y limpieza explícita.</li>
+    <li><b>Datos personales en documentos:</b> almacenamiento privado, permisos restringidos y descargas auditadas. Sin antivirus (riesgo técnico pendiente).</li>
+    <li><b>Fotos y firmas con URL pública permanente (P8):</b> una URL filtrada no se puede revocar hasta migrar el archivo. Mitigación: tarea P8 antes del primer taller comercial, con la firma primero.</li>
+    <li><b>Utilidad comercial del MVP (A):</b> si la mayoría de los siniestros tiene deducible mayor a 0, el MVP no los factura ni los entrega hasta M10. Mitigación: G1 como camino crítico, consultado desde ya.</li>
+    <li><b>Validez fiscal de la corrección (P6):</b> depende de G5; si exige nota de crédito, el circuito cambia antes de implementarse.</li>
+    <li><b>Desvío de alcance:</b> convenios, coaseguro y liquidaciones quedan fuera de forma explícita.</li>
+  </ul>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <span class="secnum">§11</span>
+  <h2>Orden recomendado para comenzar</h2>
+  <ol class="plain">
+    <li><b>E0:</b> resuelto (P1).</li>
+    <li><b>En paralelo y sin código:</b> enviar G1–G10 y V1–V14 (§10.1) a un contador, a un asesor legal y a dos o tres talleres que trabajen con aseguradoras. Es lo que más tarda. <b>G1 es el camino crítico</b> (A) y G5 condiciona la corrección de repartos (P6).</li>
+    <li><b>E1–E5:</b> en ramas separadas, en este orden sugerido: E2 (riesgo real hoy), E3, E4, E5, E1. Cada una con tu revisión.</li>
+    <li><b>T0:</b> spike de tenancy (descartable) con las condiciones de P2 y los umbrales de G, e informe de resultados. La dependencia se aprueba aparte; ante un fallo crítico, me detengo y te consulto.</li>
+    <li><b>M1</b>, coordinado con el frontend; después M2 → M3 → M4 → M5 → M6 → M7, con revisión en M7 (flujo hasta la OT).</li>
+    <li><b>T1–T5</b> en paralelo a M, según la capacidad disponible; después de T4, la <b>tarea P8</b> (fotos y firmas a privado, primero la firma).</li>
+    <li><b>M8 → M9</b> (revisión económica), con el circuito de corrección revisado contra G5 si ya hay respuesta. <b>M10</b> solo con G1 respondida. <b>M11</b> al final.</li>
+    <li><b>T6</b> (primer taller comercial) cuando T1–T5, la tarea P8 y el MVP estén aprobados. Los siniestros con deducible mayor a 0 no se habilitan comercialmente sin M10.</li>
+  </ol>
+  <footer>Punto de control: la especificación termina aquí. Las decisiones técnicas de §10.2 están aprobadas; las validaciones externas de §10.1 siguen pendientes y el módulo no está listo para producción. No se modificó el repositorio. Ningún paso de implementación empieza sin tu autorización.</footer>
+</section>
+</main>
+</div>
