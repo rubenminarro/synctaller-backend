@@ -64,9 +64,36 @@ class NotificationReminderService
                     ? [ClientNotificationType::INVOICE_DUE_SOON, "invoice_due_soon:{$invoice->id}"]
                     : [ClientNotificationType::INVOICE_OVERDUE, "invoice_overdue:{$invoice->id}:" . intdiv(-$days - 1, $repeat)];
 
-                return $this->clientNotifications->notify($type, $invoice, $invoice->client, $key) !== null;
+                $skipReason = $this->isAddressedToClient($invoice) ? null : 'La factura está a nombre de otro destinatario.';
+
+                return $this->clientNotifications->notify($type, $invoice, $invoice->client, $key, $skipReason) !== null;
             })
             ->count();
+    }
+
+    /**
+     * Si la factura sigue a nombre del cliente. Su RUC o CI pudo editarse en el
+     * borrador (por ejemplo, para facturar a una aseguradora): entonces el
+     * recordatorio no es para el cliente. CI y RUC de la misma persona cuentan
+     * como el mismo documento (se ignora el dígito verificador). Sin documento
+     * del cliente no hay con qué comparar y se avisa como siempre.
+     */
+    private function isAddressedToClient(Invoice $invoice): bool
+    {
+        $clientDocument = $invoice->client->document_number;
+
+        if (blank($clientDocument)) {
+            return true;
+        }
+
+        return $this->normalizeDocument($invoice->customer_tax_id) === $this->normalizeDocument($clientDocument);
+    }
+
+    private function normalizeDocument(?string $document): string
+    {
+        $document = strtoupper(preg_replace('/\s+/', '', (string) $document));
+
+        return preg_replace('/-\d$/', '', $document);
     }
 
     /**

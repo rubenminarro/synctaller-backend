@@ -1426,6 +1426,22 @@ quería elegir el ítem del catálogo como se elige el repuesto en la línea de 
 
 ---
 
+# 2.54 Recordatorios de factura al destinatario correcto (2026-10-28)
+
+Entrega E2 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §9). Los recordatorios de
+vencimiento iban siempre a `invoice.client`, el dueño de la recepción, aunque en el borrador se hubiera cambiado el RUC o
+CI para facturar a otro (por ejemplo, a una aseguradora): el dueño recibía el aviso de una deuda que no era suya.
+
+| Tema | Decisión |
+|---|---|
+| Regla | Si el `customer_tax_id` de la factura no coincide con el `document_number` del cliente, el recordatorio (`invoice_due_soon` / `invoice_overdue`) se registra `skipped` con el motivo "La factura está a nombre de otro destinatario." Es el mecanismo existente: no se envía email ni se crea otro canal, y la clave de deduplicación evita repetirlo |
+| Comparación | Mayúsculas y sin espacios, sin el dígito verificador final (`-N`): CI `1234567` y RUC `1234567-8` cuentan como la misma persona (decisión del usuario del 2026-10-28). Sin documento del cliente no hay con qué comparar y el aviso sale como antes |
+| Reenvío | `POST client-notifications/{id}/resend` sigue permitido sobre el aviso omitido y va al cliente (decisión del usuario del 2026-10-28): es una acción manual registrada. Sin `error_code` nuevo |
+| Código | `NotificationReminderService::invoiceReminders` (`isAddressedToClient`) y un parámetro opcional `$skipReason` en `ClientNotificationService::notify` |
+| Sin cambiar | Contrato de la API, permisos, migraciones, los demás avisos y los recordatorios de facturas a nombre del dueño |
+
+---
+
 # 2.2 Autenticación
 
 Existe:
@@ -3915,6 +3931,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Auditoría avanzada de precios, facturación, seguridad y datos maestros (FASE 25)
 [✓] Preferencias visuales por usuario y logo del sistema (2.50)
 [✓] Catálogo de ítems de diagnóstico (2.53)
+[✓] Recordatorios de factura al destinatario correcto (2.54)
 ```
 
 ## Próximo

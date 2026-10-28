@@ -55,8 +55,8 @@ Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 de
 * El lock commiteado es el de `9ca9faf` (2026-10-24).
 * **Notebook nueva:** `composer install` instala exactamente las versiones del lock commiteado. No hace falta nada
   más.
-* **Notebook anterior** [pendiente si se sigue usando]: `vendor/` quedó con las versiones nuevas y no coincide con el
-  lock. Correr `composer install` para alinearlo.
+* **Notebook anterior:** `vendor/` había quedado con las versiones nuevas. El 2026-10-28 se alineó con
+  `composer install` y la suite pasó completa (374 tests, 5985 aserciones, 315 s).
 * Actualizar las dependencias queda para una tarea aparte (`chore/`), con la suite completa.
 
 ### 3.2 Este documento
@@ -252,12 +252,14 @@ publicada todavía tiene la versión anterior. No se implementó código del mó
 2. ~~**Aprobar o ajustar** las decisiones A–G y P1–P9.~~ Aprobadas el 2026-10-27 (sección 5.2).
 3. ~~**Actualizar la especificación** con las correcciones aprobadas.~~ Hecho: `docs/especificacion-aseguradoras.html`.
 4. ~~**E0:** decidir sobre `composer.lock`.~~ Resuelto el 2026-10-27 (sección 3.1).
-5. **Publicar la versión 2** en la página de la especificación (sección 6), **solo con autorización**, y comprobar
-   ahí los siete diagramas.
+5. ~~**Publicar la versión 2** en la página de la especificación (sección 6).~~ Publicada el 2026-10-28 con
+   autorización del usuario, en el mismo enlace (`R1BmU5AE…`). [pendiente] Comprobar ahí los siete diagramas.
 6. **En paralelo:** enviar las preguntas G1–G10 y V1–V14 al contador, a un asesor legal y a talleres que trabajen con
    aseguradoras (sección 8).
 7. Después, según el plan de la especificación (§9 y §11 de `docs/especificacion-aseguradoras.html`):
-   * correcciones independientes E1–E5 (sugerido: E2 → E3 → E4 → E5 → E1), cada una en su rama y con revisión;
+   * correcciones independientes E1–E5 (sugerido: E2 → E3 → E4 → E5 → E1), cada una en su rama y con revisión.
+     **E2** implementada el 2026-10-28 en la rama `fix/recordatorios-destinatario` (handoff 2.54), pendiente de
+     revisión y merge;
    * spike T0 en una rama descartable;
    * módulo desde M1 (tipo de cliente), coordinado con el frontend.
 

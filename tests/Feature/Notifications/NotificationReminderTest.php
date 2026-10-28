@@ -40,7 +40,7 @@ class NotificationReminderTest extends InvoiceTestCase
     /**
      * Factura a crédito emitida que vence en $days días; el cliente tiene email.
      */
-    private function creditInvoice(int $days): array
+    private function creditInvoice(int $days, array $overrides = []): array
     {
         $invoice = $this->readyInvoice();
         $this->createStamp()->assertCreated();
@@ -48,6 +48,7 @@ class NotificationReminderTest extends InvoiceTestCase
         $this->patchJson("/api/invoices/{$invoice['id']}", [
             'condition' => 'credit',
             'due_date' => now()->addDays($days)->toDateString(),
+            ...$overrides,
         ])->assertOk();
 
         $invoice = $this->postJson("/api/invoices/{$invoice['id']}/issue")->assertOk()->json('data');
@@ -89,6 +90,58 @@ class NotificationReminderTest extends InvoiceTestCase
         ])->assertCreated();
         $this->travel(7)->days();
         $this->assertSame(0, $this->reminders()->invoiceReminders());
+    }
+
+    public function test_invoice_addressed_to_someone_else_is_not_reminded_to_the_client(): void
+    {
+        $this->actingAsAdmin();
+
+        $invoice = $this->creditInvoice(2, [
+            'customer_name' => 'Seguros del Sur S.A.',
+            'customer_tax_id' => '80012345-6',
+        ]);
+        Invoice::findOrFail($invoice['id'])->client->update(['document_number' => '1234567']);
+
+        $this->assertSame(1, $this->reminders()->invoiceReminders());
+        $this->assertSame(0, $this->reminders()->invoiceReminders());
+
+        $notification = ClientNotification::where('type', ClientNotificationType::INVOICE_DUE_SOON)->sole();
+        $this->assertSame('skipped', $notification->status->value);
+        $this->assertSame('La factura está a nombre de otro destinatario.', $notification->error);
+        $this->assertSame($invoice['id'], $notification->subject_id);
+        Mail::assertNothingSent();
+
+        // Vencida: también omitida.
+        $this->travel(3)->days();
+        $this->assertSame(1, $this->reminders()->invoiceReminders());
+        $this->assertSame('skipped', ClientNotification::where('type', ClientNotificationType::INVOICE_OVERDUE)->sole()->status->value);
+        Mail::assertNothingSent();
+
+        // El reenvío manual sigue disponible y va al cliente.
+        $this->postJson("/api/client-notifications/{$notification->id}/resend")
+            ->assertCreated()
+            ->assertJsonPath('data.status.value', 'sent');
+    }
+
+    public function test_ruc_of_the_same_client_still_reminds_the_client(): void
+    {
+        $this->actingAsAdmin();
+
+        $invoice = $this->readyInvoice();
+        $client = Invoice::findOrFail($invoice['id'])->client;
+        $client->update(['document_number' => '1234567']);
+
+        $this->createStamp()->assertCreated();
+        $this->patchJson("/api/invoices/{$invoice['id']}", [
+            'condition' => 'credit',
+            'due_date' => now()->addDays(2)->toDateString(),
+            'customer_tax_id' => '1234567-8',
+        ])->assertOk();
+        $this->postJson("/api/invoices/{$invoice['id']}/issue")->assertOk();
+        $client->update(['email' => 'ana@example.com']);
+
+        $this->assertSame(1, $this->reminders()->invoiceReminders());
+        $this->assertSame('sent', ClientNotification::where('type', ClientNotificationType::INVOICE_DUE_SOON)->sole()->status->value);
     }
 
     public function test_invoice_far_from_due_date_is_not_reminded(): void

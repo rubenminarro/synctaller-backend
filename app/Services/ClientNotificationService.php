@@ -37,13 +37,15 @@ class ClientNotificationService
 
     /**
      * Registra un aviso automático. Con clave de deduplicación, un aviso ya
-     * registrado no se repite (devuelve null).
+     * registrado no se repite (devuelve null). Con $skipReason el aviso queda
+     * registrado como omitido con ese motivo, sin envío.
      */
     public function notify(
         ClientNotificationType $type,
         Model $subject,
         ?Client $client,
-        ?string $dedupeKey = null
+        ?string $dedupeKey = null,
+        ?string $skipReason = null
     ): ?ClientNotification {
         // Cliente eliminado: no se avisa.
         if ($client === null || $client->trashed()) {
@@ -54,7 +56,7 @@ class ClientNotificationService
             return null;
         }
 
-        return $this->register($type, $subject, $client, ['dedupe_key' => $dedupeKey]);
+        return $this->register($type, $subject, $client, ['dedupe_key' => $dedupeKey], $skipReason);
     }
 
     /**
@@ -171,9 +173,14 @@ class ClientNotificationService
         ];
     }
 
-    private function register(ClientNotificationType $type, Model $subject, Client $client, array $attributes): ClientNotification
-    {
-        $skipReason = match (true) {
+    private function register(
+        ClientNotificationType $type,
+        Model $subject,
+        Client $client,
+        array $attributes,
+        ?string $skipReason = null
+    ): ClientNotification {
+        $skipReason ??= match (true) {
             !$client->notifications_enabled => 'El cliente desactivó los avisos.',
             blank($client->email) => 'El cliente no tiene email registrado.',
             default => null,
