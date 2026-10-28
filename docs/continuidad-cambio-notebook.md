@@ -35,11 +35,13 @@ Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 de
 
 | Repositorio | Remoto | Rama | Commit | Estado [verificado el 2026-10-27] |
 |---|---|---|---|---|
-| Backend | `https://github.com/rubenminarro/synctaller-backend.git` | `main` | `27803b1` (merge de este documento; actualizado por su corrección) | Igual a `origin/main`, sin cambios pendientes |
+| Backend | `https://github.com/rubenminarro/synctaller-backend.git` | `main` | Historial de integración de este documento: `27803b1`, `4410f27`, `5e16e37` y `d7dfcb5` (sección 3.2) | Sin cambios pendientes al 2026-10-27. El estado actual se verifica con `git log origin/main` |
 | Frontend | `https://github.com/rubenminarro/synctaller-frontend.git` | `main` | `cbbb559` ("Elige siempre del catálogo el ítem del diagnóstico") | Sin cambios pendientes |
 
 * No hay ramas abiertas para el módulo de aseguradoras: no se escribió código del módulo.
 * La rama remota `docs/deuda-aseguradoras` (`d48c38a`) ya está integrada en `main` (registró la deuda #13).
+* La rama remota `docs/especificacion-aseguradoras` (`5a6939e`) ya está integrada en `main` mediante el merge
+  `d7dfcb5`.
 
 ---
 
@@ -59,8 +61,15 @@ Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 de
 
 ### 3.2 Este documento
 
-Está en `main` desde el merge `27803b1`, vía la rama `docs/continuidad-cambio-notebook`. Esta corrección se mergea
-desde `docs/continuidad-composer-lock`.
+Se incorporó a `main` con el merge `27803b1` (rama `docs/continuidad-cambio-notebook`) y se actualizó después con
+estos merges, todos verificados en el historial de Git:
+
+* `4410f27` (rama `docs/continuidad-composer-lock`): estado del `composer.lock`;
+* `5e16e37` (rama `docs/continuidad-enlace-revision`): enlace a la revisión de la especificación;
+* `d7dfcb5` (rama `docs/especificacion-aseguradoras`): especificación versión 2 en
+  `docs/especificacion-aseguradoras.html` y actualización de este documento.
+
+La versión vigente es la de `origin/main`, no la del primer merge.
 
 ---
 
@@ -238,7 +247,8 @@ publicada todavía tiene la versión anterior. No se implementó código del mó
 
 **Siguiente paso recomendado, en orden:**
 
-1. ~~**Conservar la revisión de la especificación.**~~ Publicada el 2026-10-27 (sección 6).
+1. ~~**Conservar la revisión de la especificación.**~~ Publicada el 2026-10-27 como página «Revisión de la
+   especificación de aseguradoras» (sección 6). No equivale a publicar la versión 2 de la especificación (paso 5).
 2. ~~**Aprobar o ajustar** las decisiones A–G y P1–P9.~~ Aprobadas el 2026-10-27 (sección 5.2).
 3. ~~**Actualizar la especificación** con las correcciones aprobadas.~~ Hecho: `docs/especificacion-aseguradoras.html`.
 4. ~~**E0:** decidir sobre `composer.lock`.~~ Resuelto el 2026-10-27 (sección 3.1).
