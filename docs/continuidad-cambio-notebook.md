@@ -5,8 +5,9 @@ decisiones tomadas, los documentos producidos y el siguiente paso acordado.
 
 > **Alcance de este documento.** No reemplaza a [`CLAUDE.md`](../CLAUDE.md) (reglas vigentes) ni a
 > [`handoff.md`](handoff.md) (historia y decisiones por fase), que **no** se modificaron en esta tarea. El diseño del
-> módulo de aseguradoras todavía no está en esos documentos: vive en las páginas publicadas que se listan en la
-> sección 6.
+> módulo de aseguradoras todavía no está en esos documentos: la especificación de trabajo vigente es
+> [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 2, aprobada; sección 6). Las páginas
+> publicadas de la sección 6 quedan como antecedente.
 
 Convención: **[verificado]** = comprobado en el código o el entorno el 2026-10-27; **[pendiente]** = sin verificar o
 sin decidir.
@@ -23,7 +24,7 @@ sin decidir.
 | Servidor local | Nginx de Laragon con `php-cgi` (no Apache) | `CLAUDE.md` §3 |
 | Frontend | Repositorio aparte `../synctaller-frontend` (React 19 + TypeScript + Vite + Tabler) | `CLAUDE.md` §1 |
 | Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico | `CLAUDE.md` §1 |
-| Tests | `CLAUDE.md` y el handoff registran **374 tests en verde (2026-10-24)**. **En esta sesión no se ejecutaron tests** [pendiente de volver a verificar] | `CLAUDE.md` §1 |
+| Tests | **374 tests (5985 aserciones) en verde, en 406 s** [verificado: `php artisan test` ejecutado el 2026-10-27 en la sesión que retomó desde este documento] | `CLAUDE.md` §1 |
 | Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta** desde el 2026-10-24. `CLAUDE.md` §7 dice "Sin deudas pendientes": es una discrepancia sin corregir | `docs/handoff.md:4003` |
 
 Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 desde el 2026-10-24 (handoff 2.51).
@@ -105,7 +106,12 @@ Son la dirección del diseño, **no** una autorización para modificar código.
 7. **Fiscalidad:** no inventar reglas tributarias. El deducible y las demás cuestiones fiscales se validan con
    profesionales en Paraguay.
 
-### 5.2 Propuestas sin aprobar [pendiente]
+### 5.2 Decisiones A–G y P1–P9: aprobadas el 2026-10-27
+
+Se revisaron y aprobaron una por una el 2026-10-27, varias con precisiones. **El texto aprobado está en §10.2 de
+[`especificacion-aseguradoras.html`](especificacion-aseguradoras.html)** y se aplica en las secciones que allí se
+indican; las tablas siguientes quedan solo como registro de las propuestas originales. Aprobarlas no resuelve las
+validaciones externas (sección 8).
 
 **De la especificación (§10.2):**
 
@@ -137,8 +143,9 @@ Son la dirección del diseño, **no** una autorización para modificar código.
 
 ## 6. Auditorías y especificaciones realizadas
 
-Las cuatro son **páginas privadas en claude.ai** de la cuenta del usuario. Se abren desde cualquier equipo con esa
-cuenta. **No están en el repositorio.**
+Las cuatro primeras son **páginas privadas en claude.ai** de la cuenta del usuario. Se abren desde cualquier equipo
+con esa cuenta y **no están en el repositorio**. La quinta, la especificación de trabajo vigente, **sí está en el
+repositorio**.
 
 | Documento | Contenido | Ubicación |
 |---|---|---|
@@ -146,16 +153,21 @@ cuenta. **No están en el repositorio.**
 | Informe de decisiones: "Decisiones del módulo de aseguradoras" | Multi-tenant (recomendación C), clientes y aseguradoras, reparto, autorizaciones, MVP, preguntas G | https://claude.ai/artifact/6NQ2MEHFyC4S2pUpgWensC |
 | Especificación técnica: "Especificación del módulo de aseguradoras" | Arquitectura SaaS, entidades, flujos, invariantes I1–I8, API, permisos, plan E/T/M | https://claude.ai/artifact/R1BmU5AE8gYb6VQanTaer4 |
 | Revisión: "Revisión de la especificación de aseguradoras" | Hallazgos H1–H15, invariantes corregidas R1–R10, ejemplos numéricos, criterios del spike S1–S13, decisiones A–G | https://claude.ai/artifact/T1j1B68eKpFZLrub5Jw3vx |
+| **Especificación de trabajo (versión 2, aprobada)** | La especificación técnica con los 14 cambios de la revisión, las decisiones A–G y P1–P9 aprobadas (§10.2) y las validaciones externas pendientes G1–G10 y V1–V14 (§10.1) | [`docs/especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (repositorio) |
 
 * Las copias HTML de las cuatro páginas están en la carpeta temporal de la sesión de esta notebook
   (`%LOCALAPPDATA%\Temp\claude\...\scratchpad\aseguradoras-*.html`). Esa carpeta **no viaja** al otro equipo.
 * Los archivos `Aseguradoras y siniestros en SyncTaller.md` y `Decisiones del módulo de aseguradoras.md` que se
   citaron en un pedido **no existen** en el repositorio [verificado]. Si existen en otro lugar, registrar su
   ubicación.
-* **La especificación publicada todavía no incorpora las correcciones de la revisión.** Tiene contradicciones
-  conocidas (exceso contado dos veces, deducible nulo tratado como cero, excepción que supera la autorización,
-  ruta de entrega mal escrita `deliveries` en lugar de `receptions/{reception}/delivery`, y otras). La revisión
-  manda sobre la especificación hasta que se actualice.
+* **La página publicada de la especificación (`R1BmU5AE…`) sigue siendo la versión anterior**, sin las correcciones de
+  la revisión. La versión vigente es `docs/especificacion-aseguradoras.html`, que las incorpora junto con las
+  decisiones aprobadas. **Publicarla en esa página está pendiente de autorización.**
+* **Revisión visual de los diagramas (2026-10-27):** los siete diagramas de la versión 2 se renderizaron y revisaron en
+  una vista previa temporal (Mermaid 11.16.1, la misma versión y configuración de la página publicada; modo claro y
+  oscuro). Falta comprobarlos en claude.ai después de publicar.
+* El archivo del repositorio es la fuente de la página, sin `<!doctype>` ni el script de Mermaid (los agrega la
+  publicación): abierto directamente en un navegador, los diagramas se ven como texto.
 
 ---
 
@@ -180,9 +192,10 @@ Resumen; el detalle está en la especificación §3 y en la revisión §9.
 
 ---
 
-## 8. Validación externa pendiente (G1–G10)
+## 8. Validación externa pendiente (G1–G10 y V1–V14)
 
-Ninguna está respondida.
+Ninguna está respondida. Además de G1–G10, la revisión de las decisiones agregó las preguntas V1–V14 (§10.1 de
+`docs/especificacion-aseguradoras.html`), también pendientes.
 
 1. **G1.** Tratamiento fiscal del deducible.
 2. **G2.** Destinatario de las facturas, también en siniestros de tercero.
@@ -219,17 +232,21 @@ Sin corregir; no se tocó código.
 
 ## 10. Punto exacto y siguiente paso
 
-**Dónde quedó la sesión:** se entregó la revisión de la especificación técnica y se espera la aprobación del usuario.
-No se implementó nada ni se abrió ninguna rama.
+**Dónde quedó la sesión (2026-10-27):** las decisiones A–G y P1–P9 están aprobadas y la especificación versión 2 está
+en `docs/especificacion-aseguradoras.html`, con sus diagramas revisados en una vista previa temporal. La página
+publicada todavía tiene la versión anterior. No se implementó código del módulo.
 
 **Siguiente paso recomendado, en orden:**
 
 1. ~~**Conservar la revisión de la especificación.**~~ Publicada el 2026-10-27 (sección 6).
-2. **Aprobar o ajustar** las decisiones A–G y P1–P9 (sección 5.2).
-3. **Actualizar la especificación publicada** con las correcciones aprobadas (lista de 14 cambios de la revisión).
+2. ~~**Aprobar o ajustar** las decisiones A–G y P1–P9.~~ Aprobadas el 2026-10-27 (sección 5.2).
+3. ~~**Actualizar la especificación** con las correcciones aprobadas.~~ Hecho: `docs/especificacion-aseguradoras.html`.
 4. ~~**E0:** decidir sobre `composer.lock`.~~ Resuelto el 2026-10-27 (sección 3.1).
-5. **En paralelo:** enviar las preguntas G1–G10 al contador y a talleres que trabajen con aseguradoras.
-6. Después, según el plan de la especificación:
+5. **Publicar la versión 2** en la página de la especificación (sección 6), **solo con autorización**, y comprobar
+   ahí los siete diagramas.
+6. **En paralelo:** enviar las preguntas G1–G10 y V1–V14 al contador, a un asesor legal y a talleres que trabajen con
+   aseguradoras (sección 8).
+7. Después, según el plan de la especificación (§9 y §11 de `docs/especificacion-aseguradoras.html`):
    * correcciones independientes E1–E5 (sugerido: E2 → E3 → E4 → E5 → E1), cada una en su rama y con revisión;
    * spike T0 en una rama descartable;
    * módulo desde M1 (tipo de cliente), coordinado con el frontend.
@@ -246,9 +263,9 @@ No se implementó nada ni se abrió ninguna rama.
    * Laragon con **Nginx**;
    * no usar `config:cache` en desarrollo.
 3. **Verificar el entorno:** `php artisan test` (o `php -d extension=pdo_sqlite -d extension=sqlite3
-   vendor/bin/phpunit` si falta `pdo_sqlite`) y anotar el resultado. Hoy no hay evidencia de esta sesión.
+   vendor/bin/phpunit` si falta `pdo_sqlite`) y anotar el resultado. La última ejecución verificada es la de la
+   sección 1 (374 tests en verde, 2026-10-27); repetirla en el equipo donde se retome.
 4. **Abrir las páginas de la sección 6** con la cuenta de claude.ai del usuario.
-5. **Abrir Claude Code** en `synctaller-backend` y pedirle que lea `CLAUDE.md`, `docs/handoff.md` y este documento,
-   verifique el estado de Git y retome desde la sección 10. Para el detalle de las correcciones, compartirle la
-   revisión de la sección 6 (Claude Code no lee páginas de claude.ai sin la herramienta de artifacts: si no
-   puede abrirla, pegarle su contenido).
+5. **Abrir Claude Code** en `synctaller-backend` y pedirle que lea `CLAUDE.md`, `docs/handoff.md`, este documento y
+   `docs/especificacion-aseguradoras.html` (en especial §10), verifique el estado de Git y retome desde la sección 10.
+   La versión 2 ya incorpora la revisión: no hace falta compartirle las páginas publicadas.
