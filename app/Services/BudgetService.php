@@ -9,6 +9,8 @@ use App\Models\Part;
 use App\Models\Service;
 use App\Enums\BudgetItemType;
 use App\Enums\BudgetStatus;
+use App\Enums\ClientAcceptanceKind;
+use App\Models\User;
 use App\Enums\DiagnosticStatus;
 use App\Enums\DocumentSeries;
 use App\Enums\ClientNotificationType;
@@ -133,7 +135,10 @@ class BudgetService
         });
     }
 
-    public function approve(Budget $budget): Budget
+    /**
+     * @param array{channel?: string|null, contact?: string|null, notes?: string|null} $decision
+     */
+    public function approve(Budget $budget, User $user, array $decision = []): Budget
     {
         if ($budget->status !== BudgetStatus::SENT) {
             throw new BudgetException(
@@ -153,7 +158,7 @@ class BudgetService
             );
         }
 
-        return DB::transaction(function () use ($budget) {
+        return DB::transaction(function () use ($budget, $user, $decision) {
             $this->recalculateBudget($budget);
 
             $budget->update([
@@ -161,13 +166,18 @@ class BudgetService
                 'approved_at' => now(),
             ]);
 
+            $this->recordClientAcceptance($budget, ClientAcceptanceKind::APPROVAL, $user, $decision);
+
             $this->internalNotificationService->budgetDecided($budget);
 
             return $budget->refresh();
         });
     }
 
-    public function reject(Budget $budget): Budget
+    /**
+     * @param array{channel?: string|null, contact?: string|null, notes?: string|null} $decision
+     */
+    public function reject(Budget $budget, User $user, array $decision = []): Budget
     {
         if ($budget->status !== BudgetStatus::SENT) {
             throw new BudgetException(
@@ -179,15 +189,34 @@ class BudgetService
 
         $this->receptionStatusService->ensureEditable($budget->reception_id);
 
-        return DB::transaction(function () use ($budget) {
+        return DB::transaction(function () use ($budget, $user, $decision) {
             $budget->update([
                 'status' => BudgetStatus::REJECTED,
             ]);
+
+            $this->recordClientAcceptance($budget, ClientAcceptanceKind::REJECTION, $user, $decision);
 
             $this->internalNotificationService->budgetDecided($budget);
 
             return $budget->refresh();
         });
+    }
+
+    /**
+     * Evidencia de la respuesta del cliente: quién la registró, cuándo, por qué
+     * medio y el importe sin IVA a su cargo (en un particular, el subtotal).
+     */
+    private function recordClientAcceptance(Budget $budget, ClientAcceptanceKind $kind, User $user, array $decision): void
+    {
+        $budget->clientAcceptances()->create([
+            'kind' => $kind,
+            'decided_by' => $user->id,
+            'decided_at' => now(),
+            'channel' => $decision['channel'] ?? null,
+            'contact' => $decision['contact'] ?? null,
+            'notes' => $decision['notes'] ?? null,
+            'owner_amount' => $budget->subtotal,
+        ]);
     }
 
     public function cancel(Budget $budget): Budget

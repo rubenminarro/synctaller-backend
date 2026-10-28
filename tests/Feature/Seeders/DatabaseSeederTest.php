@@ -34,7 +34,7 @@ class DatabaseSeederTest extends TestCase
         'users', 'roles', 'permissions', 'mechanics', 'brands', 'vehicle_models', 'service_categories', 'services',
         'maintenance_plans', 'check_list_items', 'diagnostic_item_templates', 'clients', 'vehicles', 'receptions', 'reception_check_lists',
         'reception_check_list_items', 'diagnostics', 'diagnostic_items', 'diagnostic_item_photos', 'budgets',
-        'budget_items', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
+        'budget_items', 'budget_client_acceptances', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
         'work_orders', 'work_order_items', 'work_order_parts', 'work_order_closings', 'notifications',
         'invoices', 'invoice_items', 'payments', 'vehicle_deliveries', 'client_notifications',
         'purchases', 'purchase_items', 'supplier_payments', 'vehicle_maintenances', 'work_order_commissions',
@@ -113,6 +113,18 @@ class DatabaseSeederTest extends TestCase
             ['cancelled' => 1, 'completed' => 17, 'in_progress' => 3, 'paused' => 1, 'pending' => 2],
             $this->statusCounts('work_orders')
         );
+        // Cada respuesta del cliente queda registrada: una aprobación por presupuesto aprobado y un rechazo por cada
+        // presupuesto rechazado (también los reabiertos, que vuelven a borrador con su rechazo en el historial).
+        $acceptances = DB::table('budget_client_acceptances')->selectRaw('kind, count(*) as total')->groupBy('kind')
+            ->pluck('total', 'kind')->map(fn ($total) => (int) $total)->all();
+        $this->assertSame(24, $acceptances['approval'] ?? 0);
+        $this->assertGreaterThanOrEqual(2, $acceptances['rejection'] ?? 0);
+        $this->assertSame(0, DB::table('budgets')->where('status', 'approved')
+            ->whereNotExists(fn ($query) => $query->from('budget_client_acceptances')
+                ->whereColumn('budget_client_acceptances.budget_id', 'budgets.id')
+                ->where('kind', 'approval'))
+            ->count());
+
         $this->assertEqualsCanonicalizing(['pending', 'in_progress', 'completed', 'cancelled'], array_keys($this->statusCounts('diagnostics')));
         $this->assertEqualsCanonicalizing(['pending', 'in_progress', 'completed', 'cancelled'], array_keys($this->statusCounts('work_order_items')));
         $this->assertEqualsCanonicalizing(

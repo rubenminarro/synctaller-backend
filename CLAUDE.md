@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 239 rutas API, 387 tests en verde.
+  (6.3). 239 rutas API, 393 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -292,6 +292,13 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 
 * Código `BUD-…`. Estados: `draft → sent → approved`; `sent → rejected → draft` (reabrir, borra `approved_at`);
   cancelar desde `draft` o `sent`.
+* **Respuesta del cliente** (`budget_client_acceptances`, decisión del 2026-10-28): cada `approve` y `reject` crea una
+  fila inmutable (`BUDGET_CLIENT_ACCEPTANCE_IMMUTABLE`, 409) con `kind` (`ClientAcceptanceKind`: `approval|rejection`),
+  quién lo registró (`decided_by`), `decided_at`, `channel` (`ClientDecisionChannel`), `contact`, `notes` y
+  `owner_amount` (importe sin IVA a cargo del cliente: en un particular, el subtotal). El body es **opcional** (sin body,
+  el contrato es el de siempre; el motivo del rechazo también es opcional). Reabrir no borra el historial. El detalle
+  del presupuesto trae `client_acceptances` en orden. Los presupuestos anteriores a E5 no tienen filas. `Budget` usa
+  `Auditable`.
 * Solo `draft` es editable (cabecera e ítems): `BUDGET_NOT_EDITABLE`. Enviar y aprobar exigen ítems
   (`BUDGET_WITHOUT_ITEMS`). Transición inválida: `BUDGET_NOT_SENDABLE|APPROVABLE|REJECTABLE|CANCELLABLE|REOPENABLE`.
 * Enviar exige los diagnósticos de la recepción `completed|cancelled` (`BUDGET_DIAGNOSTICS_PENDING`, con los números
@@ -545,7 +552,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 * **Registro automático:** los modelos con el trait `App\Traits\Auditable` se registran solos en `audit_logs`
   (`AuditLogger`) en el alta, la modificación (solo los campos cambiados, antes y después), la baja y la restauración,
   con usuario, IP y user agent.
-  * Modelos auditados: `Part`, `Service`, `BudgetItem`, `PartSupplier`, `Invoice`, `InvoiceItem`, `Payment`,
+  * Modelos auditados: `Part`, `Service`, `Budget`, `BudgetItem`, `BudgetClientAcceptance`, `PartSupplier`, `Invoice`, `InvoiceItem`, `Payment`,
     `SupplierPayment`, `Purchase`, `PurchaseItem`, `User`, `Role`, `Permission`, `Client`, `Vehicle`, `Mechanic`,
     `InvoiceStamp`, `MaintenancePlan` y `DiagnosticItemTemplate`.
   * **Un modelo nuevo con precios, dinero, seguridad o datos maestros debe usar el trait.**
