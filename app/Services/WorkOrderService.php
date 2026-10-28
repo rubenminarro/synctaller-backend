@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\BudgetItemType;
 use App\Enums\BudgetStatus;
+use App\Enums\DocumentSeries;
 use App\Enums\WorkOrderItemStatus;
 use App\Enums\WorkOrderItemType;
 use App\Enums\WorkOrderStatus;
@@ -22,7 +23,8 @@ class WorkOrderService
         protected WorkOrderClosingService $closingService,
         protected MaintenanceService $maintenanceService,
         protected ReceptionStatusService $receptionStatusService,
-        protected InternalNotificationService $internalNotificationService
+        protected InternalNotificationService $internalNotificationService,
+        protected DocumentSequenceService $documentSequences
     ) {
     }
 
@@ -70,17 +72,17 @@ class WorkOrderService
 
             $this->receptionStatusService->ensureOpen($budget->reception_id);
 
-            $workOrder = WorkOrder::create([
+            $workOrder = $this->documentSequences->create(DocumentSeries::WORK_ORDER, fn (string $code) => WorkOrder::create([
                 'reception_id' => $budget->reception_id,
                 'budget_id' => $budget->id,
                 'mechanic_id' => $mechanic->id,
                 'created_by' => $createdBy,
-                'code' => $this->generateCode(),
+                'code' => $code,
                 'status' => WorkOrderStatus::PENDING,
                 'started_at' => null,
                 'completed_at' => null,
                 'notes' => null,
-            ]);
+            ]));
 
             foreach ($budget->items as $budgetItem) {
                 $workOrderItem = $workOrder->items()->create([
@@ -469,18 +471,6 @@ class WorkOrderService
                 'WORK_ORDER_ITEM_NOT_BELONGING'
             );
         }
-    }
-
-    private function generateCode(): string
-    {
-        $nextId = (WorkOrder::withTrashed()->max('id') ?? 0) + 1;
-
-        return 'OT-' . str_pad(
-            $nextId,
-            6,
-            '0',
-            STR_PAD_LEFT
-        );
     }
 
     private function ensureEditable(WorkOrder $workOrder): void

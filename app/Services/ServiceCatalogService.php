@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DocumentSeries;
 use App\Enums\ServiceStatus;
 use App\Exceptions\ServiceException;
 use App\Models\MaintenancePlan;
@@ -13,15 +14,20 @@ use Illuminate\Support\Facades\DB;
  */
 class ServiceCatalogService
 {
+    public function __construct(
+        protected DocumentSequenceService $documentSequences
+    ) {
+    }
+
     public function create(array $data): Service
     {
         return DB::transaction(function () use ($data) {
 
-            $service = Service::create([
+            $service = $this->documentSequences->create(DocumentSeries::SERVICE, fn (string $code) => Service::create([
                 ...$data,
-                'code' => $this->generateCode(),
+                'code' => $code,
                 'status' => ServiceStatus::ACTIVE,
-            ]);
+            ]));
 
             return $service->load('category');
         });
@@ -104,12 +110,5 @@ class ServiceCatalogService
 
             return $service->load('category');
         });
-    }
-
-    private function generateCode(): string
-    {
-        $nextId = (Service::withTrashed()->max('id') ?? 0) + 1;
-
-        return 'SRV-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
     }
 }

@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 239 rutas API, 376 tests en verde.
+  (6.3). 239 rutas API, 382 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -76,7 +76,13 @@ resultados esperados y casos de error).
 * Dinero y cantidades con **BCMath** sobre strings (`App\Support\Decimal::round`), nunca `float`.
 * Operaciones sobre varios registros en `DB::transaction`; concurrencia con `lockForUpdate`.
   Orden de bloqueo: OT → línea → `part_stocks`; OT → recepción (recálculo de estado); factura → pago;
-  recepción → entregas; compra → `part_stocks`; compra → pago a proveedor.
+  recepción → entregas; compra → `part_stocks`; compra → pago a proveedor; documento → serie de códigos (siempre
+  última).
+* **Códigos internos** (`BUD-`, `OT-`, `COM-`, `REP-`, `SRV-`, `DIA-`): salen de `DocumentSequenceService::create()`
+  (serie en `App\Enums\DocumentSeries`, contador en `document_sequences`), nunca de `max(id) + 1`. El contador de la
+  serie se bloquea dentro de la transacción del alta (un alta fallida no consume el número), se saltan los códigos ya
+  usados y un repetido igual responde `409 DOCUMENT_CODE_CONFLICT`. Puede haber huecos: no son documentos fiscales.
+  La fila de cada serie se crea en el primer uso con el máximo id + 1. Una serie nueva se agrega al enum.
 * Documentos emitidos (cierre económico, factura emitida, pago, entrega, movimiento de inventario, compra recibida,
   pago a proveedor) son
   **inmutables a nivel de modelo**: solo se anulan o se corrigen con otro registro.
@@ -304,7 +310,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 ### 6.5 Orden de trabajo
 
 * Nace de un presupuesto `approved` con ítems (`WORK_ORDER_BUDGET_NOT_APPROVED`, `WORK_ORDER_BUDGET_WITHOUT_ITEMS`);
-  una por presupuesto (`WORK_ORDER_ALREADY_EXISTS`). Código `OT-000001` (máximo id + 1, incluye eliminadas).
+  una por presupuesto (`WORK_ORDER_ALREADY_EXISTS`). Código `OT-000001` (serie con bloqueo, ver sección 3).
 * Un `WorkOrderItem` por `BudgetItem`. `WorkOrderItem` es ejecución, no inventario ni precios (los precios están en
   `BudgetItem`; los repuestos usados en `WorkOrderPart`).
 * Estados: `pending → in_progress ⇄ paused`, `in_progress → completed`, `pending → cancelled`. Nunca vuelve atrás.
