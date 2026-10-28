@@ -139,14 +139,14 @@ footer { margin-top: 32px; font-size: 14px; color: var(--muted); }
 
 <main>
 <header class="top">
-  <p class="eyebrow">SyncTaller Backend · Especificación técnica · Versión 2 (incorpora la revisión)</p>
+  <p class="eyebrow">SyncTaller Backend · Especificación técnica · Versión 3 (incorpora las primeras respuestas externas)</p>
   <h1>Especificación del módulo de aseguradoras</h1>
-  <p class="lede">Especificación incremental del módulo de aseguradoras y siniestros y de la infraestructura SaaS (base central más una base por taller), construida sobre las decisiones conceptuales aprobadas. Esta versión incorpora las correcciones de la <a href="https://claude.ai/artifact/T1j1B68eKpFZLrub5Jw3vx">revisión de la especificación</a> (hallazgos H1–H15) y las decisiones A–G y P1–P9 aprobadas el 2026-10-27 (§10.2). No se modificó el repositorio. Los nombres de tablas, clases, rutas, permisos y <code>error_code</code> nuevos son <b>propuestas provisorias</b>: lo que ya existe se cita con su archivo y línea.</p>
+  <p class="lede">Especificación incremental del módulo de aseguradoras y siniestros y de la infraestructura SaaS (base central más una base por taller), construida sobre las decisiones conceptuales aprobadas. La versión 2 incorporó las correcciones de la <a href="https://claude.ai/artifact/T1j1B68eKpFZLrub5Jw3vx">revisión de la especificación</a> (hallazgos H1–H15) y las decisiones A–G y P1–P9 aprobadas el 2026-10-27 (§10.2). <b>La versión 3</b> registra las primeras respuestas a G1–G5 (2026-10-28, §10.1) y sus efectos: la modalidad de facturación neta del deducible para M10 (§6.6), la modalidad por siniestro (§4.3), la entrega nueva de retenciones de IVA (M12, §9) y la revisión de P6 por las notas de crédito. Ninguna de esas propuestas está aprobada todavía. Los nombres de tablas, clases, rutas, permisos y <code>error_code</code> nuevos son <b>propuestas provisorias</b>: lo que ya existe se cita con su archivo y línea.</p>
   <div class="meta">
-    <span><b>Fecha:</b> 2026-10-27</span>
-    <span><b>Backend:</b> main (f61cb8c; 5e16e37 solo agrega documentación), Laravel 13.38.0</span>
+    <span><b>Fecha:</b> 2026-10-28 (versión 2: 2026-10-27)</span>
+    <span><b>Backend:</b> main (716010f), Laravel 13.38.0</span>
     <span><b>Frontend revisado:</b> main (cbbb559)</span>
-    <span><b>Estado:</b> decisiones técnicas aprobadas; validaciones externas pendientes (§10.1). <b>No apto para producción</b></span>
+    <span><b>Estado:</b> decisiones A–G y P1–P9 aprobadas; cambios de la versión 3 <b>pendientes de revisión</b>; G1–G5 respondidas en parte, el resto de las validaciones pendientes (§10.1). <b>No apto para producción</b></span>
   </div>
   <div class="legend" aria-label="Leyenda">
     <span class="item"><span class="tag h">Hecho</span> comprobado en el código o el entorno</span>
@@ -168,7 +168,15 @@ footer { margin-top: 32px; font-size: 14px; color: var(--muted); }
     <li><b>Reparto económico</b> por OT, versionado, que nunca toca <code>WorkOrderClosing</code>. Tiene dos capas: porciones en base sin IVA (quién soporta cada importe) y una obligación de deducible sin tratamiento fiscal (§4.5). Las facturas se generan por responsable desde el reparto. El flujo particular no cambia.</li>
     <li><b>Restricción comercial del MVP (A):</b> solo los siniestros con deducible informado e igual a 0 se facturan y entregan de punta a punta. Con deducible mayor a 0 el reparto se confirma, pero no se emite ninguna factura de esa OT y <b>la OT no se entrega por el flujo habitual</b> (control explícito en la entrega, §7.1) hasta M10 y la respuesta de G1. Con deducible desconocido (nulo) el reparto no se confirma y la OT tampoco se entrega (mismo control).</li>
     <li><b>Puede avanzar ya, sin supuestos fiscales:</b> aseguradoras, siniestros, documentos, autorizaciones, excepciones, reparto y facturación de las porciones con deducible 0. <b>Espera validación:</b> cómo se factura el deducible (G1), retenciones, anticipos y notas de crédito (G5, del que depende también la corrección de repartos facturados, P6).</li>
-    <li><b>Primeros pasos recomendados:</b> E0 ya está resuelto. Enviar ya las preguntas externas (§10.1), luego las correcciones independientes (E1–E5), en paralelo el spike de tenancy (T0), y después el módulo empezando por M1 (tipo de cliente).</li>
+    <li><b>Primeras respuestas (2026-10-28, §10.1):</b>
+      <ul>
+        <li><b>G1:</b> con deducible se emiten dos facturas desde la OT del siniestro: a la aseguradora, por su parte <b>neta del deducible</b>; al dueño, por el deducible con un concepto propio. La modalidad puede variar por aseguradora y por póliza. Con eso M10 tiene una modalidad concreta que diseñar (§6.6), sujeta a precisiones (V15–V16) y a la confirmación escrita del contador (V21).</li>
+        <li><b>G2:</b> se factura a quien paga; en siniestros de tercero, a la aseguradora del responsable.</li>
+        <li><b>G3:</b> las aseguradoras retienen el 30 % del IVA y la factura a crédito se cancela con un recibo que descuenta la retención. Hoy no hay forma de registrarlo: entrega nueva <b>M12</b>.</li>
+        <li><b>G5:</b> la corrección de una factura emitida es una nota de crédito. P6 (corregir anulando) queda en revisión.</li>
+      </ul>
+    </li>
+    <li><b>Primeros pasos recomendados:</b> E0 ya está resuelto y E2 está implementada (rama <code>fix/recordatorios-destinatario</code>). Pedir las precisiones V15–V22 y las validaciones todavía abiertas (§10.1). Seguir con las correcciones independientes (E3, E4, E5, E1) y, en paralelo, el spike de tenancy (T0). Después, el módulo desde M1 (tipo de cliente).</li>
   </ul>
 </section>
 
@@ -515,7 +523,7 @@ erDiagram
   <div class="tablewrap"><table>
     <thead><tr><th>Tabla (propuesta)</th><th>Campos</th><th>Reglas</th></tr></thead>
     <tbody>
-      <tr><td><code>insurers</code></td><td><code>client_id</code> (único, FK a un cliente <code>company</code>), <code>code</code> <code>ASE-000001</code>, <code>status</code> (<code>active|inactive</code>), <code>payment_term_days</code> (nulo), <code>deductible_billing_mode</code> (nulo hasta validar; ver §6.6), <code>notes</code>, <code>created_by</code>, timestamps, soft delete</td><td>Razón social, RUC, email y teléfono se leen del <code>Client</code>: <b>no se duplican</b>. Con siniestros no se elimina (<code>INSURER_IN_USE</code>, 409): se desactiva. Inactiva: no admite siniestros nuevos (<code>INSURER_INACTIVE</code>, 422). <code>Auditable</code>.</td></tr>
+      <tr><td><code>insurers</code></td><td><code>client_id</code> (único, FK a un cliente <code>company</code>), <code>code</code> <code>ASE-000001</code>, <code>status</code> (<code>active|inactive</code>), <code>payment_term_days</code> (nulo), <code>deductible_billing_mode</code> (nulo; modalidad <b>por defecto</b> de sus siniestros, ver §6.6), <code>notes</code>, <code>created_by</code>, timestamps, soft delete</td><td>Razón social, RUC, email y teléfono se leen del <code>Client</code>: <b>no se duplican</b>. Con siniestros no se elimina (<code>INSURER_IN_USE</code>, 409): se desactiva. Inactiva: no admite siniestros nuevos (<code>INSURER_INACTIVE</code>, 422). <code>Auditable</code>.</td></tr>
       <tr><td><code>insurer_contacts</code></td><td><code>insurer_id</code>, <code>name</code>, <code>role</code> (<code>claims|billing|adjuster_coordination|other</code>), <code>phone</code>, <code>email</code>, <code>is_primary</code>, <code>notes</code></td><td>Contactos operativos. Un solo principal por aseguradora. <code>Auditable</code>.</td></tr>
     </tbody>
   </table></div>
@@ -536,7 +544,7 @@ erDiagram
           <li><b>Hecho:</b> <code>claim_type</code> (<code>own|third_party</code>), <code>loss_date</code>, <code>loss_description</code>.</li>
           <li><b>Asegurado:</b> <code>insured_client_id</code> (nulo; si el asegurado ya es cliente), <code>insured_name</code>, <code>insured_document</code>, <code>insured_phone</code>, <code>insured_email</code>.</li>
           <li><b>Perito:</b> <code>adjuster_name</code>, <code>adjuster_phone</code>, <code>adjuster_email</code>, <code>inspection_scheduled_at</code>, <code>inspected_at</code>.</li>
-          <li><b>Deducible:</b> <code>deductible_amount</code> decimal(14,2) (nulo = desconocido; 0 = sin deducible).</li>
+          <li><b>Deducible:</b> <code>deductible_amount</code> decimal(14,2) (nulo = desconocido; 0 = sin deducible) y <code>deductible_billing_mode</code> (nulo; se copia de la aseguradora al abrir el siniestro y se puede cambiar según la póliza, versión 3, §6.6).</li>
           <li><b>Estado:</b> <code>coverage_notes</code>, <code>status</code>, <code>closed_at</code>, <code>cancelled_at</code>, <code>cancelled_by</code>, <code>cancellation_reason</code>, <code>created_by</code>, timestamps.</li>
         </ul>
       </td></tr>
@@ -605,7 +613,7 @@ erDiagram
   <ul>
     <li><code>invoices.allocation_id</code> (nuevo, nulo): versión del reparto que factura. Nulo en el flujo particular.</li>
     <li><code>invoice_items.allocation_line_id</code> (nuevo, nulo): porción del reparto que factura.</li>
-    <li><code>source</code> sigue siendo el concepto ejecutado. El deducible <b>no</b> genera líneas de factura en el MVP; su tratamiento en la factura (y cualquier <code>source</code> propio) se define en M10, con la respuesta de G1.</li>
+    <li><code>source</code> sigue siendo el concepto ejecutado. El deducible <b>no</b> genera líneas de factura en el MVP; su tratamiento en la factura (y cualquier <code>source</code> propio) se define en M10. La modalidad neta propuesta en la versión 3 (§6.6) lo factura al dueño en una línea propia, «Deducible de siniestro N.º …».</li>
     <li><b>Redondeo al facturar una porción</b> (revisión H10): si el importe de la porción no es igual a <code>cantidad × precio unitario base</code>, la línea va con cantidad 1 y base igual al importe, y la cantidad real se indica en la descripción (Ejemplo 5, §6.2). R8 compara <code>base_total</code>, que así siempre es exacto.</li>
     <li><code>invoices.client_id</code> pasa a significar <b>destinatario</b>. En las facturas existentes el valor no cambia; la regla 6.10 se documenta.</li>
   </ul>
@@ -773,7 +781,12 @@ stateDiagram-v2
         <li>se confirma la nueva versión, se vuelve a facturar y se registran nuevamente los pagos.</li>
       </ol>
       Las versiones sustituidas, las facturas anuladas y los pagos anulados quedan vinculados: no se pierde historial. Los números de factura anulados no se reutilizan. No cambia ninguna otra regla de facturación o pagos.</li>
-    <li><span class="tag u">Pendiente G5</span> La validez fiscal de anular facturas emitidas y entregadas como método de corrección <b>depende de G5</b> (contador). Si G5 determina que corresponde una nota de crédito, este circuito se revisa <b>antes de implementarlo</b>.</li>
+    <li><span class="tag w">En revisión (versión 3)</span> La primera respuesta a G5 (2026-10-28) indica que una factura emitida y cuestionada se corrige con una <b>nota de crédito</b> a favor de la aseguradora, no anulándola. Mientras SyncTaller no emita notas de crédito, se acepta otro procedimiento autorizado y no tiene consecuencias fiscales. Por eso este circuito <b>no se implementa como está</b> hasta definir (V18–V19):
+      <ul>
+        <li>cuál es ese procedimiento (por ejemplo, una nota de crédito en talonario o en otro sistema);</li>
+        <li>si se puede anular una factura emitida que la aseguradora todavía no recibió.</li>
+      </ul>
+      Propuesta a decidir (P10, §10.3): <b>registrar en SyncTaller la nota de crédito emitida fuera del sistema</b> (número, fecha, importe y factura afectada), para que baje el saldo de la factura y libere la porción del reparto, en lugar de anular la factura. La regla vigente de anulación (6.10) no cambia mientras tanto.</li>
     <li><b>Sin siniestro, o sin líneas a cargo de la aseguradora:</b> no se genera reparto. Se usa el flujo actual.</li>
   </ul>
 </section>
@@ -954,6 +967,44 @@ stateDiagram-v2
     <li>Agregar modalidades validadas es la entrega M10. Hasta entonces quedan fuera: líneas de deducible en <code>invoice_items</code>, toda conversión del deducible a base sin IVA y la comparación del deducible con lo cubierto.</li>
     <li>El flujo particular no cambia.</li>
   </ul>
+
+  <h4>Modalidad neta: «factura neta a la aseguradora + factura del deducible al dueño» <span class="tag p">Propuesta, versión 3</span></h4>
+  <p>Surge de la primera respuesta a G1 (2026-10-28): dos facturas desde la OT del siniestro, una a la aseguradora por su parte y otra al dueño por el deducible, con un concepto propio. La modalidad puede variar según la aseguradora y la póliza. Es la primera modalidad candidata de M10. Solo se habilita con las precisiones V15–V16 y la confirmación escrita del contador (V21).</p>
+  <ul>
+    <li><b>Dónde se elige:</b> en el siniestro (<code>claims.deductible_billing_mode</code>), con la de la aseguradora como valor por defecto (§4.2, §4.3). Valor propuesto: <code>net_of_deductible</code>. Mientras el siniestro tenga la modalidad nula, rige la regla A de arriba: no se factura con deducible mayor a 0. La evidencia de la modalidad (póliza o convenio) se guarda como documento del siniestro; si alcanza, se confirma con V20.</li>
+    <li><b>Conversión a base:</b> el deducible pasa a base sin IVA para poder repartirlo. Si el importe informado incluye IVA al 10 %, base = deducible × 100 / 110 (BCMath, 2 decimales). <span class="tag u">Pendiente V15</span> si el importe incluye IVA y si la tasa es siempre 10 %.</li>
+    <li><b>Reparto (capa A):</b> al confirmar, la base del deducible <b>se descuenta de las porciones <code>insurer_covered</code></b> y pasa al dueño como porciones de un tipo nuevo, <code>owner_deductible</code>, sobre los mismos conceptos. Así R1 y R2 se siguen cumpliendo sin ajustes con signo. Se propone llenar por orden de concepto, que es determinista y no genera centavos sueltos; la factura muestra una sola línea de todos modos. R3 se cumple con holgura: lo cubierto solo baja.</li>
+    <li><b>Facturas:</b>
+      <ul>
+        <li>aseguradora: sus porciones <code>insurer_covered</code> ya netas;</li>
+        <li>dueño: sus porciones de siempre, más <b>una línea de cantidad 1</b> con el concepto «Deducible de siniestro N.º {claim_number}» (o el código <code>SIN-</code> si no hay número), al 10 %, por la base del deducible. Puede ir en la misma factura del dueño o en una aparte; se decide en M10.</li>
+      </ul>
+    </li>
+    <li><b>Invariantes:</b> R5 suma el deducible aceptado al tope del dueño (la aceptación ya guarda <code>deductible_amount</code>). R7 sigue en importe informado. R8 y R9 no cambian, porque el deducible ahora es una porción en base.</li>
+    <li><b>Deducible mayor que lo cubierto:</b> no puede haber una factura negativa a la aseguradora. <span class="tag u">Pendiente V16</span> ¿el dueño paga solo hasta lo cubierto, o el deducible completo? Hasta responderlo, confirmar un reparto así se rechaza (propuesto <code>ALLOCATION_DEDUCTIBLE_EXCEEDS_COVERED</code>, 422).</li>
+    <li><b>Entrega:</b> con la modalidad neta, el control <code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code> deja de bloquear un deducible mayor a 0. Pasan a regir las reglas de entrega de §7.1 sobre las facturas vigentes, también la del deducible. Con deducible nulo sigue bloqueando.</li>
+  </ul>
+
+  <div class="example">
+    <h4>Ejemplo 7: el Ejemplo 1 con deducible de 220.000 y modalidad neta</h4>
+    <p>Supuesto pendiente de V15: el deducible de 220.000 incluye IVA al 10 %. Su base es 200.000.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Concepto</th><th class="num">insurer_covered</th><th class="num">owner_deductible</th><th class="num">Resto del dueño</th></tr></thead>
+      <tbody>
+        <tr><td>c1 <code>WorkOrderItem</code> i1</td><td class="num">600.000</td><td class="num">200.000</td><td class="num">200.000</td></tr>
+        <tr><td>c2 <code>WorkOrderPart</code> i2</td><td class="num">1.000.000</td><td class="num"></td><td class="num"></td></tr>
+        <tr><td>c3, c4, c5</td><td class="num"></td><td class="num"></td><td class="num">770.000</td></tr>
+        <tr class="sum"><td>Total (base 2.770.000)</td><td class="num">1.600.000</td><td class="num">200.000</td><td class="num">970.000</td></tr>
+      </tbody>
+    </table></div>
+    <ul>
+      <li><b>Factura a la aseguradora:</b> base 1.600.000, total 1.760.000.</li>
+      <li><b>Factura al dueño:</b> base 970.000 + deducible 200.000 = 1.170.000; total 1.287.000. La línea «Deducible de siniestro N.º 123» queda en 1 × 220.000.</li>
+      <li><span class="ok">R9</span> 1.600.000 + 1.170.000 = 2.770.000 = <code>sale_total</code>.</li>
+      <li><span class="ok">R5</span> el tope del dueño es 970.000 aceptados + 200.000 de deducible aceptado.</li>
+      <li><b>Si el deducible fuera 2.000.000</b> (mayor que lo cubierto, 1.800.000): se aplica V16 y, hasta responderla, se rechaza la confirmación.</li>
+    </ul>
+  </div>
 </section>
 
 <!-- 7 -->
@@ -1135,7 +1186,9 @@ flowchart LR
   M9 --> M11[M11 reportes y avisos]
   T4 --> P8T[Fotos y firmas a privado P8]
   P8T --> T6
+  G3{{Validación G3 y V17}} -.-> M12[M12 retenciones de IVA]
 </pre>
+  <p><b>Versión 3:</b> M12 (retenciones) no depende de las otras entregas del módulo. Sirve también para las facturas a aseguradoras que ya se emiten editando el borrador, y solo espera las precisiones de V17. M10 tiene ahora una modalidad candidata (neta, §6.6); la respuesta escrita del contador (V21) sigue siendo requisito. E2 está implementada.</p>
   <p>E1, E2, E4 y E5 no dependen entre sí. La línea T no bloquea a la M. Producción SaaS requiere T6, y T6 requiere la migración de fotos y firmas a privado (P8). M10 es la única entrega bloqueada por completo por una validación externa (G1). M6 necesita la respuesta de V2 para cerrar la carga de importes (P7). Además: la habilitación comercial de siniestros con deducible mayor a 0 depende de G1 (A), y el circuito de corrección de repartos facturados (M8–M9) depende de G5 (P6): si G5 exige nota de crédito, se revisa antes de implementarlo.</p>
 
   <h3>Línea E: correcciones independientes</h3>
@@ -1149,7 +1202,8 @@ flowchart LR
       <dt>Aceptación</dt><dd>Cada discrepancia con su evidencia y "a decidir"</dd>
       <dt>Revisión</dt><dd>Lectura del diff</dd>
     </dl></div>
-    <div class="step"><h4>E2 · Recordatorios al destinatario correcto <small><code>fix/</code></small></h4><dl>
+    <div class="step"><h4>E2 · Recordatorios al destinatario correcto <small>implementada el 2026-10-28 en <code>fix/recordatorios-destinatario</code>, pendiente de merge</small></h4><dl>
+      <dt>Resultado</dt><dd>El recordatorio queda <code>skipped</code> con el motivo "La factura está a nombre de otro destinatario." Se compara sin el dígito verificador, así CI y RUC de la misma persona coinciden; sin documento del cliente se avisa como antes. El reenvío manual sigue permitido. Handoff 2.54</dd>
       <dt>Objetivo</dt><dd>Que una factura con <code>customer_tax_id</code> distinto del documento del cliente no genere recordatorios al dueño</dd>
       <dt>Decisión previa</dt><dd>Propongo registrar el aviso como <code>skipped</code> con el motivo "destinatario distinto del cliente". Es el mecanismo existente, sin email nuevo</dd>
       <dt>Afecta</dt><dd><code>NotificationReminderService::invoiceReminders</code>, tests de notificaciones</dd>
@@ -1209,8 +1263,9 @@ flowchart LR
       <tr><td><b>M7</b> Bloqueo de OT y excepciones</td><td><code>InternalException</code> (solo <code>start_without_authorization</code> y <code>workshop_absorption</code>, C), verificación en <code>createFromBudget</code>, re-aceptación con evidencia, campos de aseguradora en las aceptaciones (<code>owner_amount</code> calculado, autorización y deducible), advertencias de B y P5</td><td><code>internal_exceptions</code>; columnas en las aceptaciones</td><td>M6, E5</td><td>OT bloqueada sin autorización; con excepción permitida y consumida; la excepción no reemplaza la aceptación (Ejemplo 3); aceptación desactualizada; re-aceptación por deducible mayor; advertencia de la OT y del extra; particular sin cambios</td><td><b>Revisión del flujo completo hasta la OT</b></td></tr>
       <tr><td><b>M8</b> Reparto</td><td>Refactor <code>WorkOrderSaleBreakdown</code> (test de igualdad primero), <code>WorkOrderAllocation</code> y porciones (capa A) con deducible separado (capa B), generación con tope por <code>budget_item</code>, edición, confirmación con R1–R7 y resumen previo, bloqueo siniestro → OT → reparto, versiones y corrección con <code>ALLOCATION_HAS_INVOICES</code> detallado (P6)</td><td>Dos tablas</td><td>M7</td><td>Cada regla R1–R7 con su caso de falla; ejemplos 1–4 como tests; deducible nulo → <code>CLAIM_DEDUCTIBLE_UNKNOWN</code>; deducible repartido entre varias OT (secuencial en SQLite; concurrencia en MySQL como prueba aparte); absorción con excepción; extra no asignable a la aseguradora</td><td>El particular no persiste reparto (R10); los tests del cierre no cambian. <b>Circuito de corrección sujeto a G5</b> (P6)</td></tr>
       <tr><td><b>M9</b> Facturas por responsable</td><td><code>POST work-orders/{wo}/allocations/{allocation}/invoices</code>, <code>allocation_id</code>/<code>allocation_line_id</code>, R8–R9 en generación y emisión, rechazo de toda OT que requiere reparto en <code>/invoice</code>, regla de cantidad 1 (Ejemplo 5), bloqueo de facturación por deducible mayor a 0 y bloqueo de entrega por deducible mayor a 0 o nulo (<code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>, A), <code>currentInvoices</code>, <code>invoices[]</code>/<code>invoices_count</code> (F), entrega, historial del vehículo y demás componentes de §7.1</td><td>Columnas nulas en <code>invoices</code> e <code>invoice_items</code></td><td>M8</td><td>Criterios de §7.1: OT con siniestro → <code>WORK_ORDER_REQUIRES_ALLOCATION_INVOICING</code> antes y después de confirmar; particular con JSON idéntico (snapshot); dos facturas sin duplicar (<code>WORK_ORDER_ALREADY_INVOICED</code>); cliente sin porciones → <code>ALLOCATION_CLIENT_NOT_RESPONSIBLE</code>; deducible mayor a 0 → <code>ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED</code> y entrega rechazada con <code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>, incluido el caso de una factura del dueño emitida con deducible 0, el deducible cambiado después a un valor mayor a 0 y ninguna factura vigente a la aseguradora; el mismo caso con el deducible cambiado a nulo → entrega rechazada con <code>DELIVERY_CLAIM_DEDUCTIBLE_PENDING</code>; deducible informado igual a 0 → este control no bloquea; emitir con reparto sustituido → 409; anular y volver a facturar; entrega con contado y crédito mezclados; <code>invoice</code> heredada igual; claves sin <code>invoices.show</code> ausentes; anuladas excluidas; recordatorio a la aseguradora <code>skipped</code> y nunca al dueño</td><td>Tests de facturas, pagos, entregas, historial, reportes y avisos existentes en verde sin modificarlos. <code>invoice</code> documentada como heredada en <code>CLAUDE.md</code> y la guía de Postman. <b>Revisión económica</b></td></tr>
-      <tr><td><b>M10</b> Deducible facturado</td><td>Modalidades validadas de <code>deductible_billing_mode</code>; habilita facturar y entregar siniestros con deducible mayor a 0</td><td>Según la validación</td><td>M9, <b>G1</b></td><td>Según la modalidad</td><td>Respuesta del contador por escrito. Requisito para habilitar comercialmente el deducible mayor a 0 (A)</td></tr>
+      <tr><td><b>M10</b> Deducible facturado</td><td>Modalidades validadas de <code>deductible_billing_mode</code>; habilita facturar y entregar siniestros con deducible mayor a 0. <b>Versión 3:</b> primera modalidad <code>net_of_deductible</code> (§6.6), con la modalidad en el siniestro (valor por defecto de la aseguradora), conversión del deducible a base, porciones <code>owner_deductible</code>, línea «Deducible de siniestro N.º …» y entrega sin el bloqueo de A para esa modalidad</td><td><code>claims.deductible_billing_mode</code>; valor nuevo en el enum de porciones</td><td>M9, <b>G1</b> (respondida en parte), V15, V16, V21</td><td>Ejemplo 7 como test; deducible con y sin IVA según V15; deducible mayor que lo cubierto según V16; siniestro con modalidad nula sigue bloqueado (A); deducible repartido entre dos OT (R7)</td><td>Respuesta del contador por escrito (V21). Requisito para habilitar comercialmente el deducible mayor a 0 (A)</td></tr>
       <tr><td><b>M11</b> Reportes y avisos</td><td>Cuentas por cobrar por tipo de destinatario, resumen del siniestro (presupuestado → cobrado), avisos a la aseguradora (plantillas, contacto de facturación y preferencias por tipo de aviso, D)</td><td>Ninguna prevista</td><td>M9</td><td>Etiquetas nuevas en <code>ReportExportService::LABELS</code></td><td>CSV y PDF de reportes en verde. Las comunicaciones a aseguradoras dependen de la decisión comercial (D)</td></tr>
+      <tr><td><b>M12</b> Retenciones de IVA <span class="tag p">Versión 3</span></td><td>Registrar la retención de IVA de una factura emitida, como cancelación sin movimiento de caja. Propuesta: tabla <code>invoice_withholdings</code> con <code>invoice_id</code>, <code>tax</code> (IVA), <code>rate</code> (30 % del IVA), <code>amount</code> (guaraníes enteros), <code>certificate_number</code>, <code>withheld_at</code>, <code>registered_by</code> y anulación con motivo, como el pago. El saldo de la factura pasa a ser total − pagos − retenciones vigentes (<code>Invoice::balance()</code>). El recibo <code>REC-</code> muestra la retención descontada. Fuera de la caja: no suma en <code>payments/summary</code>. Reportes de cobros con la retención aparte. <code>Auditable</code>. Tratamiento contable (crédito fiscal): fuera de SyncTaller</td><td><code>invoice_withholdings</code></td><td>Ninguna del módulo; puede ir antes de M9. <b>V17</b></td><td>Retención = 30 % de IVA 10 (total ÷ 11) redondeada a guaraníes; retención + pago cancelan la factura; retención mayor al saldo → 422; anular la retención reabre el saldo; resumen de caja sin cambios; factura de contado según V17</td><td>Tests de pagos, caja y reportes existentes en verde sin modificarlos. Error codes propuestos <code>INVOICE_WITHHOLDING_EXCEEDS_BALANCE</code> y <code>INVOICE_NOT_WITHHOLDABLE</code>. Permisos propuestos <code>invoice-withholdings.store|cancel</code> (cajero)</td></tr>
     </tbody>
   </table></div>
   <p class="callout"><span><b>Regresión en cada entrega:</b> suite completa, <code>DatabaseSeederTest</code> (sembrar dos veces) y <code>WorkshopRolesTest</code>. Cada fase actualiza <code>CLAUDE.md</code>, <code>docs/handoff.md</code>, <code>README.md</code> y <code>docs/testing/guia-postman.md</code> en la misma rama, como pide <code>CLAUDE.md</code> §2.</span></p>
@@ -1221,8 +1276,8 @@ flowchart LR
   <span class="secnum">§10</span>
   <h2>Validaciones pendientes, decisiones aprobadas y riesgos</h2>
 
-  <p>Ninguna validación externa está respondida. Ninguna se considera completada por la aprobación de las decisiones internas de §10.2.</p>
-  <h3>10.1 Validaciones externas pendientes <span class="tag u">Pendiente</span></h3>
+  <p>El 2026-10-28 llegaron las primeras respuestas a G1–G5 (tabla «Respuestas recibidas», abajo); G6–G10 y V1–V14 siguen sin respuesta. Ninguna validación se considera completada por la aprobación de las decisiones internas de §10.2. Las respuestas recibidas todavía no tienen confirmación escrita del contador (V21).</p>
+  <h3>10.1 Validaciones externas <span class="tag u">Respondidas en parte</span></h3>
   <h4>Preguntas G1–G10</h4>
   <div class="tablewrap"><table>
     <thead><tr><th>#</th><th>Asunto (contador, talleres o aseguradoras)</th><th>Qué parte depende</th><th>Qué puede avanzar sin la respuesta</th></tr></thead>
@@ -1237,6 +1292,68 @@ flowchart LR
       <tr><td>G8</td><td>Forma y plazo de liquidación (por OT o periódica)</td><td>Facturas consolidadas de varias OT (posterior)</td><td>M9 por OT; <code>payment_term_days</code> en la aseguradora</td></tr>
       <tr><td>G9</td><td>Coaseguro</td><td>Más de una aseguradora por siniestro (posterior)</td><td>Todo: el reparto ya admite N responsables; el MVP limita a uno</td></tr>
       <tr><td>G10</td><td>Plazo legal de conservación de documentos fiscales</td><td>Baja de talleres (T5), retención de documentos de siniestros (E) y acceso durante la suspensión (P9)</td><td>Todo lo demás</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>Respuestas recibidas (2026-10-28) <span class="tag h">Registro</span></h4>
+  <p>Transcripción de las respuestas del cuestionario. Ese cuestionario numera distinto: su G2 (retenciones) es la G3 de esta especificación, su G3 (anticipos) es la G4 y su G4 (notas de crédito y SIFEN) es la G5. No se indicó quién respondió (V21).</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Respuesta</th><th>Efecto en la especificación</th><th>Queda abierto</th></tr></thead>
+    <tbody>
+      <tr><td>G1</td><td>
+        <ul>
+          <li>Con deducible se emiten <b>dos facturas</b>: una a la aseguradora por la parte que le corresponde y otra al dueño por el deducible. «Todo esto ocurre con la OT de la aseguradora».</li>
+          <li>En la factura del dueño, el deducible va con un concepto específico, como «Deducible de siniestro N.º 123».</li>
+          <li>Sobre el IVA del deducible: «siempre es el mismo IVA», aunque en otros países puede ser distinto.</li>
+          <li>La modalidad puede variar según la aseguradora y la póliza.</li>
+        </ul>
+      </td><td>Modalidad neta candidata para M10 (§6.6, Ejemplo 7). Modalidad en el siniestro con la de la aseguradora por defecto (§4.3)</td><td>V15 (IVA incluido o no y tasa), V16 (deducible mayor que lo cubierto), V20 (documentación de la modalidad), V21</td></tr>
+      <tr><td>G2</td><td>
+        <ul>
+          <li>Se factura a nombre de <b>quien paga</b>.</li>
+          <li>El pago queda a nombre de quien figura en la factura.</li>
+          <li>En un siniestro de responsabilidad civil de un tercero, se factura a <b>la aseguradora del responsable</b>.</li>
+        </ul>
+      </td><td>Confirma el diseño: en M8, las porciones cubiertas van por defecto a la aseguradora del siniestro, y en siniestros de tercero esa es la aseguradora del responsable. Sin cambios</td><td>—</td></tr>
+      <tr><td>G3</td><td>
+        <ul>
+          <li>Las aseguradoras retienen el <b>30 % del IVA (10 %)</b>, como retención virtual que se registra.</li>
+          <li>El taller la registra como crédito fiscal.</li>
+          <li>La factura es a crédito. Cuando se paga, se cancela con un recibo que <b>resta la retención</b>.</li>
+        </ul>
+      </td><td>Entrega nueva M12 (§9). El tratamiento contable queda fuera de SyncTaller</td><td>V17</td></tr>
+      <tr><td>G4</td><td>Por un anticipo se emite una <b>factura de anticipo</b> y después el resto contra el trabajo. Sin respuesta sobre cómo se descuenta el anticipo en la factura final</td><td>Sigue fuera del MVP</td><td>V22</td></tr>
+      <tr><td>G5</td><td>
+        <ul>
+          <li>Una factura rechazada o cuestionada, aunque esté pagada en parte, se corrige con una <b>nota de crédito</b> a favor de la aseguradora. El plazo es de «un año».</li>
+          <li>SIFEN todavía no es obligatorio.</li>
+          <li>Que SyncTaller no emita notas de crédito al principio no tiene consecuencias por ahora, y se acepta otro procedimiento autorizado mientras tanto.</li>
+        </ul>
+      </td><td>P6 (corregir anulando) en revisión (§5.7); propuesta P10 (§10.3)</td><td>V18, V19</td></tr>
+      <tr><td>G6–G10</td><td>Sin respuesta</td><td>—</td><td>Todas</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>Precisiones surgidas de las respuestas (V15–V22) <span class="tag u">Pendiente</span></h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Pregunta</th><th>A quién</th><th>Qué parte depende</th></tr></thead>
+    <tbody>
+      <tr><td>V15</td><td>¿El importe del deducible de la póliza ya incluye el IVA? ¿La tasa es siempre 10 %?</td><td>Contador y aseguradoras</td><td>Conversión del deducible a base (M10)</td></tr>
+      <tr><td>V16</td><td>Si el deducible supera lo que cubre la aseguradora (por ejemplo, cubre 300.000 y el deducible es 500.000), ¿el dueño paga solo hasta lo cubierto o el deducible completo? ¿La aseguradora recibe factura?</td><td>Contador y talleres</td><td>M10</td></tr>
+      <tr><td>V17</td><td>
+        <ul>
+          <li>¿Retienen solo las aseguradoras o también otras empresas?</li>
+          <li>¿Hay retención de renta además de la de IVA?</li>
+          <li>¿El comprobante de retención virtual tiene un número que haya que registrar?</li>
+          <li>¿Se retiene una vez por factura o en cada pago parcial?</li>
+          <li>¿Puede haber retención en una factura al contado?</li>
+        </ul>
+      </td><td>Contador</td><td>M12</td></tr>
+      <tr><td>V18</td><td>Mientras SyncTaller no emita notas de crédito, ¿cuál es el «otro procedimiento autorizado» (nota de crédito en talonario, en otro sistema)? ¿El plazo de un año es para emitir la nota de crédito?</td><td>Contador</td><td>P6, P10</td></tr>
+      <tr><td>V19</td><td>¿Se puede anular una factura emitida que la aseguradora todavía no recibió, o siempre corresponde una nota de crédito?</td><td>Contador</td><td>P6 y la anulación vigente (6.10)</td></tr>
+      <tr><td>V20</td><td>¿Qué documento justifica la modalidad del deducible de un siniestro? ¿Alcanza con la póliza o el convenio?</td><td>Contador y aseguradoras</td><td>M4 (tipo de documento), M10</td></tr>
+      <tr><td>V21</td><td>¿Quién dio estas respuestas? M10 exige la confirmación escrita del contador antes de habilitar el deducible mayor a 0</td><td>Usuario</td><td>M10, M12</td></tr>
+      <tr><td>V22</td><td>¿Cómo se descuenta la factura de anticipo en la factura final, sin duplicar importes ni IVA?</td><td>Contador</td><td>Anticipos (posterior)</td></tr>
     </tbody>
   </table></div>
 
@@ -1280,7 +1397,7 @@ flowchart LR
       <tr><td>P3</td><td>Nombre y apellido de empresas</td><td>Nulos solo para empresas; <code>business_name</code> y <code>display_name</code> (también en el historial del vehículo); búsquedas por razón social; ninguna empresa en producción antes de adaptar el frontend; tests de igualdad para personas</td><td>§4.1, §7.1, M1</td></tr>
       <tr><td>P4</td><td>Correlativos no fiscales</td><td>Se aceptan huecos (sin garantía de continuidad); contador en la misma transacción con bloqueo de fila por serie; ocho series internas; 409 ante un duplicado imprevisto</td><td>§6.4, E3</td></tr>
       <tr><td>P5</td><td>Extras en siniestros</td><td>A cargo del dueño, salvo absorción autorizada; lo que deba cubrir la aseguradora va a un complementario; advertencia antes de confirmar el extra; un complementario no corrige un extra ya consumido</td><td>§5.5, §5.6, R4, M7</td></tr>
-      <tr><td>P6</td><td>Corrección de un reparto</td><td>Exige resolver todas las facturas vigentes de la versión anterior; 409 <code>ALLOCATION_HAS_INVOICES</code> con detalle; resumen previo a confirmar; trazabilidad; <b>sujeta a G5</b></td><td>§5.7, M8</td></tr>
+      <tr><td>P6</td><td>Corrección de un reparto</td><td>Exige resolver todas las facturas vigentes de la versión anterior; 409 <code>ALLOCATION_HAS_INVOICES</code> con detalle; resumen previo a confirmar; trazabilidad; <b>sujeta a G5</b>. <b>Versión 3:</b> en revisión, porque la respuesta a G5 indica nota de crédito (P10)</td><td>§5.7, M8</td></tr>
       <tr><td>P7</td><td>Tope de la autorización</td><td>Por línea, en importe y en cantidad; el exceso va a un complementario; pregunta externa V1 (no G6); unidades explícitas en M6</td><td>§4.4, §5.3, M6</td></tr>
       <tr><td>P8</td><td>Fotos y firmas públicas</td><td>Deuda de seguridad; tarea independiente después de T4, primero la firma; resuelta antes del primer taller comercial; ningún tipo nuevo de archivo en <code>public</code> salvo branding</td><td>§3.7, §9 (tarea P8), T6</td></tr>
       <tr><td>P9</td><td>Taller suspendido</td><td>Bloqueo total y reversible, también en rutas públicas; avisos en cola → <code>failed</code> con <code>Taller suspendido</code>; pantalla específica en el frontend; exportación asistida como procedimiento operativo; solo lectura como alternativa futura</td><td>§3.5, §3.9, §3.12, §7.3, T5</td></tr>
@@ -1295,6 +1412,15 @@ flowchart LR
     <li><b>M7–M8:</b> definir el nombre del campo de la advertencia de B en la API.</li>
     <li><b>M8:</b> la concurrencia real del deducible compartido se prueba en MySQL, fuera de la suite SQLite.</li>
   </ul>
+  <h4>Propuestas de la versión 3, pendientes de decisión</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Propuesta</th><th>Recomendación</th><th>Depende de</th></tr></thead>
+    <tbody>
+      <tr><td>M10</td><td>Modalidad neta del deducible (§6.6): modalidad en el siniestro, porciones <code>owner_deductible</code> descontadas de lo cubierto y línea propia en la factura del dueño</td><td>Aprobar el diseño. La implementación espera M9, V15, V16 y V21</td><td>G1 (respondida en parte)</td></tr>
+      <tr><td>M12</td><td>Retenciones de IVA como cancelación sin caja (§9)</td><td>Aprobar el diseño y hacerla antes de M9 si ya se facturan aseguradoras editando el borrador. La implementación espera V17</td><td>G3 (respondida)</td></tr>
+      <tr><td>P10</td><td>Corrección de facturas emitidas: registrar en SyncTaller la nota de crédito emitida fuera del sistema (número, fecha, importe, factura afectada), que baja el saldo de la factura y libera su porción del reparto. La emisión de notas de crédito desde SyncTaller queda para cuando SIFEN sea obligatorio o se decida</td><td>Esperar V18–V19 antes de decidir. Mientras tanto no se implementa el circuito de corrección de P6 y la anulación vigente (6.10) no cambia</td><td>G5 (respondida en parte)</td></tr>
+    </tbody>
+  </table></div>
 
   <h3>10.4 Riesgos</h3>
   <ul>
@@ -1303,8 +1429,9 @@ flowchart LR
     <li><b>Contexto de taller pegado en los workers (T3):</b> mitigación con tests de jobs alternados y limpieza explícita.</li>
     <li><b>Datos personales en documentos:</b> almacenamiento privado, permisos restringidos y descargas auditadas. Sin antivirus (riesgo técnico pendiente).</li>
     <li><b>Fotos y firmas con URL pública permanente (P8):</b> una URL filtrada no se puede revocar hasta migrar el archivo. Mitigación: tarea P8 antes del primer taller comercial, con la firma primero.</li>
-    <li><b>Utilidad comercial del MVP (A):</b> si la mayoría de los siniestros tiene deducible mayor a 0, el MVP no los factura ni los entrega hasta M10. Mitigación: G1 como camino crítico, consultado desde ya.</li>
-    <li><b>Validez fiscal de la corrección (P6):</b> depende de G5; si exige nota de crédito, el circuito cambia antes de implementarse.</li>
+    <li><b>Utilidad comercial del MVP (A):</b> si la mayoría de los siniestros tiene deducible mayor a 0, el MVP no los factura ni los entrega hasta M10. Mitigación: G1 ya tiene una modalidad candidata (versión 3); falta confirmarla por escrito (V21) y precisar V15–V16.</li>
+    <li><b>Validez fiscal de la corrección (P6):</b> la primera respuesta a G5 indica nota de crédito. El circuito de anulación no se implementa hasta resolver V18–V19 y decidir P10.</li>
+    <li><b>Saldos de aseguradoras sin retenciones (M12):</b> hasta registrar la retención, las facturas a aseguradoras quedan con un saldo pendiente que nunca se cobra. Esto afecta los recordatorios, los reportes de cobros y la entrega con facturas a crédito.</li>
     <li><b>Desvío de alcance:</b> convenios, coaseguro y liquidaciones quedan fuera de forma explícita.</li>
   </ul>
 </section>
@@ -1316,14 +1443,16 @@ flowchart LR
   <ol class="plain">
     <li><b>E0:</b> resuelto (P1).</li>
     <li><b>En paralelo y sin código:</b> enviar G1–G10 y V1–V14 (§10.1) a un contador, a un asesor legal y a dos o tres talleres que trabajen con aseguradoras. Es lo que más tarda. <b>G1 es el camino crítico</b> (A) y G5 condiciona la corrección de repartos (P6).</li>
-    <li><b>E1–E5:</b> en ramas separadas, en este orden sugerido: E2 (riesgo real hoy), E3, E4, E5, E1. Cada una con tu revisión.</li>
+    <li><b>Versión 3:</b> pedir las precisiones V15–V22, que surgieron de las primeras respuestas (§10.1), y la confirmación escrita del contador (V21).</li>
+    <li><b>E1–E5:</b> en ramas separadas, en este orden sugerido: E2 (riesgo real hoy; implementada, pendiente de merge), E3, E4, E5, E1. Cada una con tu revisión.</li>
+    <li><b>M12</b> (retenciones), si se aprueba y V17 está respondida: no depende del resto del módulo.</li>
     <li><b>T0:</b> spike de tenancy (descartable) con las condiciones de P2 y los umbrales de G, e informe de resultados. La dependencia se aprueba aparte; ante un fallo crítico, me detengo y te consulto.</li>
     <li><b>M1</b>, coordinado con el frontend; después M2 → M3 → M4 → M5 → M6 → M7, con revisión en M7 (flujo hasta la OT).</li>
     <li><b>T1–T5</b> en paralelo a M, según la capacidad disponible; después de T4, la <b>tarea P8</b> (fotos y firmas a privado, primero la firma).</li>
     <li><b>M8 → M9</b> (revisión económica), con el circuito de corrección revisado contra G5 si ya hay respuesta. <b>M10</b> solo con G1 respondida. <b>M11</b> al final.</li>
     <li><b>T6</b> (primer taller comercial) cuando T1–T5, la tarea P8 y el MVP estén aprobados. Los siniestros con deducible mayor a 0 no se habilitan comercialmente sin M10.</li>
   </ol>
-  <footer>Punto de control: la especificación termina aquí. Las decisiones técnicas de §10.2 están aprobadas; las validaciones externas de §10.1 siguen pendientes y el módulo no está listo para producción. No se modificó el repositorio. Ningún paso de implementación empieza sin tu autorización.</footer>
+  <footer>Punto de control: la especificación termina aquí. Las decisiones técnicas de §10.2 están aprobadas. Las propuestas de la versión 3 (M10 neta, M12 y P10) esperan tu revisión. Las validaciones de §10.1 están respondidas en parte y el módulo no está listo para producción. Ningún paso de implementación empieza sin tu autorización.</footer>
 </section>
 </main>
 </div>
