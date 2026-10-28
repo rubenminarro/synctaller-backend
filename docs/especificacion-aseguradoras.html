@@ -176,7 +176,7 @@ footer { margin-top: 32px; font-size: 14px; color: var(--muted); }
         <li><b>G5:</b> la corrección de una factura emitida es una nota de crédito. P6 (corregir anulando) queda en revisión.</li>
       </ul>
     </li>
-    <li><b>Primeros pasos recomendados:</b> E0 ya está resuelto y E2 está implementada (rama <code>fix/recordatorios-destinatario</code>). Pedir las precisiones V15–V22 y las validaciones todavía abiertas (§10.1). Seguir con las correcciones independientes (E3, E4, E5, E1) y, en paralelo, el spike de tenancy (T0). Después, el módulo desde M1 (tipo de cliente).</li>
+    <li><b>Primeros pasos recomendados:</b> la línea E (E0–E5) está completa (2026-10-28). Pedir las precisiones V15–V22 y las validaciones todavía abiertas (§10.1). Seguir con el spike de tenancy (T0) y M1. Después, el módulo desde M1 (tipo de cliente).</li>
   </ul>
 </section>
 
@@ -1188,7 +1188,7 @@ flowchart LR
   P8T --> T6
   G3{{Validación G3 y V17}} -.-> M12[M12 retenciones de IVA]
 </pre>
-  <p><b>Versión 3:</b> M12 (retenciones) no depende de las otras entregas del módulo. Sirve también para las facturas a aseguradoras que ya se emiten editando el borrador, y solo espera las precisiones de V17. M10 tiene ahora una modalidad candidata (neta, §6.6); la respuesta escrita del contador (V21) sigue siendo requisito. E2 está implementada.</p>
+  <p><b>Versión 3:</b> M12 (retenciones) no depende de las otras entregas del módulo. Sirve también para las facturas a aseguradoras que ya se emiten editando el borrador, y solo espera las precisiones de V17. M10 tiene ahora una modalidad candidata (neta, §6.6); la respuesta escrita del contador (V21) sigue siendo requisito. La línea E (E0–E5) quedó completa el 2026-10-28.</p>
   <p>E1, E2, E4 y E5 no dependen entre sí. La línea T no bloquea a la M. Producción SaaS requiere T6, y T6 requiere la migración de fotos y firmas a privado (P8). M10 es la única entrega bloqueada por completo por una validación externa (G1). M6 necesita la respuesta de V2 para cerrar la carga de importes (P7). Además: la habilitación comercial de siniestros con deducible mayor a 0 depende de G1 (A), y el circuito de corrección de repartos facturados (M8–M9) depende de G5 (P6): si G5 exige nota de crédito, se revisa antes de implementarlo.</p>
 
   <h3>Línea E: correcciones independientes</h3>
@@ -1196,13 +1196,14 @@ flowchart LR
     <div class="step"><h4>E0 · <code>composer.lock</code> <small>resuelto el 2026-10-27 (P1)</small></h4><dl>
       <dt>Resultado</dt><dd>Se descartaron los cambios locales de parche. El lock commiteado (<code>9ca9faf</code>) coincide con <code>vendor/</code>; 374 tests en verde (406 s). Actualizar dependencias queda para una tarea <code>chore/</code> aparte, con la suite completa.</dd>
     </dl></div>
-    <div class="step"><h4>E1 · Discrepancias documentales <small><code>docs/</code></small></h4><dl>
+    <div class="step"><h4>E1 · Discrepancias documentales <small>hecha el 2026-10-28 (<code>docs/discrepancias-e1</code>)</small></h4><dl>
+      <dt>Resultado</dt><dd>Handoff §14: deudas #14 (disco <code>local</code> con <code>serve</code>), #15 (fotos y firmas públicas, P8) y #16 (antivirus), y tabla 14.1 con D1–D10 reverificadas. D1, D5 y D10 quedan sin acción o resueltas, D2 se resuelve aquí, y D3, D4, D6, D7, D8 y D9 esperan decisión. <code>CLAUDE.md</code> §7 lista las deudas abiertas</dd>
       <dt>Objetivo</dt><dd>Registrar D1–D10 en el handoff §14 y alinear <code>CLAUDE.md</code> §7 (deuda #13 abierta), sin cambiar código. Registrar también las deudas aprobadas: disco <code>local</code> con <code>serve</code> activo sin uso (E), fotos y firmas con URL pública (P8, prioridad la firma) y antivirus fuera de alcance (E)</dd>
       <dt>Afecta</dt><dd><code>CLAUDE.md</code>, <code>docs/handoff.md</code></dd>
       <dt>Aceptación</dt><dd>Cada discrepancia con su evidencia y "a decidir"</dd>
       <dt>Revisión</dt><dd>Lectura del diff</dd>
     </dl></div>
-    <div class="step"><h4>E2 · Recordatorios al destinatario correcto <small>implementada el 2026-10-28 en <code>fix/recordatorios-destinatario</code>, pendiente de merge</small></h4><dl>
+    <div class="step"><h4>E2 · Recordatorios al destinatario correcto <small>hecha y mergeada el 2026-10-28</small></h4><dl>
       <dt>Resultado</dt><dd>El recordatorio queda <code>skipped</code> con el motivo "La factura está a nombre de otro destinatario." Se compara sin el dígito verificador, así CI y RUC de la misma persona coinciden; sin documento del cliente se avisa como antes. El reenvío manual sigue permitido. Handoff 2.54</dd>
       <dt>Objetivo</dt><dd>Que una factura con <code>customer_tax_id</code> distinto del documento del cliente no genere recordatorios al dueño</dd>
       <dt>Decisión previa</dt><dd>Propongo registrar el aviso como <code>skipped</code> con el motivo "destinatario distinto del cliente". Es el mecanismo existente, sin email nuevo</dd>
@@ -1210,7 +1211,8 @@ flowchart LR
       <dt>Pruebas</dt><dd>Factura a crédito editada → <code>skipped</code>; factura sin editar → aviso como hoy</dd>
       <dt>Aceptación</dt><dd>Suite en verde; ningún cambio de contrato</dd>
     </dl></div>
-    <div class="step"><h4>E3 · Correlativos con bloqueo <small><code>fix/</code></small></h4><dl>
+    <div class="step"><h4>E3 · Correlativos con bloqueo <small>hecha y mergeada el 2026-10-28</small></h4><dl>
+      <dt>Resultado</dt><dd><code>DocumentSequenceService</code> y migración <code>000056</code>. Diferencia con lo previsto: el valor inicial se crea en el <b>primer uso</b> de cada serie (máximo id + 1), no en la migración, que queda solo con la estructura; se saltan los códigos ya usados y un repetido responde <code>409 DOCUMENT_CODE_CONFLICT</code>. Concurrencia probada en MySQL (8 × 25 códigos, sin repetidos). Handoff 2.55</dd>
       <dt>Objetivo</dt><dd>Reemplazar los 6 generadores <code>max(id)+1</code> sin bloqueo por un generador por serie, sin cambiar el formato de los códigos (política de §6.4, P4)</dd>
       <dt>Afecta</dt><dd><code>BudgetService</code>, <code>WorkOrderService</code>, <code>PurchaseService</code>, <code>PartService</code>, <code>ServiceCatalogService</code>, <code>DiagnosticItemTemplateService</code>. No afecta facturas, <code>REC-</code>, <code>ENT-</code> ni <code>PAG-</code></dd>
       <dt>Migraciones</dt><dd>Tabla <code>document_sequences</code> (<code>key</code> único, <code>next_value</code>). El valor inicial se calcula en la migración con SQL (máximo id + 1, incluidas las eliminadas), sin llamar a la aplicación</dd>
@@ -1219,14 +1221,16 @@ flowchart LR
       <dt>Pruebas</dt><dd>Formato idéntico; continuidad con los códigos existentes; altas concurrentes de la misma serie y de series distintas (concurrencia real en MySQL; SQLite no la reproduce); rollback del contador ante un alta fallida; respuesta 409 ante un duplicado imprevisto</dd>
       <dt>Aceptación</dt><dd>Mismos códigos para los mismos escenarios; <code>DatabaseSeederTest</code> en verde</dd>
     </dl></div>
-    <div class="step"><h4>E4 · Decimales del presupuesto <small><code>fix/</code></small></h4><dl>
+    <div class="step"><h4>E4 · Decimales del presupuesto <small>hecha y mergeada el 2026-10-28</small></h4><dl>
+      <dt>Resultado</dt><dd>Migración <code>000057</code> con <code>down()</code> protegido. Además: topes de validación y <code>BUDGET_AMOUNT_OUT_OF_RANGE</code> (422) para que ningún importe dé 500, y el alta y la edición del ítem en una transacción. Verificada en MySQL. Handoff 2.56</dd>
       <dt>Objetivo</dt><dd>Pasar <code>budgets.subtotal|tax|total</code> y <code>budget_items.unit_price|total</code> de <code>decimal(10,2)</code> a <code>decimal(14,2)</code></dd>
       <dt>Migraciones</dt><dd><code>ALTER</code> que amplía columnas (sin pérdida)</dd>
       <dt>Riesgo</dt><dd>Bajo. Hay que verificar el <code>down</code> (podría truncar si hay importes grandes)</dd>
       <dt>Pruebas</dt><dd>Presupuesto de 150.000.000 Gs se guarda y recalcula igual con BCMath</dd>
       <dt>Aceptación</dt><dd>Suite en verde; contrato sin cambios</dd>
     </dl></div>
-    <div class="step"><h4>E5 · Trazabilidad de la aceptación del cliente <small><code>feature/</code></small></h4><dl>
+    <div class="step"><h4>E5 · Trazabilidad de la aceptación del cliente <small>hecha y mergeada el 2026-10-28</small></h4><dl>
+      <dt>Resultado</dt><dd>Tabla <code>budget_client_acceptances</code> (migración <code>000058</code>), inmutable, con <code>owner_amount</code> (subtotal sin IVA) desde E5. Body opcional y sin histórico para los presupuestos anteriores. <code>Budget</code> auditado. Handoff 2.57</dd>
       <dt>Objetivo</dt><dd><code>budget_client_acceptances</code> (sin campos de aseguradora todavía), body opcional en <code>approve</code>/<code>reject</code> y <code>Auditable</code> en <code>Budget</code></dd>
       <dt>Afecta</dt><dd><code>BudgetService::approve|reject</code>, <code>BudgetController</code>, Request nuevo, <code>ShowBudgetResource</code></dd>
       <dt>Migraciones</dt><dd>Tabla nueva</dd>
@@ -1444,7 +1448,7 @@ flowchart LR
     <li><b>E0:</b> resuelto (P1).</li>
     <li><b>En paralelo y sin código:</b> enviar G1–G10 y V1–V14 (§10.1) a un contador, a un asesor legal y a dos o tres talleres que trabajen con aseguradoras. Es lo que más tarda. <b>G1 es el camino crítico</b> (A) y G5 condiciona la corrección de repartos (P6).</li>
     <li><b>Versión 3:</b> pedir las precisiones V15–V22, que surgieron de las primeras respuestas (§10.1), y la confirmación escrita del contador (V21).</li>
-    <li><b>E1–E5:</b> en ramas separadas, en este orden sugerido: E2 (riesgo real hoy; implementada, pendiente de merge), E3, E4, E5, E1. Cada una con tu revisión.</li>
+    <li><b>E1–E5:</b> hechas el 2026-10-28, en el orden E2, E3, E4, E5, E1, cada una en su rama y con tu revisión.</li>
     <li><b>M12</b> (retenciones), si se aprueba y V17 está respondida: no depende del resto del módulo.</li>
     <li><b>T0:</b> spike de tenancy (descartable) con las condiciones de P2 y los umbrales de G, e informe de resultados. La dependencia se aprueba aparte; ante un fallo crítico, me detengo y te consulto.</li>
     <li><b>M1</b>, coordinado con el frontend; después M2 → M3 → M4 → M5 → M6 → M7, con revisión en M7 (flujo hasta la OT).</li>
