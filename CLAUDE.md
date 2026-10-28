@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 239 rutas API, 374 tests en verde.
+  (6.3). 239 rutas API, 376 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -483,6 +483,10 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   Días y hora de la tarea diaria en `config/notifications.php`.
 * **Registro y envío:** el aviso se registra dentro de la transacción del evento y se envía por cola con `afterCommit`.
   * Sin email o con `clients.notifications_enabled = false` queda `skipped` con el motivo.
+  * El recordatorio de una factura cuyo RUC/CI (`customer_tax_id`) no es el documento del cliente queda `skipped`
+    ("La factura está a nombre de otro destinatario."): no se avisa al dueño de una factura a nombre de otro. Se compara
+    sin espacios, en mayúsculas y sin el dígito verificador (CI y RUC de la misma persona coinciden); sin documento del
+    cliente, se avisa como siempre. El reenvío manual sigue permitido.
   * Un fallo de envío queda `failed` sin romper la operación que lo originó. No hay reintentos automáticos.
   * Los avisos automáticos no se repiten gracias a `dedupe_key` (único).
 * **Reenvío** (`POST client-notifications/{id}/resend`): crea otro registro (`resent_from_id`, `created_by`) con el

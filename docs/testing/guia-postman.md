@@ -2732,6 +2732,7 @@ cantidad de avisos registrados. Se puede ejecutar varias veces: no repite avisos
 | Factura vencida con saldo | `invoice_overdue` el primer día y cada 7 días |
 | Mantenimiento por vencer / vencido (ver `GET maintenance/alerts`) | `maintenance_due_soon` / `maintenance_overdue`, uno por estado y ciclo |
 | Compras con saldo vencido | Aviso interno `accounts_payable_overdue` a cada cajero, uno por día |
+| Factura a crédito cuyo RUC/CI se cambió en el borrador a otro destinatario (por ejemplo `80012345-6`) | El mismo aviso, `skipped` con `error` "La factura está a nombre de otro destinatario." (sin email). Cambiar CI `1234567` por RUC `1234567-8` del mismo cliente no lo omite. El reenvío manual responde 201 y va al cliente |
 
 ### 23.5 Listado, detalle y reenvío
 
