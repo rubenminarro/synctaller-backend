@@ -26,7 +26,7 @@ sin decidir.
 | Frontend | Repositorio aparte `../synctaller-frontend` (React 19 + TypeScript + Vite + Tabler) | `CLAUDE.md` §1 |
 | Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico | `CLAUDE.md` §1 |
 | Tests | **374 tests (5985 aserciones) en verde, en 406 s** [verificado: `php artisan test` ejecutado el 2026-10-27 en la sesión que retomó desde este documento] | `CLAUDE.md` §1 |
-| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta** desde el 2026-10-24. `CLAUDE.md` §7 dice "Sin deudas pendientes": es una discrepancia sin corregir | `docs/handoff.md:4003` |
+| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta** desde el 2026-10-24, en diseño. El 2026-10-28 (E1) se registraron las deudas #14–#16 y las discrepancias D1–D10 (14.1), y `CLAUDE.md` §7 dejó de decir "Sin deudas pendientes" | `docs/handoff.md`, §14 |
 
 Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 desde el 2026-10-24 (handoff 2.51).
 
@@ -280,8 +280,9 @@ propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2, E3 y
      **E2** (handoff 2.54) y **E3** (handoff 2.55) implementadas y mergeadas en `main` el 2026-10-28. La base MySQL
      de desarrollo ya tiene la migración `000056` y la prueba de concurrencia de E3 pasó (8 × 25 códigos, sin
      repetidos). **E4** (handoff 2.56) mergeada en `main` el 2026-10-28 (migración `000057`, verificada en MySQL).
-     **E5** (handoff 2.57) implementada en `feature/aceptacion-cliente`, pendiente de revisión y merge; la base local
-     ya tiene la migración `000058`. Queda **E1** (discrepancias documentales);
+     **E5** (handoff 2.57) mergeada en `main` el 2026-10-28 (migración `000058`). **E1** (handoff §14: deudas
+     #14–#16 y discrepancias D1–D10 en 14.1; `CLAUDE.md` §7) en la rama `docs/discrepancias-e1`. Con eso la línea E
+     está completa. Quedan para decidir D3, D4, D6, D7, D8 y D9;
    * spike T0 en una rama descartable;
    * módulo desde M1 (tipo de cliente), coordinado con el frontend.
 

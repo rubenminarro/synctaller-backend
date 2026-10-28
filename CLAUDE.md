@@ -609,4 +609,14 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 ## 7. Deuda técnica conocida
 
 `docs/handoff.md`, sección 14. Las deudas nuevas se registran ahí y no se corrigen sin decisión previa del usuario.
-Sin deudas pendientes (la #11, repuestos extra sin aprobación del cliente, se resolvió el 2026-10-23; ver 6.7).
+Abiertas (reverificado el 2026-10-28):
+
+* **#13, clientes aseguradoras:** en diseño (`docs/especificacion-aseguradoras.html`, versión 3); el módulo no está
+  implementado.
+* **#14:** disco `local` con `serve` activo y sin uso. No se usa para documentos nuevos.
+* **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes
+  del primer taller comercial; mientras tanto, nada nuevo en el disco `public` salvo branding.
+* **#16:** sin antivirus para los archivos subidos (riesgo técnico).
+* **Discrepancias D1–D10** (14.1): D3, D4, D6, D7, D8 y D9 esperan decisión.
+
+La #11 (repuestos extra sin aprobación del cliente) se resolvió el 2026-10-23; ver 6.7.
