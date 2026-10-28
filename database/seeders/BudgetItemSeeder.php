@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Part;
 use App\Models\Service;
 use App\Enums\BudgetItemType;
+use App\Enums\ClientDecisionChannel;
 use App\Services\BudgetService;
 use Illuminate\Support\Facades\DB;
 
@@ -50,12 +51,17 @@ class BudgetItemSeeder extends Seeder
             // Enviar exige los diagnósticos cerrados: los escenarios enviados los tienen completados o cancelados.
             ExampleScenarios::travel($at(1, 9), fn () => $budgetService->send($budget->refresh()));
 
+            // La respuesta del cliente la registra el recepcionista del escenario (budget_client_acceptances).
+            $receptionist = ExampleScenarios::user($scenario['receptionist']);
+            $approval = ['channel' => ClientDecisionChannel::WHATSAPP->value];
+            $rejection = ['channel' => ClientDecisionChannel::PHONE->value, 'notes' => 'El cliente no aceptó el precio.'];
+
             match ($status) {
-                'approved' => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->approve($budget->refresh())),
-                'rejected' => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->reject($budget->refresh())),
+                'approved' => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->approve($budget->refresh(), $receptionist, $approval)),
+                'rejected' => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->reject($budget->refresh(), $receptionist, $rejection)),
                 'cancelled' => ExampleScenarios::travel($at(2, 9), fn () => $budgetService->cancel($budget->refresh())),
                 'reopened' => [
-                    ExampleScenarios::travel($at(1, 16), fn () => $budgetService->reject($budget->refresh())),
+                    ExampleScenarios::travel($at(1, 16), fn () => $budgetService->reject($budget->refresh(), $receptionist, $rejection)),
                     ExampleScenarios::travel($at(2, 10), fn () => $budgetService->reopen($budget->refresh())),
                 ],
                 default => null,

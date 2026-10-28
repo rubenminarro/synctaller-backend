@@ -512,10 +512,25 @@ Permisos del mecánico (token = `{{token_mec}}`):
 | Enviar | `POST {{base_url}}/budgets/{{budget_id}}/send` | — | 200 | `sent` |
 | Enviar de nuevo | `POST {{base_url}}/budgets/{{budget_id}}/send` | — | 422 | `BUDGET_NOT_SENDABLE` |
 | Agregar ítem con `sent` | `POST {{base_url}}/budgets/{{budget_id}}/items` | body de P.2 | 422 | `BUDGET_NOT_EDITABLE` |
-| Aprobar | `POST {{base_url}}/budgets/{{budget_id}}/approve` | — | 200 | `approved`, `approved_at` informado |
+| Aprobar | `POST {{base_url}}/budgets/{{budget_id}}/approve` | — (body opcional, ver abajo) | 200 | `approved`, `approved_at` informado; `client_acceptances` con una fila `approval` (`decided_by` = usuario del token, `channel` `null`, `owner_amount` = subtotal) |
 | Cancelar aprobado | `POST {{base_url}}/budgets/{{budget_id}}/cancel` | — | 422 | `BUDGET_NOT_CANCELLABLE` |
 
 Caso adicional (presupuesto nuevo y vacío): crear con P.1 y enviar sin ítems → `422 BUDGET_WITHOUT_ITEMS`; el presupuesto sigue en `draft`.
+
+Respuesta del cliente (`budget_client_acceptances`, ver `docs/handoff.md`, 2.57). `approve` y `reject` aceptan un body
+opcional; sin body funcionan como siempre y la fila se registra igual:
+
+```json
+{ "channel": "whatsapp", "contact": "+595981123456", "notes": "Aprobó por mensaje." }
+```
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Aprobar con datos | `POST {{base_url}}/budgets/{{budget_id}}/approve` | el de arriba | 200 | `client_acceptances[0]`: `kind.value` `approval`, `channel.label` `WhatsApp`, `contact`, `notes` |
+| Rechazar con motivo | `POST {{base_url}}/budgets/{{budget_id}}/reject` | `{ "channel": "phone", "notes": "Le pareció caro." }` | 200 | Fila `rejection` |
+| Canal inválido | ídem | `{ "channel": "fax" }` | 422 | `VALIDATION_ERROR` en `channel` |
+| Notas muy cortas | ídem | `{ "notes": "x" }` | 422 | `VALIDATION_ERROR` en `notes` |
+| Reabrir, reenviar y aprobar | `reopen` → editar → `send` → `approve` | — | 200 | `client_acceptances` con las dos filas en orden (`rejection`, `approval`), cada una con su `owner_amount` |
 
 Importes grandes (presupuesto en `draft`; los importes van en `decimal(14,2)`, ver `docs/handoff.md`, 2.56):
 

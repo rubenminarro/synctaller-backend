@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Enums\BudgetStatus;
+use App\Traits\Auditable;
 
 class Budget extends Model
 {
-    
-    use SoftDeletes;
+
+    use Auditable, SoftDeletes;
 
     protected $fillable = [
         'reception_id',
@@ -52,6 +53,14 @@ class Budget extends Model
     public function workOrder(): HasOne
     {
         return $this->hasOne(WorkOrder::class);
+    }
+
+    /**
+     * Respuestas del cliente, en orden (reabrir no borra las anteriores).
+     */
+    public function clientAcceptances(): HasMany
+    {
+        return $this->hasMany(BudgetClientAcceptance::class)->orderBy('decided_at')->orderBy('id');
     }
 
 }

@@ -29,6 +29,9 @@ class ShowBudgetResource extends JsonResource
             'items' => BudgetItemResource::collection(
                 $this->whenLoaded('items')
             ),
+            'client_acceptances' => BudgetClientAcceptanceResource::collection(
+                $this->whenLoaded('clientAcceptances')
+            ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

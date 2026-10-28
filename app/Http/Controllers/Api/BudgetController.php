@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Http\Requests\DecideBudgetRequest;
 use App\Http\Requests\StoreBudgetRequest;
 use App\Http\Requests\UpdateBudgetRequest;
 use App\Http\Resources\BudgetResource;
@@ -219,9 +220,9 @@ class BudgetController extends Controller implements HasMiddleware
         );
     }
 
-    public function approve(Budget $budget)
+    public function approve(DecideBudgetRequest $request, Budget $budget)
     {
-        $budget = $this->budgetService->approve($budget);
+        $budget = $this->budgetService->approve($budget, $request->user(), $request->validated());
 
         $this->loadShowRelations($budget);
 
@@ -231,9 +232,9 @@ class BudgetController extends Controller implements HasMiddleware
         );
     }
 
-    public function reject(Budget $budget)
+    public function reject(DecideBudgetRequest $request, Budget $budget)
     {
-        $budget = $this->budgetService->reject($budget);
+        $budget = $this->budgetService->reject($budget, $request->user(), $request->validated());
 
         $this->loadShowRelations($budget);
 
@@ -276,6 +277,7 @@ class BudgetController extends Controller implements HasMiddleware
             'reception.vehicle.brand',
             'reception.vehicle.vehicleModel',
             'creator',
+            'clientAcceptances.decidedBy',
         ]);
     }
     

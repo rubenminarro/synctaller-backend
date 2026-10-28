@@ -1479,6 +1479,27 @@ con 500.
 
 ---
 
+# 2.57 Registro de la respuesta del cliente al presupuesto (2026-10-28)
+
+Entrega E5 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.4 y §9). `approve` y
+`reject` solo cambiaban el estado: no quedaba quién lo registró, por qué medio respondió el cliente ni por qué importe.
+`reopen` borraba `approved_at`, así que se perdía el historial, y `Budget` no estaba auditado. Es la base del control
+de aceptación del dueño en siniestros (decisión B, M7).
+
+| Tema | Decisión |
+|---|---|
+| Tabla | `budget_client_acceptances` (migración `000058`): `budget_id`, `kind` (`ClientAcceptanceKind`: `approval\|rejection`), `decided_by` (usuario que lo registra), `decided_at`, `channel` (`ClientDecisionChannel`, nulo), `contact` (nulo), `notes` (nulo) y `owner_amount` (`decimal(14,2)`). Claves foráneas `restrictOnDelete`. Las columnas de aseguradora (`insurer_authorization_id`, `deductible_amount`) y el tipo `re_acceptance` llegan con M7 |
+| Importe | `owner_amount` = subtotal sin IVA al responder (decisión del usuario del 2026-10-28: desde E5). En M7, con aseguradora, pasa a ser la parte del dueño |
+| Body | Opcional (decisión del usuario del 2026-10-28): `channel`, `contact` (≤ 150) y `notes` (3 a 500), con las reglas de la respuesta a un extra (`DecideBudgetRequest`). Sin body el contrato es el de siempre y la fila se crea igual; el motivo del rechazo también es opcional |
+| Inmutable | `BudgetClientAcceptance` no se edita ni se elimina (`BUDGET_CLIENT_ACCEPTANCE_IMMUTABLE`, 409). Reabrir no toca las filas: una respuesta nueva es otra fila |
+| Histórico | Sin filas para los presupuestos anteriores (decisión del usuario del 2026-10-28): no hay de dónde sacar quién lo registró ni por qué medio. Conservan `approved_at` |
+| Contrato | El detalle del presupuesto (`show` y las respuestas de las transiciones) agrega `client_acceptances`, en orden, con `kind`, `decided_by` (`id`, `name`), `channel` y `owner_amount` (aditivo) |
+| Auditoría | `Budget` y `BudgetClientAcceptance` usan `Auditable`. Como cada ítem recalcula los totales del presupuesto, esos cambios también quedan registrados (son precios) |
+| Seeders | `BudgetItemSeeder` aprueba (por WhatsApp) y rechaza (por teléfono, con motivo) con el recepcionista del escenario. `DatabaseSeederTest` verifica una aprobación por presupuesto aprobado y los rechazos, incluido el del reabierto |
+| Pruebas | `tests/Feature/Budgets/BudgetClientAcceptanceTest`: sin body, con datos, canal y notas inválidos, historial al reabrir (importe de cada respuesta), inmutabilidad y auditoría. Los tests de presupuestos existentes no cambiaron |
+
+---
+
 ---
 
 # 2.2 Autenticación
@@ -3973,6 +3994,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Recordatorios de factura al destinatario correcto (2.54)
 [✓] Códigos internos con bloqueo (2.55)
 [✓] Importes del presupuesto en decimal(14,2) (2.56)
+[✓] Registro de la respuesta del cliente al presupuesto (2.57)
 ```
 
 ## Próximo
