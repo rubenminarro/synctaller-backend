@@ -1442,6 +1442,26 @@ CI para facturar a otro (por ejemplo, a una aseguradora): el dueño recibía el 
 
 ---
 
+# 2.55 Códigos internos con bloqueo (2026-10-28)
+
+Entrega E3 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §9; política P4, §6.4).
+Seis altas calculaban el código como `withTrashed()->max('id') + 1` sin bloqueo (`BUD-`, `OT-`, `COM-`, `REP-`, `SRV-`,
+`DIA-`): dos altas simultáneas de la misma serie obtenían el mismo código y la segunda fallaba con 500 por el índice
+único de `code`.
+
+| Tema | Decisión |
+|---|---|
+| Contador | Tabla `document_sequences` (migración `000056`: `key` único, `next_value`). `DocumentSequenceService::create(DocumentSeries, closure)` bloquea la fila de la serie con `lockForUpdate` dentro de la transacción del alta, arma el código (prefijo + 6 dígitos, formato sin cambios) y lo pasa al closure que crea el documento. Si el alta falla, el rollback revierte el incremento. Solo se serializan las altas de la misma serie |
+| Valor inicial | En el **primer uso** (decisión del usuario del 2026-10-28, en lugar de cargarlo en la migración): el servicio inserta la fila con `insertOrIgnore` y el máximo id + 1 de la tabla, incluidos los eliminados, que es el mismo código que daba el cálculo anterior. La migración es solo estructura. Las series futuras (`ASE-`, `SIN-`) solo se agregan al enum `DocumentSeries` |
+| Códigos usados | Con la fila bloqueada, si el código ya existe (también eliminado) se salta al siguiente. Cubre códigos cargados sin pasar por la serie (por ejemplo, la migración `000055` con `DIA-`) |
+| Duplicado | Si igual se viola la unicidad del código, la API responde `409 DOCUMENT_CODE_CONFLICT` (`AppException`), nunca 500 (decisión del usuario del 2026-10-28: solo para los códigos, sin mapeo global). Otras violaciones de unicidad no cambian |
+| Orden de bloqueo | Documento → serie: la serie siempre al final, y cada serie la usa un solo servicio (sin ciclos). La OT retiene la fila de su serie mientras reserva repuestos en la misma transacción |
+| Huecos | Se aceptan (P4): no son documentos fiscales. Facturas, `REC-`, `ENT-` y `PAG-` no cambian (ya usaban `lockForUpdate`) |
+| Pruebas | `tests/Feature/Documents/DocumentSequenceTest` (formato, continuidad, salto, rollback, series independientes, 409). La concurrencia real solo se reproduce en MySQL: `tests/Manual/document_sequence_concurrency.php` (N procesos piden códigos a la vez; verifica que no haya repetidos ni errores y restaura el contador) |
+| Sin cambiar | Rutas, Resources, permisos y formato de los códigos |
+
+---
+
 # 2.2 Autenticación
 
 Existe:
@@ -3932,6 +3952,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Preferencias visuales por usuario y logo del sistema (2.50)
 [✓] Catálogo de ítems de diagnóstico (2.53)
 [✓] Recordatorios de factura al destinatario correcto (2.54)
+[✓] Códigos internos con bloqueo (2.55)
 ```
 
 ## Próximo

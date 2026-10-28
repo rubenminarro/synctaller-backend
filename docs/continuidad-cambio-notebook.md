@@ -259,7 +259,9 @@ publicada todavía tiene la versión anterior. No se implementó código del mó
 7. Después, según el plan de la especificación (§9 y §11 de `docs/especificacion-aseguradoras.html`):
    * correcciones independientes E1–E5 (sugerido: E2 → E3 → E4 → E5 → E1), cada una en su rama y con revisión.
      **E2** implementada el 2026-10-28 en la rama `fix/recordatorios-destinatario` (handoff 2.54), pendiente de
-     revisión y merge;
+     revisión y merge. **E3** implementada el 2026-10-28 en `fix/correlativos-con-bloqueo`, que parte de la rama de
+     E2: hay que mergear primero E2 (handoff 2.55). La base MySQL de desarrollo ya tiene la migración `000056`, y la
+     prueba de concurrencia pasó (8 × 25 códigos, sin repetidos);
    * spike T0 en una rama descartable;
    * módulo desde M1 (tipo de cliente), coordinado con el frontend.
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DocumentSeries;
 use App\Enums\InvoiceCondition;
 use App\Enums\PartStatus;
 use App\Enums\PurchaseStatus;
@@ -26,7 +27,8 @@ class PurchaseService
     private const RELATIONS = ['supplier', 'items.part', 'creator', 'receiver', 'canceller'];
 
     public function __construct(
-        protected InventoryService $inventoryService
+        protected InventoryService $inventoryService,
+        protected DocumentSequenceService $documentSequences
     ) {
     }
 
@@ -36,14 +38,14 @@ class PurchaseService
 
             $this->activeSupplier((int) $data['supplier_id']);
 
-            $purchase = Purchase::create([
+            $purchase = $this->documentSequences->create(DocumentSeries::PURCHASE, fn (string $code) => Purchase::create([
                 ...$this->headerData($data),
                 'supplier_id' => $data['supplier_id'],
-                'code' => $this->generateCode(),
+                'code' => $code,
                 'status' => PurchaseStatus::DRAFT,
                 'condition' => $data['condition'] ?? InvoiceCondition::CASH->value,
                 'created_by' => $user->id,
-            ]);
+            ]));
 
             return $purchase->load(self::RELATIONS);
         });
@@ -406,12 +408,5 @@ class PurchaseService
     private function taxRate(int|string|null $rate): TaxRate
     {
         return TaxRate::from((int) ($rate ?? config('invoice.default_tax_rate', 10)));
-    }
-
-    private function generateCode(): string
-    {
-        $nextId = (Purchase::withTrashed()->max('id') ?? 0) + 1;
-
-        return 'COM-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
     }
 }

@@ -54,6 +54,12 @@ Error:
 
 En todos los casos: `status` del cuerpo = código HTTP; nunca aparecen `exception`, `file`, `line` ni `trace`.
 
+Códigos internos (`BUD-`, `OT-`, `COM-`, `REP-`, `SRV-`, `DIA-`): salen de una serie con bloqueo y conservan su
+formato. Puede haber huecos (un alta fallida no consume el número, pero no se garantiza continuidad). Si un código
+llegara a repetirse (cargado por fuera de la serie), el alta responde `409 DOCUMENT_CODE_CONFLICT` en lugar de 500; no
+se puede provocar desde la API. La concurrencia se prueba con `php tests/Manual/document_sequence_concurrency.php`
+contra MySQL (ver `docs/handoff.md`, 2.55).
+
 ### 0.4 Datos precargados por el seeder
 
 | Dato | Valor |

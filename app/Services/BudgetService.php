@@ -10,6 +10,7 @@ use App\Models\Service;
 use App\Enums\BudgetItemType;
 use App\Enums\BudgetStatus;
 use App\Enums\DiagnosticStatus;
+use App\Enums\DocumentSeries;
 use App\Enums\ClientNotificationType;
 use App\Exceptions\BudgetException;
 use App\Exceptions\PartException;
@@ -22,7 +23,8 @@ class BudgetService
     public function __construct(
         protected ReceptionStatusService $receptionStatusService,
         protected ClientNotificationService $clientNotificationService,
-        protected InternalNotificationService $internalNotificationService
+        protected InternalNotificationService $internalNotificationService,
+        protected DocumentSequenceService $documentSequences
     ) {
     }
 
@@ -332,16 +334,16 @@ class BudgetService
 
             $this->receptionStatusService->ensureOpen((int) $data['reception_id']);
 
-            $budget = Budget::create([
+            $budget = $this->documentSequences->create(DocumentSeries::BUDGET, fn (string $code) => Budget::create([
                 'reception_id' => $data['reception_id'],
                 'created_by' => $userId,
-                'code' => $this->generateCode(),
+                'code' => $code,
                 'status' => BudgetStatus::DRAFT,
                 'subtotal' => 0,
                 'tax' => 0,
                 'total' => 0,
                 'notes' => $data['notes'] ?? null,
-            ]);
+            ]));
 
             // Presupuestar pone la recepción "en proceso".
             $this->receptionStatusService->sync($budget->reception_id);
@@ -368,17 +370,5 @@ class BudgetService
 
             $this->receptionStatusService->sync($budget->reception_id);
         });
-    }
-
-    private function generateCode(): string
-    {
-        $nextId = (Budget::withTrashed()->max('id') ?? 0) + 1;
-
-        return 'BUD-' . str_pad(
-            $nextId,
-            6,
-            '0',
-            STR_PAD_LEFT
-        );
     }
 }

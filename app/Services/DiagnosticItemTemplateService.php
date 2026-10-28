@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\DiagnosticItemStatus;
 use App\Enums\DiagnosticItemTemplateStatus;
+use App\Enums\DocumentSeries;
 use App\Exceptions\DiagnosticItemTemplateException;
 use App\Models\DiagnosticItemTemplate;
 use Illuminate\Support\Facades\DB;
@@ -24,15 +25,23 @@ class DiagnosticItemTemplateService
         'recommendation',
     ];
 
+    public function __construct(
+        protected DocumentSequenceService $documentSequences
+    ) {
+    }
+
     public function create(array $data): DiagnosticItemTemplate
     {
         return DB::transaction(function () use ($data) {
 
-            $template = DiagnosticItemTemplate::create([
-                ...$data,
-                'code' => $this->generateCode(),
-                'status' => DiagnosticItemTemplateStatus::ACTIVE,
-            ]);
+            $template = $this->documentSequences->create(
+                DocumentSeries::DIAGNOSTIC_ITEM_TEMPLATE,
+                fn (string $code) => DiagnosticItemTemplate::create([
+                    ...$data,
+                    'code' => $code,
+                    'status' => DiagnosticItemTemplateStatus::ACTIVE,
+                ])
+            );
 
             return $template->refresh()->load('category');
         });
@@ -117,12 +126,5 @@ class DiagnosticItemTemplateService
     private function lower(DiagnosticItemTemplateStatus $status): string
     {
         return mb_strtolower($status->label());
-    }
-
-    private function generateCode(): string
-    {
-        $nextId = (DiagnosticItemTemplate::withTrashed()->max('id') ?? 0) + 1;
-
-        return 'DIA-' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
     }
 }

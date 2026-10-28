@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DocumentSeries;
 use App\Enums\PartStatus;
 use App\Exceptions\PartException;
 use App\Exceptions\SupplierException;
@@ -14,17 +15,22 @@ use Illuminate\Support\Facades\DB;
 
 class PartService
 {
+    public function __construct(
+        protected DocumentSequenceService $documentSequences
+    ) {
+    }
+
     public function create(array $data): Part
     {
         return DB::transaction(function () use ($data) {
 
             $this->ensureCategoryActive((int) $data['part_category_id']);
 
-            $part = Part::create([
+            $part = $this->documentSequences->create(DocumentSeries::PART, fn (string $code) => Part::create([
                 ...$data,
-                'code' => $this->generateCode(),
+                'code' => $code,
                 'status' => PartStatus::ACTIVE,
-            ]);
+            ]));
 
             PartStock::create([
                 'part_id' => $part->id,
@@ -225,17 +231,5 @@ class PartService
         DB::table('part_supplier')
             ->where('part_id', $part->id)
             ->update(['is_preferred' => false]);
-    }
-
-    private function generateCode(): string
-    {
-        $nextId = (Part::withTrashed()->max('id') ?? 0) + 1;
-
-        return 'REP-' . str_pad(
-            $nextId,
-            6,
-            '0',
-            STR_PAD_LEFT
-        );
     }
 }
