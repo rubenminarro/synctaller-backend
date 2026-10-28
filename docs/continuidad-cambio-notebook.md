@@ -6,7 +6,8 @@ decisiones tomadas, los documentos producidos y el siguiente paso acordado.
 > **Alcance de este documento.** No reemplaza a [`CLAUDE.md`](../CLAUDE.md) (reglas vigentes) ni a
 > [`handoff.md`](handoff.md) (historia y decisiones por fase), que **no** se modificaron en esta tarea. El diseño del
 > módulo de aseguradoras todavía no está en esos documentos: la especificación de trabajo vigente es
-> [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 2, aprobada; sección 6). Las páginas
+> [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 2 aprobada; la versión 3, con las
+> primeras respuestas externas, está pendiente de revisión; sección 6). Las páginas
 > publicadas de la sección 6 quedan como antecedente.
 
 Convención: **[verificado]** = comprobado en el código o el entorno el 2026-10-27; **[pendiente]** = sin verificar o
@@ -201,10 +202,22 @@ Resumen; el detalle está en la especificación §3 y en la revisión §9.
 
 ---
 
-## 8. Validación externa pendiente (G1–G10 y V1–V14)
+## 8. Validación externa (G1–G10, V1–V22)
 
-Ninguna está respondida. Además de G1–G10, la revisión de las decisiones agregó las preguntas V1–V14 (§10.1 de
-`docs/especificacion-aseguradoras.html`), también pendientes.
+**Respuestas del 2026-10-28.** G1–G5 tienen primeras respuestas; la transcripción y su efecto están en §10.1 de
+`docs/especificacion-aseguradoras.html` (versión 3). No se indicó quién respondió: falta la confirmación escrita del
+contador (V21). En resumen:
+
+* **G1:** dos facturas desde la OT del siniestro: a la aseguradora, neta del deducible; al dueño, por el deducible con
+  un concepto propio. La modalidad varía por aseguradora y póliza.
+* **G2:** se factura a quien paga; en siniestros de tercero, a la aseguradora del responsable.
+* **G3:** las aseguradoras retienen el 30 % del IVA; el recibo descuenta la retención.
+* **G4:** factura de anticipo y después la final (falta cómo se descuenta).
+* **G5:** nota de crédito; SIFEN todavía no es obligatorio; se acepta otro procedimiento mientras tanto.
+
+De esas respuestas salieron las precisiones V15–V22, también pendientes. **G6–G10 y V1–V14 siguen sin respuesta.**
+Además de G1–G10, la revisión de las decisiones agregó las preguntas V1–V14 (§10.1 de
+`docs/especificacion-aseguradoras.html`).
 
 1. **G1.** Tratamiento fiscal del deducible.
 2. **G2.** Destinatario de las facturas, también en siniestros de tercero.
@@ -244,6 +257,11 @@ Sin corregir; no se tocó código.
 **Dónde quedó la sesión (2026-10-27):** las decisiones A–G y P1–P9 están aprobadas y la especificación versión 2 está
 en `docs/especificacion-aseguradoras.html`, con sus diagramas revisados en una vista previa temporal. La página
 publicada todavía tiene la versión anterior. No se implementó código del módulo.
+
+**Actualización (2026-10-28):** G1–G5 respondidas en parte (sección 8). La especificación pasó a la versión 3 (rama
+`docs/especificacion-v3`): modalidad neta del deducible para M10, entrega nueva M12 (retenciones de IVA) y propuesta
+P10 (notas de crédito emitidas fuera del sistema), todas pendientes de revisión. Faltan pedir las precisiones V15–V22
+y publicar la versión 3 en la página de la especificación, después de la revisión.
 
 **Siguiente paso recomendado, en orden:**
 
