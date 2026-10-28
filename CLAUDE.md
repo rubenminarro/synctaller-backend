@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 239 rutas API, 382 tests en verde.
+  (6.3). 239 rutas API, 387 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -300,6 +300,10 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 * Totales con BCMath (`BudgetService::itemTotal()` y `recalculateBudget()`), redondeo half-up a 2 decimales: ítem =
   cantidad × precio; `subtotal` = suma de ítems; `tax` = subtotal × `config('invoice.default_tax_rate')` (10) / 100;
   precios sin IVA.
+* Importes del presupuesto y sus ítems en `decimal(14,2)` (hasta 999.999.999.999,99; `BudgetService::MAX_AMOUNT`);
+  `quantity` en `(10,2)`. Topes de validación en `unit_price` y `quantity` (422 `VALIDATION_ERROR`). Si el total del
+  ítem o del presupuesto, con el IVA, no entra: `BUDGET_AMOUNT_OUT_OF_RANGE` (422), y el ítem no se guarda (el alta y
+  la edición del ítem corren en una transacción con el recálculo).
 * Ítems `labor | service | part`. `part_id` solo en `part` (repuesto `inactive` → `PART_NOT_USABLE`; unidades enteras
   → `INVENTORY_FRACTIONAL_QUANTITY_NOT_ALLOWED`). `service_id` solo en `service` (sin `unit_price` toma
   `standard_price`; inactivo → `SERVICE_NOT_USABLE`). `estimated_hours`: service = catálogo × cantidad si no se informa;

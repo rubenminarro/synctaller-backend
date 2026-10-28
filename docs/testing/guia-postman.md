@@ -517,6 +517,16 @@ Permisos del mecánico (token = `{{token_mec}}`):
 
 Caso adicional (presupuesto nuevo y vacío): crear con P.1 y enviar sin ítems → `422 BUDGET_WITHOUT_ITEMS`; el presupuesto sigue en `draft`.
 
+Importes grandes (presupuesto en `draft`; los importes van en `decimal(14,2)`, ver `docs/handoff.md`, 2.56):
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Ítem de 150.000.000 | `POST {{base_url}}/budgets/{{budget_id}}/items` | `{ "type": "labor", "description": "Chapería completa", "quantity": 1, "unit_price": 150000000 }` | 201 | Presupuesto con `subtotal` 150000000.00, `tax` 15000000.00, `total` 165000000.00 (antes: 500) |
+| Precio sobre el máximo | ídem | `unit_price` 1000000000000 | 422 | `VALIDATION_ERROR` en `unit_price` |
+| Cantidad sobre el máximo | ídem | `quantity` 100000000 | 422 | `VALIDATION_ERROR` en `quantity` |
+| Total del ítem fuera de rango | ídem | `quantity` 2, `unit_price` 999999999999.99 | 422 | `BUDGET_AMOUNT_OUT_OF_RANGE`; el ítem no se guarda |
+| Total con IVA fuera de rango | ídem | `quantity` 1, `unit_price` 909090909091 | 422 | `BUDGET_AMOUNT_OUT_OF_RANGE`; el ítem no se guarda y los totales no cambian |
+
 Ciclo de rechazo (presupuesto nuevo con un ítem): enviar → `reject` (200, `rejected`) → `reopen` (200, `draft`).
 
 ---

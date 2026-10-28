@@ -43,6 +43,8 @@ class StoreBudgetItemRequest extends FormRequest
                 'required',
                 'numeric',
                 'min:0.01',
+                // Columna decimal(10,2).
+                'max:99999999.99',
             ],
             'unit_price' => [
                 // Un servicio del catálogo toma su precio estándar si no se informa.
@@ -52,6 +54,8 @@ class StoreBudgetItemRequest extends FormRequest
                 'nullable',
                 'numeric',
                 'min:0',
+                // Columna decimal(14,2) (BudgetService::MAX_AMOUNT).
+                'max:999999999999.99',
             ],
             'estimated_hours' => [
                 Rule::prohibitedIf(fn () => $this->input('type') === BudgetItemType::PART->value),
@@ -98,11 +102,13 @@ class StoreBudgetItemRequest extends FormRequest
                 'required' => 'La cantidad es obligatoria.',
                 'numeric' => 'La cantidad debe ser un número.',
                 'min' => 'La cantidad debe ser al menos 0.01.',
+                'max' => 'La cantidad supera el máximo permitido.',
             ],
             'unit_price' => [
                 'required' => 'El precio unitario es obligatorio.',
                 'numeric' => 'El precio unitario debe ser un número.',
                 'min' => 'El precio unitario no puede ser negativo.',
+                'max' => 'El precio unitario supera el máximo permitido.',
             ],
             'estimated_hours' => [
                 'prohibited' => 'Los repuestos no llevan tiempo estimado.',

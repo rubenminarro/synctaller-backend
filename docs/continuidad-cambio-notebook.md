@@ -7,7 +7,7 @@ decisiones tomadas, los documentos producidos y el siguiente paso acordado.
 > [`handoff.md`](handoff.md) (historia y decisiones por fase), que **no** se modificaron en esta tarea. El diseño del
 > módulo de aseguradoras todavía no está en esos documentos: la especificación de trabajo vigente es
 > [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 2 aprobada; la versión 3, con las
-> primeras respuestas externas, está pendiente de revisión; sección 6). Las páginas
+> primeras respuestas externas, está publicada y sus propuestas M10, M12 y P10 esperan revisión; sección 6). Las páginas
 > publicadas de la sección 6 quedan como antecedente.
 
 Convención: **[verificado]** = comprobado en el código o el entorno el 2026-10-27; **[pendiente]** = sin verificar o
@@ -258,10 +258,11 @@ Sin corregir; no se tocó código.
 en `docs/especificacion-aseguradoras.html`, con sus diagramas revisados en una vista previa temporal. La página
 publicada todavía tiene la versión anterior. No se implementó código del módulo.
 
-**Actualización (2026-10-28):** G1–G5 respondidas en parte (sección 8). La especificación pasó a la versión 3 (rama
-`docs/especificacion-v3`): modalidad neta del deducible para M10, entrega nueva M12 (retenciones de IVA) y propuesta
-P10 (notas de crédito emitidas fuera del sistema), todas pendientes de revisión. Faltan pedir las precisiones V15–V22
-y publicar la versión 3 en la página de la especificación, después de la revisión.
+**Actualización (2026-10-28):** G1–G5 respondidas en parte (sección 8). La especificación pasó a la versión 3, que ya
+está en `main` y publicada en la página de la especificación (`R1BmU5AE…`): modalidad neta del deducible para M10,
+entrega nueva M12 (retenciones de IVA) y propuesta P10 (notas de crédito emitidas fuera del sistema). Las tres
+propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2 y E3 están en `main` (merge `d01560b`);
+E4 está en la rama `fix/decimales-presupuesto`.
 
 **Siguiente paso recomendado, en orden:**
 
@@ -276,10 +277,9 @@ y publicar la versión 3 en la página de la especificación, después de la rev
    aseguradoras (sección 8).
 7. Después, según el plan de la especificación (§9 y §11 de `docs/especificacion-aseguradoras.html`):
    * correcciones independientes E1–E5 (sugerido: E2 → E3 → E4 → E5 → E1), cada una en su rama y con revisión.
-     **E2** implementada el 2026-10-28 en la rama `fix/recordatorios-destinatario` (handoff 2.54), pendiente de
-     revisión y merge. **E3** implementada el 2026-10-28 en `fix/correlativos-con-bloqueo`, que parte de la rama de
-     E2: hay que mergear primero E2 (handoff 2.55). La base MySQL de desarrollo ya tiene la migración `000056`, y la
-     prueba de concurrencia pasó (8 × 25 códigos, sin repetidos);
+     **E2** (handoff 2.54) y **E3** (handoff 2.55) implementadas y mergeadas en `main` el 2026-10-28. La base MySQL
+     de desarrollo ya tiene la migración `000056` y la prueba de concurrencia de E3 pasó (8 × 25 códigos, sin
+     repetidos). **E4** (handoff 2.56) implementada en `fix/decimales-presupuesto`, pendiente de revisión y merge;
    * spike T0 en una rama descartable;
    * módulo desde M1 (tipo de cliente), coordinado con el frontend.
 
