@@ -44,11 +44,15 @@ class UpdateBudgetItemRequest extends FormRequest
                 'sometimes',
                 'numeric',
                 'min:0.01',
+                // Columna decimal(10,2).
+                'max:99999999.99',
             ],
             'unit_price' => [
                 'sometimes',
                 'numeric',
                 'min:0',
+                // Columna decimal(14,2) (BudgetService::MAX_AMOUNT).
+                'max:999999999999.99',
             ],
             'estimated_hours' => [
                 'sometimes',
@@ -91,10 +95,12 @@ class UpdateBudgetItemRequest extends FormRequest
             'quantity' => [
                 'numeric' => 'La cantidad debe ser un número.',
                 'min' => 'La cantidad debe ser al menos 0.01.',
+                'max' => 'La cantidad supera el máximo permitido.',
             ],
             'unit_price' => [
                 'numeric' => 'El precio unitario debe ser un número.',
                 'min' => 'El precio unitario no puede ser negativo.',
+                'max' => 'El precio unitario supera el máximo permitido.',
             ],
             'estimated_hours' => [
                 'numeric' => 'Las horas estimadas deben ser un número.',

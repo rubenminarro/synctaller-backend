@@ -1462,6 +1462,25 @@ Seis altas calculaban el código como `withTrashed()->max('id') + 1` sin bloqueo
 
 ---
 
+# 2.56 Importes del presupuesto en decimal(14,2) (2026-10-28)
+
+Entrega E4 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §9). `budgets.subtotal|tax|total`
+y `budget_items.unit_price|total` eran `decimal(10,2)`: tope de 99.999.999,99 Gs. Como los Requests no limitaban precio
+ni cantidad y MySQL corre en modo estricto, un presupuesto mayor (por ejemplo, una chapería de 120 millones) fallaba
+con 500.
+
+| Tema | Decisión |
+|---|---|
+| Columnas | Migración `000057`: las cinco columnas pasan a `decimal(14,2)` con `->change()`, conservando default y nulabilidad. Es la misma precisión que las facturas. `quantity` queda en `(10,2)`. El `down()` se detiene con un mensaje si algún importe no entra en `(10,2)`, en lugar de truncar |
+| Topes | Decisión del usuario del 2026-10-28: `unit_price` ≤ 999.999.999.999,99 y `quantity` ≤ 99.999.999,99 en los Requests (422 `VALIDATION_ERROR`). Si el total del ítem o el del presupuesto con IVA no entra en `(14,2)`: `BUDGET_AMOUNT_OUT_OF_RANGE` (422, `BudgetService::ensureAmountInRange`). Ningún importe llega a la base fuera de rango |
+| Transacción | `BudgetItemController::store\|update` creaba o editaba el ítem y recalculaba sin transacción: si el recálculo fallaba, el ítem quedaba guardado. Ahora las dos operaciones van en `DB::transaction`. La lógica de ítems sigue en el controller (no se movió al Service: fuera de alcance) |
+| Alcance | Solo presupuestos (decisión del usuario del 2026-10-28). **Observación sin cambios:** `parts.cost_price\|sale_price`, `part_supplier.last_cost` y `mechanics.hour_cost` siguen en `(10,2)`, con un máximo de 99,9 millones por unidad; `work_order_closings` está en `(12,2)` y alcanza |
+| Pruebas | `tests/Feature/Budgets/BudgetAmountRangeTest`: presupuesto de 150.000.000, topes, total del ítem y del presupuesto fuera de rango (sin guardar nada) y edición fuera de rango. SQLite no aplica la precisión de los decimales: la ampliación se verificó en la base MySQL de desarrollo el 2026-10-28. Las cinco columnas quedaron en `decimal(14,2)` con sus defaults, y un presupuesto de 150.000.000 se guardó con total 165.000.000,00 (dentro de una transacción revertida). El `down()` se detuvo con importes grandes, y sin ellos volvió a `(10,2)` y se reaplicó |
+
+---
+
+---
+
 # 2.2 Autenticación
 
 Existe:
@@ -3953,6 +3972,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Catálogo de ítems de diagnóstico (2.53)
 [✓] Recordatorios de factura al destinatario correcto (2.54)
 [✓] Códigos internos con bloqueo (2.55)
+[✓] Importes del presupuesto en decimal(14,2) (2.56)
 ```
 
 ## Próximo

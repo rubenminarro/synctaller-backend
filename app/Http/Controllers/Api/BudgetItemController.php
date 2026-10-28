@@ -12,6 +12,7 @@ use App\Services\BudgetService;
 use App\Traits\ApiResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 
 class BudgetItemController extends Controller implements HasMiddleware
 {
@@ -52,9 +53,14 @@ class BudgetItemController extends Controller implements HasMiddleware
 
         $data['total'] = $this->budgetService->itemTotal($data['quantity'], $data['unit_price']);
 
-        $item = $budget->items()->create($data);
+        // Si el nuevo total del presupuesto queda fuera de rango, el ítem no se guarda.
+        $item = DB::transaction(function () use ($budget, $data) {
+            $item = $budget->items()->create($data);
 
-        $this->budgetService->recalculateBudget($budget);
+            $this->budgetService->recalculateBudget($budget);
+
+            return $item;
+        });
 
         return $this->successResponse(
             'El item del presupuesto creado exitosamente.',
@@ -84,9 +90,11 @@ class BudgetItemController extends Controller implements HasMiddleware
 
         $data['total'] = $this->budgetService->itemTotal($quantity, $unitPrice);
 
-        $item->update($data);
+        DB::transaction(function () use ($budget, $item, $data) {
+            $item->update($data);
 
-        $this->budgetService->recalculateBudget($budget);
+            $this->budgetService->recalculateBudget($budget);
+        });
 
         return $this->successResponse(
             'El item del presupuesto actualizado exitosamente.',

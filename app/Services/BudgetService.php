@@ -28,12 +28,19 @@ class BudgetService
     ) {
     }
 
+    /** Mayor importe que entra en las columnas decimal(14,2) del presupuesto y sus ítems. */
+    public const MAX_AMOUNT = '999999999999.99';
+
     /**
      * Total del ítem (cantidad × precio, sin IVA) con BCMath.
      */
     public function itemTotal(int|float|string $quantity, int|float|string $unitPrice): string
     {
-        return Decimal::round(bcmul(Decimal::of($quantity, 2), Decimal::of($unitPrice, 2), 4), 2);
+        $total = Decimal::round(bcmul(Decimal::of($quantity, 2), Decimal::of($unitPrice, 2), 4), 2);
+
+        $this->ensureAmountInRange($total);
+
+        return $total;
     }
 
     public function recalculateBudget(Budget $budget): Budget
@@ -48,6 +55,9 @@ class BudgetService
 
         $total = bcadd($subtotal, $tax, 2);
 
+        // El total (con IVA) es el mayor de los tres importes.
+        $this->ensureAmountInRange($total);
+
         $budget->update([
             'subtotal' => $subtotal,
             'tax' => $tax,
@@ -55,6 +65,21 @@ class BudgetService
         ]);
 
         return $budget->refresh();
+    }
+
+    /**
+     * Un importe fuera de rango haría fallar el guardado (MySQL estricto): se
+     * rechaza como error de negocio, nunca 500.
+     */
+    private function ensureAmountInRange(string $amount): void
+    {
+        if (bccomp($amount, self::MAX_AMOUNT, 2) > 0) {
+            throw new BudgetException(
+                'El importe supera el máximo permitido para un presupuesto (999.999.999.999,99).',
+                422,
+                'BUDGET_AMOUNT_OUT_OF_RANGE'
+            );
+        }
     }
 
     public function send(Budget $budget): Budget
