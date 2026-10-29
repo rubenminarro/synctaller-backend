@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateClientRequest;
 use App\Http\Resources\ClientResource;
 use App\Http\Resources\ShowClientResource;
 use App\Models\Client;
+use App\Services\ClientService;
 use App\Traits\ApiResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -16,6 +17,11 @@ use Illuminate\Routing\Controllers\Middleware;
 class ClientController extends Controller implements HasMiddleware
 {
     use ApiResponse;
+
+    public function __construct(
+        protected ClientService $clientService
+    ) {
+    }
 
     public static function middleware(): array
     {
@@ -39,6 +45,7 @@ class ClientController extends Controller implements HasMiddleware
                 $q->where('document_number', 'like', "%{$search}%")
                 ->orWhere('first_name', 'like', "%{$search}%")
                 ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('business_name', 'like', "%{$search}%")
                 ->orWhere('phone', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%");
             });
@@ -47,7 +54,9 @@ class ClientController extends Controller implements HasMiddleware
             $query->where('document_number', 'like', "%{$request->document_number}%");
         })
         ->when($request->filled('first_name'), function ($query) use ($request) {
-            $query->where('first_name', 'like', "%{$request->first_name}%");
+            // También encuentra empresas por razón social.
+            $query->where(fn ($q) => $q->where('first_name', 'like', "%{$request->first_name}%")
+                ->orWhere('business_name', 'like', "%{$request->first_name}%"));
         })
         ->when($request->filled('last_name'), function ($query) use ($request) {
             $query->where('last_name', 'like', "%{$request->last_name}%");
@@ -82,7 +91,7 @@ class ClientController extends Controller implements HasMiddleware
     {
         $data = $request->validated();
 
-        $client = Client::create($data);
+        $client = $this->clientService->create($data);
             
         return $this->successResponse(
             'Cliente creado correctamente.',
@@ -110,7 +119,7 @@ class ClientController extends Controller implements HasMiddleware
     {
         $data = $request->validated();
 
-        $client->update($data);
+        $client = $this->clientService->update($client, $data);
 
         $client->loadMissing([
             'vehicles.brand', 
@@ -126,20 +135,7 @@ class ClientController extends Controller implements HasMiddleware
 
     public function destroy(Client $client)
     {
-        
-        $suffix = '//deleted_' . now()->timestamp;
-
-        if ($client->document_number) {
-            $client->document_number = substr($client->document_number . $suffix, 0, 30);
-        }
-
-        if ($client->email) {
-            $client->email = $client->email . $suffix;
-        }
-
-        $client->save();
-
-        $client->delete();
+        $this->clientService->delete($client);
 
         return $this->successResponse(
             'Cliente eliminado correctamente.',

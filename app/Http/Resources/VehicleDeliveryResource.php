@@ -20,7 +20,7 @@ class VehicleDeliveryResource extends JsonResource
             'vehicle_id' => $this->vehicle_id,
             'plate' => $this->whenLoaded('vehicle', fn () => $this->vehicle?->plate),
             'client_id' => $this->client_id,
-            'client_name' => $this->whenLoaded('client', fn () => $this->client ? trim("{$this->client->first_name} {$this->client->last_name}") : null),
+            'client_name' => $this->whenLoaded('client', fn () => $this->client?->display_name),
             'delivered_at' => $this->delivered_at,
             'final_mileage' => $this->final_mileage,
             'received_by_name' => $this->received_by_name,

@@ -63,6 +63,7 @@ class DiagnosticController extends Controller implements HasMiddleware
                     $client->where('document_number', 'like', "%{$search}%")
                         ->orWhere('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('business_name', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhereRaw(

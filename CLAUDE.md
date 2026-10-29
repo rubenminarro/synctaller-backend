@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 239 rutas API, 393 tests en verde.
+  (6.3). 239 rutas API, 400 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -216,10 +216,23 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   intactos), todos `409`: mecánico con OT, asignaciones o diagnósticos (`MECHANIC_IN_USE`: se pasa a inactivo); vehículo
   con recepciones (`VEHICLE_IN_USE`: si cambió de dueño, se edita su cliente); ítem de checklist usado en recepciones
   (`CHECKLIST_ITEM_IN_USE`: se desactiva con `is_active`, y los inactivos no entran en checklists nuevos); servicio en
-  presupuestos o en un plan de mantenimiento (`SERVICE_IN_USE`). Un servicio usado en presupuestos no cambia de nombre
-  (`SERVICE_NAME_NOT_EDITABLE`, 422); precio, horas, descripción y categoría sí.
+  presupuestos o en un plan de mantenimiento (`SERVICE_IN_USE`); cliente con vehículos vigentes, recepciones o facturas
+  (`CLIENT_IN_USE`, `ClientService::delete`, decisión del 2026-10-29). Un servicio usado en presupuestos no cambia de
+  nombre (`SERVICE_NAME_NOT_EDITABLE`, 422); precio, horas, descripción y categoría sí.
 * Cliente: `document_number` único (letras, números, guiones), `email` único `email:rfc,dns` (el DNS se omite
   con `EMAIL_DNS_CHECK=false`, ver `config/validation.php`), teléfono `+?[1-9]\d{7,14}`.
+* **Persona o empresa** (`clients.kind`, `ClientKind`: `person|company`; M1, decisión del 2026-10-29). Sin `kind`, el
+  alta es la de siempre (persona). Una empresa lleva `business_name` (mismos caracteres que el nombre de la factura) y
+  no lleva `first_name`/`last_name` (`prohibited`); una persona, al revés. `address` es opcional para los dos. El tipo
+  cambia solo si el cliente no tiene recepciones ni facturas (`CLIENT_KIND_NOT_EDITABLE`, 422); al cambiar, se vacían
+  los campos del tipo anterior. La lógica de alta, edición y baja está en `ClientService`.
+* **Nombre del cliente:** siempre `Client::display_name` ("nombre apellido" de una persona, idéntico al texto anterior;
+  razón social de una empresa), nunca concatenando nombre y apellido. Lo usan la factura (`customer_name`), los PDF, los
+  reportes, el mantenimiento, el historial y los Resources de recepción, vehículo, entrega, diagnóstico y avisos (las
+  claves no cambiaron). El saludo de los avisos usa `greeting_name`: el nombre de pila de una persona (como antes) o la
+  razón social. Las búsquedas de cliente (`search` y los filtros `first_name` y `client_first_name`) también buscan por
+  razón social. **No crear empresas en producción hasta adaptar el frontend** (tipos que admiten `null` en nombre y
+  apellido, y `display_name`). El dígito verificador del RUC no se valida (pendiente V10).
 * Vehículo: `plate` obligatoria salvo `no_plate = true` (entonces `chassis` obligatorio); placa y chasis únicos;
   `year` ≤ año actual; color, combustible y transmisión por enum. Rutas anidadas `clients/{client}/vehicles` (index,
   store, show; el `client_id` sale de la URL); editar y eliminar solo en `vehicles/{vehicle}`. La tabla es `vehicles`
@@ -617,6 +630,6 @@ Abiertas (reverificado el 2026-10-28):
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes
   del primer taller comercial; mientras tanto, nada nuevo en el disco `public` salvo branding.
 * **#16:** sin antivirus para los archivos subidos (riesgo técnico).
-* **Discrepancias D1–D10** (14.1): D3, D4, D6, D7, D8 y D9 esperan decisión.
+* **Discrepancias D1–D10** (14.1): D3, D4, D6, D7 y D8 esperan decisión (D9 se resolvió con M1).
 
 La #11 (repuestos extra sin aprobación del cliente) se resolvió el 2026-10-23; ver 6.7.

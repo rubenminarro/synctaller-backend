@@ -58,6 +58,7 @@ class VehicleController extends Controller implements HasMiddleware
                     $q->where('document_number', 'like', "%{$search}%")
                     ->orWhere('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('business_name', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
                 })
@@ -94,7 +95,9 @@ class VehicleController extends Controller implements HasMiddleware
         })
         ->when($request->filled('client_first_name'), function ($query) use ($request) {
             $query->whereHas('client', function ($q) use ($request) {
-                $q->where('first_name', 'like', "%{$request->client_first_name}%");
+                // También encuentra empresas por razón social.
+                $q->where('first_name', 'like', "%{$request->client_first_name}%")
+                    ->orWhere('business_name', 'like', "%{$request->client_first_name}%");
             });
         })
         ->when($request->filled('client_last_name'), function ($query) use ($request) {

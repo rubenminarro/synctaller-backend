@@ -66,7 +66,7 @@ class InvoiceService
                 'work_order_id' => $workOrder->id,
                 'client_id' => $client->id,
                 'status' => InvoiceStatus::DRAFT,
-                'customer_name' => trim("{$client->first_name} {$client->last_name}"),
+                'customer_name' => $client->display_name,
                 'customer_tax_id' => $client->document_number,
                 'condition' => InvoiceCondition::CASH,
                 'created_by' => $user->id,

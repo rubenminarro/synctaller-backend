@@ -40,10 +40,7 @@ class DiagnosticResource extends JsonResource
                     'client' => $this->reception->relationLoaded('client')
                     ? [
                         'id' => $this->reception->client->id,
-                        'full_name' => trim(
-                            $this->reception->client->first_name . ' ' .
-                            $this->reception->client->last_name
-                        ),
+                        'full_name' => $this->reception->client->display_name,
                     ]
                     : null,
                     'vehicle' => $this->reception->relationLoaded('vehicle')

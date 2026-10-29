@@ -476,6 +476,6 @@ class ReportService
 
     private function clientName(?Client $client): ?string
     {
-        return $client ? trim("{$client->first_name} {$client->last_name}") : null;
+        return $client ? $client->display_name : null;
     }
 }
