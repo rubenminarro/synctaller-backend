@@ -28,7 +28,8 @@ use Illuminate\Support\Facades\DB;
 class ReceptionStatusService
 {
     public function __construct(
-        protected ClientNotificationService $clientNotificationService
+        protected ClientNotificationService $clientNotificationService,
+        protected ClaimStatusService $claimStatusService
     ) {
     }
 
@@ -134,6 +135,9 @@ class ReceptionStatusService
                 'cancelled_by' => $user->id,
                 'cancellation_reason' => $reason,
             ]);
+
+            // El siniestro vigente se cancela con la recepción.
+            $this->claimStatusService->receptionCancelled($reception, $reason, $user->id);
 
             // Uno por uno para que cada cambio quede en la auditoría.
             $reception->budgets()

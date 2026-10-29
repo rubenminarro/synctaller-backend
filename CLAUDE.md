@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 250 rutas API, 407 tests en verde.
+  (6.3). 256 rutas API, 415 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -76,9 +76,9 @@ resultados esperados y casos de error).
 * Dinero y cantidades con **BCMath** sobre strings (`App\Support\Decimal::round`), nunca `float`.
 * Operaciones sobre varios registros en `DB::transaction`; concurrencia con `lockForUpdate`.
   Orden de bloqueo: OT → línea → `part_stocks`; OT → recepción (recálculo de estado); factura → pago;
-  recepción → entregas; compra → `part_stocks`; compra → pago a proveedor; documento → serie de códigos (siempre
+  recepción → entregas; compra → `part_stocks`; compra → pago a proveedor; recepción → siniestro; documento → serie de códigos (siempre
   última).
-* **Códigos internos** (`BUD-`, `OT-`, `COM-`, `REP-`, `SRV-`, `DIA-`, `ASE-`): salen de `DocumentSequenceService::create()`
+* **Códigos internos** (`BUD-`, `OT-`, `COM-`, `REP-`, `SRV-`, `DIA-`, `ASE-`, `SIN-`): salen de `DocumentSequenceService::create()`
   (serie en `App\Enums\DocumentSeries`, contador en `document_sequences`), nunca de `max(id) + 1`. El contador de la
   serie se bloquea dentro de la transacción del alta (un alta fallida no consume el número), se saltan los códigos ya
   usados y un repetido igual responde `409 DOCUMENT_CODE_CONFLICT`. Puede haber huecos: no son documentos fiscales.
@@ -173,7 +173,7 @@ Controller (HasMiddleware) → Form Request → Service → Model/Eloquent → A
 * Excepciones de dominio: `BudgetException`, `WorkOrderException`, `WorkOrderPartException`, `PartException`,
   `SupplierException`, `InventoryException`, `ServiceException`, `InvoiceException`, `PaymentException`,
   `VehicleDeliveryException`, `MaintenanceException`, `ReceptionException`, `PurchaseException`,
-  `SupplierPaymentException`, `NotificationException`, `AuditException`, `VehicleCatalogException`, `ClientException`, `InsurerException` (todas extienden `AppException(message, status, errorCode, errors)`).
+  `SupplierPaymentException`, `NotificationException`, `AuditException`, `VehicleCatalogException`, `ClientException`, `InsurerException`, `ClaimException` (todas extienden `AppException(message, status, errorCode, errors)`).
 
 ### Autenticación
 
@@ -193,9 +193,9 @@ de los permisos, ordenados; el administrador recibe todos los del guard `api` po
 |---|---|---|
 | `administrador` | Todo (`Gate::before`) | Exclusivo: usuarios/roles/permisos, auditoría (`audit-logs.*`), logo del sistema (`system-settings.update`), costos y margen (`work-orders.view-economics`), liquidar comisiones, anular entregas, timbrados, ABM de planes de mantenimiento, reporte de rentabilidad |
 | `mechanic` | Ejecuta la OT | Diagnóstico (consulta y usa el catálogo de ítems), iniciar/pausar/completar OT e ítems, consumir/devolver repuestos, sus horas y comisiones, historial, estado de mantenimiento, dashboard (bloque taller) |
-| `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos) |
-| `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras |
-| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras |
+| `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos) y siniestros (alta, edición y cancelación) |
+| `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras y siniestros (alta, edición y cancelación) |
+| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras y siniestros |
 | `deposito` | Stock | Repuestos, proveedores, inventario, compras completas, repuestos en OT, reporte de inventario, consulta de pagos a proveedores y cuentas por pagar |
 
 El rol del mecánico se llama `mechanic` (no `mecanico`). El seeder crea usuarios de cada rol (README, "Datos de prueba").
@@ -568,7 +568,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   con usuario, IP y user agent.
   * Modelos auditados: `Part`, `Service`, `Budget`, `BudgetItem`, `BudgetClientAcceptance`, `PartSupplier`, `Invoice`, `InvoiceItem`, `Payment`,
     `SupplierPayment`, `Purchase`, `PurchaseItem`, `User`, `Role`, `Permission`, `Client`, `Vehicle`, `Mechanic`,
-    `InvoiceStamp`, `MaintenancePlan`, `DiagnosticItemTemplate`, `Insurer` e `InsurerContact`.
+    `InvoiceStamp`, `MaintenancePlan`, `DiagnosticItemTemplate`, `Insurer`, `InsurerContact` y `Claim`.
   * **Un modelo nuevo con precios, dinero, seguridad o datos maestros debe usar el trait.**
   * El stock ya se audita en `inventory_movements`.
 * **Exclusiones:** `password`, `remember_token` y `token` se guardan como `********`. Los timestamps no se registran.
@@ -640,7 +640,38 @@ Entrega M2 de `docs/especificacion-aseguradoras.html` (decisión del 2026-10-29;
 * **Efecto sobre el cliente:** no se elimina (`CLIENT_LINKED_TO_INSURER`, 409) ni pasa a persona (`CLIENT_KIND_NOT_EDITABLE`).
 * **Permisos:** `insurers.index|show` (recepcionista, jefe de taller y cajero) y `insurers.store|update|destroy|change-status`
   (recepcionista). Los contactos se leen con `insurers.show` y se editan con `insurers.update`.
-* **Pendiente:** la baja con siniestros (`INSURER_IN_USE`) llega con M3, y la modalidad del deducible con M10.
+* **Baja:** con siniestros (también cancelados) no se elimina (`INSURER_IN_USE`, 409): se desactiva. La modalidad del
+  deducible llega con M10.
+
+### 6.23 Siniestros
+
+Entrega M3 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-10-29; `ClaimService`).
+
+* **Modelo:** `Claim` (`SIN-000001`) de una recepción y una aseguradora:
+  * datos del siniestro: número y póliza (nulos), `claim_type` (`ClaimType`: `own|third_party`), fecha y descripción;
+  * asegurado: `insured_*`, con `insured_client_id` si es cliente;
+  * perito: `adjuster_*` y fechas de inspección;
+  * `deductible_amount` (`decimal(14,2)`: nulo = desconocido, 0 = sin deducible) y `coverage_notes`;
+  * `status` (`ClaimStatus`: `open|closed|cancelled`).
+
+  `Auditable`.
+* **Alta** (`POST claims`):
+  * solo con la recepción abierta (`RECEPTION_CLOSED`) y la aseguradora activa (`INSURER_INACTIVE`, 422);
+  * **un siniestro vigente (no cancelado) por recepción** (`RECEPTION_ALREADY_HAS_CLAIM`, 409): uno cancelado queda en el
+    historial y se puede abrir otro;
+  * el número no se repite en la misma aseguradora entre los no cancelados (`CLAIM_NUMBER_DUPLICATE`, 409);
+  * en uno propio, sin datos del asegurado se copian los del cliente de la recepción; en uno de tercero el nombre del
+    asegurado es obligatorio.
+* **Edición** (`PATCH`): solo `open` (`CLAIM_NOT_EDITABLE`) y con la recepción editable. Recepción, aseguradora y tipo no
+  cambian (`prohibited`: se cancela y se registra otro). El deducible se edita libremente: su bloqueo con facturas llega
+  con M9.
+* **Cancelación** (`POST claims/{id}/cancel`, motivo obligatorio): solo `open` (`CLAIM_NOT_CANCELLABLE`).
+* **Estado sincronizado con la recepción** (`ClaimStatusService`, en la transacción del evento): la entrega lo cierra, la
+  anulación de la entrega lo reabre y la cancelación de la recepción lo cancela ("Recepción cancelada: <motivo>").
+* **Visibilidad:** el detalle de la recepción trae `claim` (código, número, estado y aseguradora) solo si el usuario tiene
+  `claims.show`. El mecánico ve la recepción, pero no pólizas ni datos del asegurado.
+* **Permisos:** `claims.index|show` (recepcionista, jefe de taller y cajero) y `claims.store|update|cancel` (recepcionista y
+  jefe de taller). También `GET receptions/{reception}/claim` (siniestro vigente, 404 si no tiene).
 
 ---
 

@@ -100,10 +100,19 @@ class InsurerService
     }
 
     /**
-     * Baja lógica. Con siniestros no se elimina (INSURER_IN_USE), desde M3. El cliente queda como está.
+     * Baja lógica. Con siniestros (también cancelados, que quedan en el historial) no se elimina: se desactiva. El
+     * cliente queda como está.
      */
     public function delete(Insurer $insurer): void
     {
+        if ($insurer->claims()->exists()) {
+            throw new InsurerException(
+                'La aseguradora tiene siniestros y no puede eliminarse. Desactívela para que no admita siniestros nuevos.',
+                409,
+                'INSURER_IN_USE'
+            );
+        }
+
         $insurer->delete();
     }
 

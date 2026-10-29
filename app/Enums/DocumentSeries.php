@@ -15,6 +15,7 @@ enum DocumentSeries: string
     case SERVICE = 'service';
     case DIAGNOSTIC_ITEM_TEMPLATE = 'diagnostic_item_template';
     case INSURER = 'insurer';
+    case CLAIM = 'claim';
 
     public function prefix(): string
     {
@@ -26,6 +27,7 @@ enum DocumentSeries: string
             self::SERVICE => 'SRV-',
             self::DIAGNOSTIC_ITEM_TEMPLATE => 'DIA-',
             self::INSURER => 'ASE-',
+            self::CLAIM => 'SIN-',
         };
     }
 
@@ -42,6 +44,7 @@ enum DocumentSeries: string
             self::SERVICE => 'services',
             self::DIAGNOSTIC_ITEM_TEMPLATE => 'diagnostic_item_templates',
             self::INSURER => 'insurers',
+            self::CLAIM => 'claims',
         };
     }
 }

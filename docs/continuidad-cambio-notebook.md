@@ -289,9 +289,9 @@ propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2, E3 y
    * módulo desde M1 (tipo de cliente), coordinado con el frontend:
      * **M1** (handoff 2.59; migración `000059`) mergeada en `main` el 2026-10-29. **No crear empresas en producción
        hasta adaptar el frontend.**
-     * **M2** (aseguradoras, handoff 2.60; migración `000060`) en `feature/aseguradoras`, pendiente de revisión y
-       merge.
-     * Las dos migraciones ya están aplicadas en la base local. Sigue M3 (siniestros).
+     * **M2** (aseguradoras, handoff 2.60; migración `000060`) mergeada en `main` el 2026-10-29.
+     * **M3** (siniestros, handoff 2.61; migración `000061`) en `feature/siniestros`, pendiente de revisión y merge.
+     * Las migraciones ya están aplicadas en la base local. Sigue M4 (documentos privados del siniestro).
 
 ---
 
