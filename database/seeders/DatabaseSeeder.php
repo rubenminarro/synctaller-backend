@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             PurchaseSeeder::class,
             SupplierPaymentSeeder::class,
             ClientsSeeder::class,
+            InsurerSeeder::class,
             VehiclesSeeder::class,
             // Flujo del taller por escenarios (ExampleScenarios).
             ReceptionSeeder::class,

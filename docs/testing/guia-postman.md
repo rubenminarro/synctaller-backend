@@ -322,6 +322,30 @@ Cliente persona o empresa (M1, ver `docs/handoff.md`, 2.59). Todos los clientes 
 | Eliminar un cliente con vehículos, recepciones o facturas | `DELETE {{base_url}}/clients/{{client_id}}` | 409 | `CLIENT_IN_USE` (antes se eliminaba) |
 | Eliminar un cliente sin uso | `DELETE {{base_url}}/clients/{id}` | 200 | Baja lógica con sufijo en documento y email |
 
+Aseguradoras (M2, ver `CLAUDE.md` 6.22 y `docs/handoff.md` 2.60). Alta con su cliente empresa nuevo:
+
+```json
+{ "client": { "document_number": "80012345-6", "business_name": "Seguros del Sur S.A.",
+  "email": "siniestros@segurosdelsur.com.py", "phone": "+595211234567" }, "payment_term_days": 30 }
+```
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Alta con cliente nuevo | `POST {{base_url}}/insurers` | el de arriba | 201 | `code` `ASE-…`, `client.kind` `company`, `client.notifications_enabled` `false`, `meta` `null`. Guardar `{{insurer_id}}` |
+| Alta sobre un cliente empresa existente | ídem | `{ "client_id": {{company_client_id}} }` | 201 | El cliente conserva sus avisos; `meta.warnings` lo advierte |
+| Sin cliente / con los dos | ídem | `{}` o `client_id` + `client` | 422 | `VALIDATION_ERROR` en `client_id` / `client` |
+| Datos del cliente inválidos | ídem | `client` sin `business_name` | 422 | `VALIDATION_ERROR` en `client.business_name` |
+| Cliente persona | ídem | `{ "client_id": {{client_id}} }` | 422 | `INSURER_CLIENT_NOT_COMPANY` |
+| Cliente ya vinculado | ídem, otra vez con el mismo `client_id` | — | 409 | `INSURER_CLIENT_ALREADY_LINKED` |
+| Listar / buscar / filtrar | `GET {{base_url}}/insurers?search=Sur&status=active` | — | 200 | `meta.pagination`, `contacts_count` |
+| Editar plazo y notas | `PATCH {{base_url}}/insurers/{{insurer_id}}` | `{ "payment_term_days": 60 }` | 200 | — |
+| Desactivar / activar | `POST {{base_url}}/insurers/{{insurer_id}}/deactivate` (y `activate`) | — | 200 | Repetir → 422 `INSURER_INVALID_STATUS_TRANSITION` |
+| Agregar contacto principal | `POST {{base_url}}/insurers/{{insurer_id}}/contacts` | `{ "name": "Laura Benítez", "role": "claims", "is_primary": true }` | 201 | Marcar otro como principal desmarca este |
+| Editar / eliminar contacto | `PATCH` / `DELETE {{base_url}}/insurers/{{insurer_id}}/contacts/{id}` | — | 200 | Contacto de otra aseguradora → 404 |
+| Eliminar el cliente de una aseguradora | `DELETE {{base_url}}/clients/{cliente de la aseguradora}` | — | 409 | `CLIENT_LINKED_TO_INSURER` |
+| Eliminar la aseguradora | `DELETE {{base_url}}/insurers/{{insurer_id}}` | — | 200 | Baja lógica; el cliente se puede vincular a otra aseguradora |
+| Sin permiso | cajero: `POST {{base_url}}/insurers`; mecánico o depósito: `GET {{base_url}}/insurers` | — | 403 | `FORBIDDEN` |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.

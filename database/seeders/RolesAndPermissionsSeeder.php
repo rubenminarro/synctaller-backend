@@ -127,6 +127,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'diagnostic-item-templates.destroy',
             'diagnostic-item-templates.change-status',
 
+            /* insurer permissions */
+            'insurers.index',
+            'insurers.store',
+            'insurers.show',
+            'insurers.update',
+            'insurers.destroy',
+            'insurers.change-status',
+
             /* budget permissions */
             'budgets.index',
             'budgets.store',
@@ -441,6 +449,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'maintenance-plans.index', 'maintenance-plans.show',
                     'vehicle-maintenances.index', 'vehicle-maintenances.record', 'maintenance-alerts.index',
                     'client-notifications.index', 'client-notifications.show', 'client-notifications.resend',
+                    'insurers.index', 'insurers.store', 'insurers.show', 'insurers.update', 'insurers.destroy', 'insurers.change-status',
                     'dashboard.view', 'reports.budgets',
                 ],
             ],
@@ -478,6 +487,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'maintenance-plans.index', 'maintenance-plans.show',
                     'vehicle-maintenances.index', 'vehicle-maintenances.record', 'vehicle-maintenances.configure',
                     'maintenance-alerts.index',
+                    'insurers.index', 'insurers.show',
                     'dashboard.view', 'reports.productivity',
                 ],
             ],
@@ -497,6 +507,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'vehicle-deliveries.index', 'vehicle-deliveries.show',
                     'vehicle-history.view',
                     'client-notifications.index', 'client-notifications.show', 'client-notifications.resend',
+                    'insurers.index', 'insurers.show',
                     'dashboard.view', 'reports.sales', 'reports.clients',
                 ],
             ],
