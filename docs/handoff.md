@@ -3,13 +3,13 @@
 ## SyncTaller (antes Presupuestador) — Sistema de Gestión para Taller Mecánico
 
 **Versión del handoff:** 1.2
-**Fecha:** 2026-10-17
+**Fecha:** 2026-10-17 (contenido actualizado hasta el 2026-10-29)
 **Estado:** Backend/API funcional — roadmap original completo (FASES 10 a 20: repuestos, inventario, servicios,
 cierre económico, facturación, pagos, entrega, historial, mantenimiento preventivo, reportes), FASE 21 (compras) y
-FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría); 6 roles;
-374 tests en verde (2026-10-24)
-**Stack principal:** Laravel 13.38 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend previsto en React 19: **no está en este
-repositorio** (ver 1.2)
+FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría) y
+módulo de aseguradoras en curso (M1–M7, 2.59–2.65); 6 roles; 440 tests en verde (2026-10-29)
+**Stack principal:** Laravel 13.38 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend en React 19, en el repositorio aparte
+`../synctaller-frontend` (ver 1.2)
 **Entorno local:** Laragon / Windows
 **Base de datos:** `synctaller` (hasta el 2026-10-21, `presupuestador`)
 
@@ -80,15 +80,16 @@ La arquitectura debe permitir continuar agregando módulos sin romper los módul
 
 ## Frontend
 
-* React 19 (previsto)
+* React 19 + TypeScript + Vite + Tabler, en el repositorio aparte `../synctaller-frontend`
+  (`https://github.com/rubenminarro/synctaller-frontend.git`)
 * Consumo de API REST
-* Autenticación mediante Sanctum
+* Autenticación mediante Sanctum (tokens Bearer)
 
 > **Verificado el 2026-10-17:** este repositorio no contiene código React. `package.json` es el scaffold por defecto
 > de Laravel (Vite 7, Tailwind CSS 4, axios) sin uso real (`resources/views/welcome.blade.php` y `resources/js/app.js`
 > sin cambios; `routes/web.php` sin rutas). Lo único preparado para un SPA es `config/cors.php` y
-> `SANCTUM_STATEFUL_DOMAINS` con `http://localhost:5173` (puerto por defecto de Vite). La versión de React, la
-> biblioteca visual y el repositorio del frontend no pudieron verificarse.
+> `SANCTUM_STATEFUL_DOMAINS` con `http://localhost:5173` (puerto por defecto de Vite). **Actualizado el 2026-10-29
+> (D4):** el frontend existe en su propio repositorio (ver arriba y su `CLAUDE.md`).
 
 ## Entorno de desarrollo
 
@@ -4026,16 +4027,18 @@ La arquitectura objetivo es:
 El proyecto actualmente se encuentra en:
 
 ```text
-FASE 25 — AUDITORÍA AVANZADA — IMPLEMENTADA (2026-10-20, ver 2.38)
+MÓDULO DE ASEGURADORAS — M1 a M7 IMPLEMENTADAS (2026-10-29, ver 2.59–2.65); SIGUE M8 (REPARTO ECONÓMICO)
 ```
 
 Con la FASE 20 se completó el roadmap original (FASES 10–20); después se implementaron compras (FASE 21), pagos a
 proveedores (FASE 22), notificaciones por email y bandeja interna (FASE 23), exportación de reportes y comprobantes
-imprimibles (FASE 24) y auditoría avanzada (FASE 25). Siguen sin fase asignada, a priorizar:
+imprimibles (FASE 24) y auditoría avanzada (FASE 25). Desde el 2026-10-24 se trabaja en el módulo de aseguradoras
+(deuda #13), según el plan de `docs/especificacion-aseguradoras.html` (§9): M8 (reparto), M9 (facturas por
+responsable), M10 (deducible, espera G1), M11 (avisos) y M12 (retenciones). El frontend React 19 está en
+`../synctaller-frontend` y se adapta en su propio repositorio. Sigue sin fase asignada:
 
 ```text
 Notificaciones por WhatsApp (el canal ya está previsto en NotificationChannel)
-Frontend React 19 (consumo de esta API)
 ```
 
 El orden de trabajo de abajo se usó para las FASES 10 a 13 y sigue siendo la referencia.
@@ -4168,9 +4171,11 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 ## Próximo
 
 ```text
+[ ] Aseguradoras: reparto económico (M8) y facturación por responsable (M9–M12)
 [ ] Notificaciones por WhatsApp
-[ ] Frontend React 19
 ```
+
+El frontend React 19 está en `../synctaller-frontend` (no es una tarea de este repositorio).
 
 ---
 
@@ -4249,11 +4254,11 @@ aprobadas (E y P8, §10.2 de la especificación), que solo faltaba registrar.
 | 6 | ~~Middleware sin registrar~~ **Resuelto el 2026-10-19** | `App\Http\Middleware\EnsureJsonResponse` no aparecía en `bootstrap/app.php` ni en las rutas (y respondía `406 {"error": "JSON only"}`, fuera del contrato). Sin `Accept: application/json`: request sin token → `500` HTML (redirección a una ruta `login` inexistente), validación → `302`, ruta inexistente → `404` HTML | Ahora es middleware global: fija `Accept: application/json` en `api/*` y todo responde con el contrato (`401`, `422`, `404`, `405`…). Test: `tests/Feature/Http/JsonResponseTest` |
 | 7 | ~~Seeders no idempotentes~~ **Resuelto el 2026-10-19** | `BrandSeeder` (`insert`), `VehicleModelSeeder`, `ClientsSeeder`, `VehiclesSeeder`, `ReceptionSeeder`, `DiagnosticItemSeeder`, `BudgetSeeder` y `BudgetItemSeeder` creaban sin verificar si el dato existía, y referenciaban marcas, clientes, vehículos, categorías y presupuestos por id fijo (`VehiclesSeeder` además combinaba marcas con modelos de otra marca, p. ej. Hyundai + Corolla Cross) | Ahora omiten lo existente por clave natural (nombre, documento, placa, código de categoría; recepción si el vehículo ya tiene, presupuesto si la recepción ya tiene, ítems si el presupuesto ya tiene) y resuelven las relaciones por esas claves. `BudgetSeeder` crea por `BudgetService::create()` (código y estado derivado de la recepción). `DatabaseSeederTest` corre todo dos veces y compara conteos |
 | 8 | ~~Tests que dependen de la red~~ **Resuelto el 2026-10-19** | `Store/UpdateUserRequest` y `Store/UpdateClientRequest` usan `email:rfc,dns`; los de usuario además `Password::uncompromised()` (simulado con `Http::fake` en los tests) | Los tests necesitaban resolver DNS (`gmail.com`). Ahora la consulta DNS depende de `config('validation.email_dns')` (`EMAIL_DNS_CHECK`, `true` por defecto); `phpunit.xml` la desactiva y los tests corren sin red. `ClientTest` verifica ambos modos con un dominio `.invalid` |
+| 9 | ~~Rama remota antigua~~ **Resuelto el 2026-10-17** | `origin/feature/diagnostic-item-seeders-controllers-migrations-models` (commit `795d830519b28d1abc22ba7fee92da04e50af4a5`, 2026-08-12) sin mergear | Eliminada a pedido del usuario: sus archivos existían en `main` en versiones posteriores. Ese día también se eliminaron todas las ramas ya integradas en `main` (locales y remotas); su contenido sigue en el historial de `main` |
 | 10 | ~~Alta de mecánico con costo o comisión `null` → `500`~~ **Resuelto el 2026-10-21** | `StoreMechanicRequest` declaraba `hour_cost` y `commission_percentage` como `nullable`, pero las columnas son `NOT NULL DEFAULT 0` (migración `000001`). `POST /api/mechanics` con `"hour_cost": null` respondía `500 INTERNAL_SERVER_ERROR` | Decisión del usuario: rechazar con `422`. Alta y edición validan `sometimes\|required`: sin enviarlos quedan en `0`; vacíos → `422 VALIDATION_ERROR`. Test: `MechanicTest::test_cost_and_commission_cannot_be_null` |
 | 11 | ~~Repuestos extra sin aprobación del cliente~~ **Resuelto el 2026-10-23 (opción 3, ver 2.49)** | `POST work-orders/{id}/parts` agrega repuestos fuera del presupuesto aprobado (`work_order_item_id` `null`, `is_budgeted` `false`, precio de venta del repuesto o el informado) con la OT `pending\|in_progress\|paused`. El cierre (6.9) y la factura (6.10) suman lo realmente usado, extras incluidos | El cliente paga más que el presupuesto que aprobó, sin registro de su conformidad ni aviso. La diferencia solo se ve en el cierre (`variance`, con `work-orders.view-economics`). Hoy se puede formalizar con un presupuesto complementario en la misma recepción y otra OT. Opciones a decidir con los clientes del taller: (1) mantener y mostrar en OT y factura lo no presupuestado y la diferencia; (2) prohibir extras y usar siempre el presupuesto complementario; (3) extras con aprobación registrada del cliente antes de consumir o facturar (diseño nuevo, con migración). **Se eligió la 3:** el extra nace `awaiting_approval` y se registra la respuesta del cliente (medio, contacto, quién la cargó) antes de reservar, consumir o completar la OT |
 | 12 | ~~Requests ocasionales sin el `.env` (entorno local)~~ **Resuelto el 2026-10-22** | En la revisión visual de F9, un request concurrente del frontend falló y el navegador lo informó como CORS; `laravel.log`: `production.ERROR: Database connection [framework_base] not configured` (sin `APP_ENV` ni `DB_CONNECTION`: corrió sin las variables del `.env`). Reproducido: 13 de 300 requests concurrentes con 500 | Causa: Apache multihilo de Laragon (`mpm_winnt` + PHP como módulo ZTS), `putenv` no es seguro entre hilos. Laragon pasó a **Nginx** (puerto 80, `php-cgi` con procesos hijos, `client_max_body_size 2000M`): 900 de 900 requests concurrentes en 200, sin errores nuevos. Además `database.default` pasó de `framework_base` (resto del scaffold) a `mysql`; el 2026-10-24 la conexión del proyecto, que se llamaba `synctaller` y no se usaba (Laravel completaba `mysql` con su configuración interna), se renombró a `mysql`. No usar `config:cache` en desarrollo: con la config cacheada `php artisan test` usaría MySQL y `RefreshDatabase` borraría la base |
-| 13 | **Abierta (2026-10-24), en diseño desde el 2026-10-27: clientes aseguradoras.** Especificación de trabajo en `docs/especificacion-aseguradoras.html` (versión 3): decisiones A–G y P1–P9 aprobadas; primeras respuestas externas a G1–G5 (2026-10-28); correcciones previas E2–E5 implementadas (2.54–2.57). El módulo (M1–M12) no está implementado | No hay concepto de aseguradora, siniestro, póliza ni deducible. La factura toma el `client_id` del dueño de la recepción (`InvoiceService::generate`); en borrador se pueden cambiar `customer_name`, `customer_tax_id`, `customer_address` y la condición (`UpdateInvoiceRequest`), así que hoy se puede facturar a nombre de la aseguradora y a crédito. Una sola factura vigente por OT (`WORK_ORDER_ALREADY_INVOICED`); el presupuesto lo aprueba el cliente, sin aprobación parcial por ítem | Reportes de ventas, clientes y cobros muestran al dueño, no a la aseguradora; no se puede dividir la factura (deducible al dueño y el resto a la aseguradora); no se registra el número de siniestro ni el perito. Preguntas abiertas: ¿quién paga el deducible y con qué factura?, ¿quién aprueba el presupuesto (perito, dueño o ambos) y si puede ser parcial?, ¿siniestro o póliza en presupuesto y factura?, ¿cuentas por cobrar por aseguradora? Para entregar con pago diferido hay que facturar a crédito (la entrega exige la factura de contado pagada) |
-| 9 | ~~Rama remota antigua~~ **Resuelto el 2026-10-17** | `origin/feature/diagnostic-item-seeders-controllers-migrations-models` (commit `795d830519b28d1abc22ba7fee92da04e50af4a5`, 2026-08-12) sin mergear | Eliminada a pedido del usuario: sus archivos existían en `main` en versiones posteriores. Ese día también se eliminaron todas las ramas ya integradas en `main` (locales y remotas); su contenido sigue en el historial de `main` |
+| 13 | **Abierta (2026-10-24), en diseño desde el 2026-10-27: clientes aseguradoras.** Especificación de trabajo en `docs/especificacion-aseguradoras.html` (versión 3): decisiones A–G y P1–P9 aprobadas; primeras respuestas externas a G1–G5 (2026-10-28); correcciones previas E2–E5 implementadas (2.54–2.57). **M1–M7 implementadas (2.59–2.65, 2026-10-29)**; faltan M8–M12 (reparto, facturación por responsable, deducible, avisos y retenciones) | No hay concepto de aseguradora, siniestro, póliza ni deducible. La factura toma el `client_id` del dueño de la recepción (`InvoiceService::generate`); en borrador se pueden cambiar `customer_name`, `customer_tax_id`, `customer_address` y la condición (`UpdateInvoiceRequest`), así que hoy se puede facturar a nombre de la aseguradora y a crédito. Una sola factura vigente por OT (`WORK_ORDER_ALREADY_INVOICED`); el presupuesto lo aprueba el cliente, sin aprobación parcial por ítem | Reportes de ventas, clientes y cobros muestran al dueño, no a la aseguradora; no se puede dividir la factura (deducible al dueño y el resto a la aseguradora); no se registra el número de siniestro ni el perito. Preguntas abiertas: ¿quién paga el deducible y con qué factura?, ¿quién aprueba el presupuesto (perito, dueño o ambos) y si puede ser parcial?, ¿siniestro o póliza en presupuesto y factura?, ¿cuentas por cobrar por aseguradora? Para entregar con pago diferido hay que facturar a crédito (la entrega exige la factura de contado pagada) |
 | 14 | **Abierta (2026-10-28): disco `local` con `serve` activo y sin uso** | `config/filesystems.php`: el disco `local` (`storage/app/private`) tiene `'serve' => true`. Laravel registra `GET` y `PUT storage/{path}` con URL firmada: la firma usa la `APP_KEY` y no conoce permisos, taller ni auditoría. Ninguna parte de `app/` usa ese disco | Hoy no expone nada (la carpeta solo tiene `.gitignore`), pero cualquier archivo que se guarde ahí quedaría descargable por URL firmada. Decisión aprobada (E): no se usa para el módulo, que tendrá su propio disco privado sin `serve`; su revisión queda como deuda, **sin desactivarlo en esta etapa** |
 | 15 | **Abierta (2026-10-28): fotos y firmas con URL pública (deuda de seguridad, P8)** | Fotos de recepción (`ReceptionPhotoController`), fotos de ítems de diagnóstico (`DiagnosticItemPhotoController`) y firmas de entrega (`VehicleDeliveryService`) en el disco `public`, con URL permanente y nombre aleatorio. El frontend las muestra con `<img src>`, que no envía el token | Una URL filtrada no se puede revocar hasta mover el archivo; no hay permiso ni auditoría de acceso. Decisión aprobada (P8): tarea independiente **después de T4** (storage por taller), primero la firma y después las fotos, coordinada con el frontend (descarga con token). **Requisito antes del primer taller comercial.** Hasta entonces no se agregan tipos de archivo nuevos al disco `public`, salvo branding |
 | 16 | **Abierta (2026-10-28): sin análisis antivirus de archivos subidos (riesgo técnico)** | Las subidas solo validan tipo, extensión y tamaño (fotos, firma, logo, favicon; y los documentos de siniestros previstos en M4) | La validación no sustituye un antivirus. Decisión aprobada (E): queda fuera del alcance actual y se documenta como riesgo pendiente; decidir antes de recibir documentos de terceros en producción |
@@ -4269,9 +4274,9 @@ corregir: las que siguen abiertas esperan decisión del usuario.
 | D1 | Un pedido mencionaba Laravel 12; el código usa Laravel 13.38 | `composer.json`, `php artisan --version`, handoff 2.51 | **Sin acción**: no es un error del repositorio. `CLAUDE.md` §1 ya dice Laravel 13.38 |
 | D2 | `CLAUDE.md` §7 decía "Sin deudas pendientes" con la #13 abierta | `CLAUDE.md` §7; tabla de arriba, #13 | **Resuelta el 2026-10-28** (E1): §7 lista las deudas abiertas (#13–#16) |
 | D3 | `receptions.approved_by` existe en la tabla, el modelo, `ShowReceptionResource` y la búsqueda de `ReceptionController`, pero ningún Service ni Request la asigna: siempre es `null` | Migración `000009:28`; `Reception.php:32,59`; `ShowReceptionResource.php:46`; `ReceptionController.php:43,91` | **A decidir**: eliminarla (migración y contrato) o darle uso. El estudio la dejaba para la Fase 0 |
-| D4 | El handoff (§11, "Siguen sin fase asignada", y §12, "Próximo") lista "Frontend React 19" como pendiente; existe en `../synctaller-frontend` (`CLAUDE.md` §1) | `docs/handoff.md`, §11 y §12 | **A decidir**: actualizar esas dos listas (solo documentación) |
+| D4 | El handoff (§11, "Siguen sin fase asignada", y §12, "Próximo") lista "Frontend React 19" como pendiente; existe en `../synctaller-frontend` (`CLAUDE.md` §1) | `docs/handoff.md`, §11 y §12 | **Resuelta el 2026-10-29** (pedido del usuario de corregir la documentación antes de M8): las dos listas lo indican como repositorio aparte; también el README (sección Frontend) y la cabecera de este documento |
 | D5 | `composer.lock` modificado sin commitear en `main` | `git status` del 2026-10-27 | **Resuelta el 2026-10-27** (E0, P1): se descartaron los cambios locales; `vendor/` alineado el 2026-10-28 |
-| D6 | La cabecera del handoff tiene fecha 2026-10-17 con contenido posterior, y en esta tabla la fila #9 está después de la #13 | `docs/handoff.md:6`; tabla de arriba | **A decidir**: actualizar la fecha y reordenar (solo documentación) |
+| D6 | La cabecera del handoff tiene fecha 2026-10-17 con contenido posterior, y en esta tabla la fila #9 está después de la #13 | `docs/handoff.md:6`; tabla de arriba | **Resuelta el 2026-10-29** (mismo pedido): la cabecera indica hasta cuándo está actualizado el contenido y la fila #9 va en su lugar |
 | D7 | `CLAUDE.md` 6.1 dice que el email del cliente es único, pero la unicidad existe solo en la validación: `clients.email` no tiene índice único | Migración `000005:20`; `StoreClientRequest` | **A decidir**: índice único en la base (con los datos existentes revisados) o corregir la regla en `CLAUDE.md` |
 | D8 | `document_number` y `email` del cliente son opcionales en la base pero obligatorios en la API | Migración `000005:16,20`; `StoreClientRequest` | **A decidir**. Relacionado con M1 (cliente empresa), que redefine qué es obligatorio por tipo |
 | D9 | "Datos maestros en uso no se eliminan" (6.1) no incluye a los clientes: `ClientController::destroy` hace la baja con sufijo sin verificar si el cliente tiene vehículos, recepciones o facturas, y la lógica está en el controller, no en un Service | `ClientController.php:127-142` | **Resuelta el 2026-10-29** (M1, 2.59): la baja pasó a `ClientService::delete` y responde `409 CLIENT_IN_USE` con vehículos vigentes, recepciones o facturas. El bloqueo para el cliente de una aseguradora (`CLIENT_LINKED_TO_INSURER`) llega con M2 |

@@ -14,7 +14,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 
 ---
 
-## 1. Estado actual (verificado el 2026-10-21)
+## 1. Estado actual (verificado el 2026-10-29)
 
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
@@ -806,7 +806,7 @@ Entrega M7 de `docs/especificacion-aseguradoras.html` (decisiones B y C y decisi
 ## 7. Deuda técnica conocida
 
 `docs/handoff.md`, sección 14. Las deudas nuevas se registran ahí y no se corrigen sin decisión previa del usuario.
-Abiertas (reverificado el 2026-10-28):
+Abiertas (reverificado el 2026-10-29):
 
 * **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M7 hechas
   (6.1, 6.4, 6.5 y 6.22–6.26); faltan el reparto y la facturación por responsable (M8–M12).
@@ -815,6 +815,6 @@ Abiertas (reverificado el 2026-10-28):
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes
   del primer taller comercial; mientras tanto, nada nuevo en el disco `public` salvo branding.
 * **#16:** sin antivirus para los archivos subidos (riesgo técnico).
-* **Discrepancias D1–D10** (14.1): D3, D4, D6, D7 y D8 esperan decisión (D9 se resolvió con M1).
+* **Discrepancias D1–D10** (14.1): D3, D7 y D8 esperan decisión (D9 se resolvió con M1; D4 y D6, solo documentación, el 2026-10-29).
 
 La #11 (repuestos extra sin aprobación del cliente) se resolvió el 2026-10-23; ver 6.7.
