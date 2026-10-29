@@ -37,6 +37,7 @@ class DatabaseSeeder extends Seeder
             // Flujo del taller por escenarios (ExampleScenarios).
             ReceptionSeeder::class,
             ClaimSeeder::class,
+            ClaimDocumentSeeder::class,
             DiagnosticSeeder::class,
             DiagnosticItemSeeder::class,
             DiagnosticItemPhotoSeeder::class,

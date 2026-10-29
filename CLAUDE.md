@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 256 rutas API, 415 tests en verde.
+  (6.3). 260 rutas API, 421 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -152,7 +152,7 @@ Controller (HasMiddleware) → Form Request → Service → Model/Eloquent → A
 | `app/Exceptions` | `AppException` y una subclase por módulo |
 | `app/Support/Decimal.php` | Redondeo BCMath |
 | `app/Traits/ApiResponse.php` | `successResponse` / `errorResponse` |
-| `app/Traits/FileResponse.php` | Descarga de archivos generados (PDF, CSV) |
+| `app/Traits/FileResponse.php` | Descarga de archivos generados (PDF, CSV) y de documentos subidos (`storedFileResponse`: adjunto y `nosniff`) |
 | `app/Traits/Auditable.php` | Registro automático de cambios en `audit_logs` |
 | `bootstrap/app.php` | Mapeo de excepciones a JSON |
 | `config/invoice.php`, `maintenance.php`, `notifications.php`, `company.php` | Parámetros de negocio (`invoice.default_tax_rate` es el IVA de presupuestos y facturas; `company` son los datos del taller para los PDF) |
@@ -193,9 +193,9 @@ de los permisos, ordenados; el administrador recibe todos los del guard `api` po
 |---|---|---|
 | `administrador` | Todo (`Gate::before`) | Exclusivo: usuarios/roles/permisos, auditoría (`audit-logs.*`), logo del sistema (`system-settings.update`), costos y margen (`work-orders.view-economics`), liquidar comisiones, anular entregas, timbrados, ABM de planes de mantenimiento, reporte de rentabilidad |
 | `mechanic` | Ejecuta la OT | Diagnóstico (consulta y usa el catálogo de ítems), iniciar/pausar/completar OT e ítems, consumir/devolver repuestos, sus horas y comisiones, historial, estado de mantenimiento, dashboard (bloque taller) |
-| `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos) y siniestros (alta, edición y cancelación) |
-| `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras y siniestros (alta, edición y cancelación) |
-| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras y siniestros |
+| `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos) y siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar) |
+| `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras y siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar) |
+| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras y siniestros (con la descarga de sus documentos) |
 | `deposito` | Stock | Repuestos, proveedores, inventario, compras completas, repuestos en OT, reporte de inventario, consulta de pagos a proveedores y cuentas por pagar |
 
 El rol del mecánico se llama `mechanic` (no `mecanico`). El seeder crea usuarios de cada rol (README, "Datos de prueba").
@@ -568,12 +568,13 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   con usuario, IP y user agent.
   * Modelos auditados: `Part`, `Service`, `Budget`, `BudgetItem`, `BudgetClientAcceptance`, `PartSupplier`, `Invoice`, `InvoiceItem`, `Payment`,
     `SupplierPayment`, `Purchase`, `PurchaseItem`, `User`, `Role`, `Permission`, `Client`, `Vehicle`, `Mechanic`,
-    `InvoiceStamp`, `MaintenancePlan`, `DiagnosticItemTemplate`, `Insurer`, `InsurerContact` y `Claim`.
+    `InvoiceStamp`, `MaintenancePlan`, `DiagnosticItemTemplate`, `Insurer`, `InsurerContact`, `Claim` y `ClaimDocument` (sin su ruta interna).
   * **Un modelo nuevo con precios, dinero, seguridad o datos maestros debe usar el trait.**
   * El stock ya se audita en `inventory_movements`.
 * **Exclusiones:** `password`, `remember_token` y `token` se guardan como `********`. Los timestamps no se registran.
   Cada modelo puede excluir campos con `$auditExclude`. Un pivote sin clave propia se identifica con `auditContext()`.
 * **Eventos sin modelo propio:** se registran con `AuditLogger::record()`.
+  * Descarga de un documento de siniestro (`downloaded`, en `ClaimDocumentService::download`).
   * Login, login fallido y logout, en `AuthController`.
   * `permissions_synced` y `roles_synced`, porque `syncPermissions` y `syncRoles` de Spatie no disparan eventos.
     Cualquier sincronización nueva de roles o permisos debe registrarse igual.
@@ -673,6 +674,31 @@ Entrega M3 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-10-29
 * **Permisos:** `claims.index|show` (recepcionista, jefe de taller y cajero) y `claims.store|update|cancel` (recepcionista y
   jefe de taller). También `GET receptions/{reception}/claim` (siniestro vigente, 404 si no tiene).
 
+### 6.24 Documentos de siniestros
+
+Entrega M4 de `docs/especificacion-aseguradoras.html` (decisión E y decisiones del 2026-10-29; `ClaimDocumentService`).
+
+* **Almacenamiento:**
+  * disco propio `claim_documents` (`storage/app/claim-documents`), privado, **sin `serve`** ni URL ni `temporaryUrl`;
+  * nombre interno UUID con la extensión según el contenido (`claims/{claim}/{uuid}.ext`, armado solo en
+    `ClaimDocumentService::pathFor`); el nombre original queda como dato;
+  * se guardan `mime`, `size` y `sha256`. `path` nunca sale en la API ni en la auditoría.
+* **Subida** (`POST claims/{claim}/documents`, multipart: `file`, `type` `ClaimDocumentType`, `notes`):
+  * PDF, JPG, PNG o WEBP, hasta 10 MB (provisorio, V8). SVG, HTML y cualquier otro tipo se rechazan;
+  * se validan la extensión, el tipo MIME **real** (por contenido) y que la extensión coincida con el contenido;
+  * con el siniestro abierto o cerrado; cancelado → `CLAIM_NOT_EDITABLE`.
+
+  En los tests, usar archivos reales (`new UploadedFile($path, $name, null, null, true)`): `UploadedFile::fake()` informa
+  el tipo según la extensión del nombre y no prueba nada.
+* **Descarga** (`GET claims/{claim}/documents/{document}/download`): solo por la API, resuelta por el registro
+  (`scopeBindings`: un documento de otro siniestro → 404). Adjunto con nombre saneado y `X-Content-Type-Options: nosniff`.
+  **Cada descarga queda en la auditoría** (`downloaded`).
+* **Baja** (`DELETE …/{document}`, motivo obligatorio, solo administrador): lógica, con `deleted_by` y `deletion_reason`.
+  El dado de baja responde 404 y ya no se lista; el archivo se conserva (retención legal pendiente, G10).
+* **Permisos:** `claim-documents.index|download` (recepcionista, jefe de taller y cajero), `store` (recepcionista y jefe
+  de taller) y `destroy` (solo administrador). Mecánico y depósito sin acceso.
+* **Pendiente:** el vínculo con la autorización de la aseguradora y `CLAIM_DOCUMENT_IN_USE` (M6). Sin antivirus (deuda #16).
+
 ---
 
 ## 7. Deuda técnica conocida
@@ -682,7 +708,8 @@ Abiertas (reverificado el 2026-10-28):
 
 * **#13, clientes aseguradoras:** en diseño (`docs/especificacion-aseguradoras.html`, versión 3); el módulo no está
   implementado.
-* **#14:** disco `local` con `serve` activo y sin uso. No se usa para documentos nuevos.
+* **#14:** disco `local` con `serve` activo y sin uso. No se usa para documentos nuevos: los de siniestros van al disco
+  `claim_documents`, sin `serve` (6.24).
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes
   del primer taller comercial; mientras tanto, nada nuevo en el disco `public` salvo branding.
 * **#16:** sin antivirus para los archivos subidos (riesgo técnico).

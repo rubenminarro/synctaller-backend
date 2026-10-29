@@ -47,6 +47,17 @@ return [
             'report' => false,
         ],
 
+        // Documentos de siniestros (M4, decisión E): privados, sin serve ni URL. Solo se descargan por la API, con
+        // permiso y auditoría. ClaimDocumentService arma las rutas (T4 cambiará la raíz por taller).
+        'claim_documents' => [
+            'driver' => 'local',
+            'root' => storage_path('app/claim-documents'),
+            'visibility' => 'private',
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

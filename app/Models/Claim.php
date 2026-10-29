@@ -7,6 +7,7 @@ use App\Enums\ClaimType;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Siniestro de una recepción (M3). Datos del asegurado y del perito,
@@ -71,6 +72,11 @@ class Claim extends Model
     public function insurer(): BelongsTo
     {
         return $this->belongsTo(Insurer::class)->withTrashed();
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(ClaimDocument::class)->latest('id');
     }
 
     public function insuredClient(): BelongsTo

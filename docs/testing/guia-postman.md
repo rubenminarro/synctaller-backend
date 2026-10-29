@@ -371,6 +371,20 @@ Siniestros (M3, ver `CLAUDE.md` 6.23 y `docs/handoff.md` 2.61). Alta sobre una r
 | Listar / filtrar | `GET {{base_url}}/claims?search=SDS&status=open&insurer_id={{insurer_id}}` | — | 200 | Con `plate` y la aseguradora |
 | Sin permiso | cajero: `PATCH {{base_url}}/claims/{id}`; mecánico o depósito: `GET {{base_url}}/claims` | — | 403 | `FORBIDDEN` |
 
+Documentos del siniestro (M4, ver `CLAUDE.md` 6.24). En Postman: Body → form-data, `file` de tipo File, `type` y `notes` de tipo Text.
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Subir la denuncia (PDF) | `POST {{base_url}}/claims/{{claim_id}}/documents` | `file` = un PDF, `type` = `loss_report` | 201 | `original_name`, `mime`, `size`, `sha256`; nunca `path`. Guardar `{{claim_document_id}}` |
+| Subir un SVG, un HTML o un archivo de más de 10 MB | ídem | — | 422 | `VALIDATION_ERROR` en `file` |
+| Extensión que no coincide (una imagen renombrada a `.pdf`) | ídem | — | 422 | `VALIDATION_ERROR` en `file`: "La extensión del archivo no coincide con su contenido." |
+| Listar | `GET {{base_url}}/claims/{{claim_id}}/documents` | — | 200 | Sin `path` |
+| Descargar | `GET {{base_url}}/claims/{{claim_id}}/documents/{{claim_document_id}}/download` | — | 200 | Archivo adjunto con `X-Content-Type-Options: nosniff`; `GET audit-logs?event=downloaded` lo muestra |
+| Documento de otro siniestro | `GET {{base_url}}/claims/{otro}/documents/{{claim_document_id}}/download` | — | 404 | `RESOURCE_NOT_FOUND` |
+| Subir con el siniestro cancelado | `POST {{base_url}}/claims/{id cancelado}/documents` | — | 422 | `CLAIM_NOT_EDITABLE` |
+| Dar de baja (administrador) | `DELETE {{base_url}}/claims/{{claim_id}}/documents/{{claim_document_id}}` | `{ "reason": "Duplicado." }` | 200 | Después, descargar → 404. Con el token del recepcionista → 403 |
+| Sin permiso | cajero: subir; mecánico o depósito: listar o descargar | — | 403 | `FORBIDDEN` |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.
