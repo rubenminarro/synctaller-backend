@@ -283,7 +283,9 @@ propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2, E3 y
      **E5** (handoff 2.57) mergeada en `main` el 2026-10-28 (migración `000058`). **E1** (handoff §14: deudas
      #14–#16 y discrepancias D1–D10 en 14.1; `CLAUDE.md` §7) en la rama `docs/discrepancias-e1`. Con eso la línea E
      está completa. Quedan para decidir D3, D4, D6, D7, D8 y D9;
-   * spike T0 en una rama descartable;
+   * ~~spike T0 en una rama descartable~~ Hecho el 2026-10-28/29 y descartado. Informe: `docs/spike-t0-informe.md`
+     (handoff 2.58). Sin fallas críticas. No cumplen S8 (jobs), S10 y S13 (unos 30–45 ms por request), con
+     mitigaciones previstas para T2. La dependencia no está aprobada;
    * módulo desde M1 (tipo de cliente), coordinado con el frontend.
 
 ---
