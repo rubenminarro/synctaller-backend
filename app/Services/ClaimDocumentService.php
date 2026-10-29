@@ -118,6 +118,17 @@ class ClaimDocumentService
     public function delete(ClaimDocument $document, string $reason, User $user): void
     {
         DB::transaction(function () use ($document, $reason, $user) {
+            $document = ClaimDocument::whereKey($document->id)->lockForUpdate()->firstOrFail();
+
+            // La evidencia de una autorización no se da de baja (M6).
+            if ($document->insurer_authorization_id !== null) {
+                throw new ClaimException(
+                    'El documento respalda una autorización de la aseguradora y no puede darse de baja.',
+                    409,
+                    'CLAIM_DOCUMENT_IN_USE'
+                );
+            }
+
             $document->update(['deleted_by' => $user->id, 'deletion_reason' => $reason]);
             $document->delete();
         });

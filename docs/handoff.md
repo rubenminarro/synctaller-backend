@@ -1612,6 +1612,24 @@ vigentes en `CLAUDE.md`, 6.4.
 | Seeder | `BudgetItemSeeder` carga a la aseguradora la línea del presupuesto del siniestro abierto (C07). `DatabaseSeederTest` verifica los dos valores |
 | Pruebas | `tests/Feature/Budgets/BudgetItemResponsibilityTest` (4): dueño por defecto aun con siniestro, aseguradora solo con siniestro abierto (y valor inválido), solo en borrador, y vuelta al dueño al cancelar el siniestro (el enviado no cambia) |
 
+# 2.64 Autorizaciones de la aseguradora (2026-10-29)
+
+Entrega M6 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.5, P7 y decisión C).
+Reglas vigentes en `CLAUDE.md`, 6.25.
+
+| Tema | Decisión |
+|---|---|
+| Tablas | Migración `000064`: `insurer_authorizations` (única por `budget_id` + `version`), `insurer_authorization_items` y `claim_documents.insurer_authorization_id` (nulable, `restrictOnDelete`) |
+| Unidad (P7) | Se guarda sin IVA, como el presupuesto. `amounts_include_tax` es obligatorio en cada registro (decisión del usuario del 2026-10-29): mientras V2 no tenga respuesta, quien carga dice en qué unidad vino el importe. Con IVA se convierte con la tasa del presupuesto (`invoice.default_tax_rate`) |
+| Cobertura | Una línea por cada ítem `insurer`, ni más ni menos. Tope por importe y por cantidad (`INSURER_AUTHORIZATION_EXCEEDS_BUDGET`): lo que exceda va en un complementario (V1 sigue abierta) |
+| Versiones | La nueva sustituye a la vigente. Si sube el importe de alguna línea, exige un documento del siniestro (decisión del usuario del 2026-10-29: evidencia obligatoria al subir); el documento queda vinculado y no se da de baja (`CLAIM_DOCUMENT_IN_USE`, 409) |
+| Copia del ítem | Durante la implementación: `BudgetItemController::destroy` borra el ítem físicamente, y con `restrictOnDelete` borrar un ítem de un presupuesto reabierto habría dado 500. La línea guarda descripción, cantidad y total presupuestados, y la clave foránea pasa a `null` |
+| Invalidación | `BudgetService::reopen` y `cancel` (ahora en una transacción) y `ReceptionStatusService::cancel` (por cada presupuesto que cancela). Cancelar el siniestro no la toca, igual que M5 con los presupuestos enviados |
+| Sin dependencias | `InsurerAuthorizationService` no depende de otros Services: lo usan `BudgetService` y `ReceptionStatusService` |
+| Detalle del presupuesto | `insurer_authorization` (vigente, resumida) solo con `insurer-authorizations.show`, como `claim` en la recepción. Aditivo |
+| Seeder | C05 suma un siniestro abierto y sus líneas a la aseguradora: versión 1 parcial y versión 2 (sube la instalación, con el documento `authorization` como evidencia). C07: autorización total, invalidada al reabrir. `DatabaseSeederTest` verifica `current`, `superseded` e `invalidated` |
+| Pruebas | `tests/Feature/Claims/InsurerAuthorizationTest` (7): registro por línea con conversión de IVA, coincidencia y topes, precondiciones, versiones y evidencia, invalidación (y borrado del ítem después de reabrir), inmutabilidad y permisos |
+
 ---
 
 ---
@@ -4115,6 +4133,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Siniestros (2.61)
 [✓] Documentos privados de siniestros (2.62)
 [✓] Responsable por línea del presupuesto (2.63)
+[✓] Autorizaciones de la aseguradora (2.64)
 ```
 
 ## Próximo

@@ -16,6 +16,8 @@ class ClaimDocumentResource extends JsonResource
         return [
             'id' => $this->id,
             'claim_id' => $this->claim_id,
+            // Evidencia de una autorización de la aseguradora (M6): no se da de baja.
+            'insurer_authorization_id' => $this->insurer_authorization_id,
             'type' => [
                 'value' => $this->type->value,
                 'label' => $this->type->label(),

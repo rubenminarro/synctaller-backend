@@ -34,7 +34,7 @@ class DatabaseSeederTest extends TestCase
         'users', 'roles', 'permissions', 'mechanics', 'brands', 'vehicle_models', 'service_categories', 'services',
         'maintenance_plans', 'check_list_items', 'diagnostic_item_templates', 'clients', 'vehicles', 'receptions', 'reception_check_lists',
         'reception_check_list_items', 'diagnostics', 'diagnostic_items', 'diagnostic_item_photos', 'budgets',
-        'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'claim_documents', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
+        'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'claim_documents', 'insurer_authorizations', 'insurer_authorization_items', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
         'work_orders', 'work_order_items', 'work_order_parts', 'work_order_closings', 'notifications',
         'invoices', 'invoice_items', 'payments', 'vehicle_deliveries', 'client_notifications',
         'purchases', 'purchase_items', 'supplier_payments', 'vehicle_maintenances', 'work_order_commissions',
@@ -102,12 +102,15 @@ class DatabaseSeederTest extends TestCase
         $this->assertFalse($insurer->client->notifications_enabled);
         $this->assertSame(1, $insurer->contacts()->where('is_primary', true)->count());
 
-        // Siniestros (M3): el estado sale de la sincronización con la recepción (C07 abierta, H07 entregada, X01 cancelada).
-        $this->assertSame(['cancelled' => 1, 'closed' => 1, 'open' => 1], $this->statusCounts('claims'));
-        // Responsabilidad por línea (M5): el presupuesto del siniestro abierto (C07) lo paga la aseguradora.
+        // Siniestros (M3): el estado sale de la sincronización con la recepción (C05 y C07 abiertas, H07 entregada, X01 cancelada).
+        $this->assertSame(['cancelled' => 1, 'closed' => 1, 'open' => 2], $this->statusCounts('claims'));
+        // Responsabilidad por línea (M5): los presupuestos de los siniestros abiertos (C05 y C07) los paga la aseguradora.
         $this->assertEqualsCanonicalizing(['owner', 'insurer'], DB::table('budget_items')->distinct()->pluck('responsibility')->all());
-        // Documentos (M4): denuncia y foto del siniestro abierto, con su archivo en el disco privado.
-        $this->assertEqualsCanonicalizing(['loss_report', 'photo'], DB::table('claim_documents')->pluck('type')->all());
+        // Documentos (M4): denuncia y foto de C07 y la ampliación de la autorización de C05, en el disco privado.
+        $this->assertEqualsCanonicalizing(['loss_report', 'photo', 'authorization'], DB::table('claim_documents')->pluck('type')->all());
+        // Autorizaciones (M6): C05 con la versión 2 vigente (la 1, sustituida) y la de C07 invalidada al reabrir.
+        $this->assertSame(['current' => 1, 'invalidated' => 1, 'superseded' => 1], $this->statusCounts('insurer_authorizations'));
+        $this->assertSame(1, DB::table('claim_documents')->whereNotNull('insurer_authorization_id')->count());
         DB::table('claim_documents')->pluck('path')->each(fn (string $path) => Storage::disk('claim_documents')->assertExists($path));
         $this->assertTrue((bool) Vehicle::where('chassis', VehiclesSeeder::WITHOUT_PLATE_CHASSIS)->value('no_plate'));
         $this->assertGreaterThanOrEqual(30, Client::count());

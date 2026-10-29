@@ -29,7 +29,8 @@ class ReceptionStatusService
 {
     public function __construct(
         protected ClientNotificationService $clientNotificationService,
-        protected ClaimStatusService $claimStatusService
+        protected ClaimStatusService $claimStatusService,
+        protected InsurerAuthorizationService $insurerAuthorizationService
     ) {
     }
 
@@ -143,7 +144,10 @@ class ReceptionStatusService
             $reception->budgets()
                 ->whereIn('status', [BudgetStatus::DRAFT, BudgetStatus::SENT])
                 ->get()
-                ->each(fn (Budget $budget) => $budget->update(['status' => BudgetStatus::CANCELLED]));
+                ->each(function (Budget $budget) use ($reason) {
+                    $budget->update(['status' => BudgetStatus::CANCELLED]);
+                    $this->insurerAuthorizationService->invalidateCurrent($budget, "Recepción cancelada: {$reason}");
+                });
 
             return $reception;
         });
