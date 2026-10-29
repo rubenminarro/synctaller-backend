@@ -293,9 +293,11 @@ propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2, E3 y
      * **M3** (siniestros, handoff 2.61; migración `000061`) mergeada en `main` el 2026-10-29.
      * **M4** (documentos privados, handoff 2.62; migración `000062`) mergeada en `main` el 2026-10-29.
      * **M5** (responsable por línea, handoff 2.63; migración `000063`) mergeada en `main` el 2026-10-29.
-     * **M6** (autorizaciones de la aseguradora, handoff 2.64; migración `000064`) en `feature/autorizaciones-aseguradora`,
-       pendiente de revisión y merge. La unidad de los importes (V2) se declara en cada registro (`amounts_include_tax`).
-     * Las migraciones ya están aplicadas en la base local. Sigue M7 (bloqueo de la OT y excepciones internas).
+     * **M6** (autorizaciones de la aseguradora, handoff 2.64; migración `000064`) mergeada en `main` el 2026-10-29
+       (`5b06a48`). La unidad de los importes (V2) se declara en cada registro (`amounts_include_tax`).
+     * **M7** (bloqueo de la OT, re-aceptación y excepciones internas, handoff 2.65; migraciones `000065` y `000066`) en
+       `feature/bloqueo-ot-excepciones`, pendiente de la revisión del flujo hasta la OT (§9 de la especificación) y del
+       merge. Sigue M8 (reparto).
 
 ---
 

@@ -196,7 +196,8 @@ final class ExampleScenarios
                 'key' => 'C05', 'plate' => 'CCC333', 'days' => 7, 'receptionist' => $r2, 'categories' => ['mechanical'],
                 'fuel' => FuelLevel::FULL, 'problem' => 'Golpes al pasar lomadas.',
                 'diagnostics' => [['MEC-002', 'completed', 'high', 'Golpes en lomadas.', 'Amortiguadores delanteros agotados.', 'Cambio de amortiguadores.', ['shock_absorber']]],
-                'budget' => ['status' => 'sent', 'items' => [['part', 'SUS-AMO-001', 2], ['service', 'Instalación de amortiguadores']]],
+                // Siniestro (M3–M7): autorización en dos versiones, aprobado con la primera y re-aceptado con la segunda.
+                'budget' => ['status' => 'approved', 'items' => [['part', 'SUS-AMO-001', 2], ['service', 'Instalación de amortiguadores']]],
             ],
             [
                 'key' => 'C06', 'plate' => 'QAB104', 'days' => 12, 'receptionist' => $r3, 'categories' => ['general', 'tires'],

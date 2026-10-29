@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Services\WorkOrderClosingService;
+use App\Services\OwnerShareService;
 use App\Services\WorkOrderCommissionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -83,6 +84,16 @@ class ShowWorkOrderResource extends JsonResource
                 $this->relationLoaded('parts') &&
                 (bool) $request->user()?->can('work-orders.view-economics'),
                 fn () => app(WorkOrderClosingService::class)->summary($this->resource)
+            ),
+            // Siniestro abierto en la recepción (M7): el frontend avisa que un extra queda a cargo del dueño (P5).
+            'has_claim' => app(OwnerShareService::class)->openClaim($this->reception_id) !== null,
+            // Advertencia de B (M7): la parte potencial del dueño supera lo que aceptó, o subió el deducible. Solo con
+            // claims.show (el mecánico ve la OT, pero no los datos del siniestro); null si no hay nada que advertir.
+            'owner_amount_warning' => $this->when(
+                $this->relationLoaded('items') &&
+                $this->relationLoaded('parts') &&
+                (bool) $request->user()?->can('claims.show'),
+                fn () => app(OwnerShareService::class)->workOrderWarning($this->resource)
             ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

@@ -16,6 +16,8 @@ use App\Models\User;
 use App\Services\BudgetService;
 use App\Services\ClaimDocumentService;
 use App\Services\InsurerAuthorizationService;
+use App\Services\InternalExceptionService;
+use App\Enums\InternalExceptionType;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -26,17 +28,24 @@ use Illuminate\Support\Facades\DB;
  * rechazado y reabierto, o cancelado. Con siniestro, la autorización de la
  * aseguradora se registra después del envío (M6): C05 queda con la versión 2
  * vigente (subió un importe, con el documento como evidencia) y la de C07 se
- * invalida al reabrir el presupuesto.
+ * invalida al reabrir el presupuesto. En C05 (M7) el jefe de taller otorga la
+ * excepción para iniciar sin autorización (queda sin usar: la autorización
+ * llega antes de la OT), el dueño aprueba con la versión 1 y re-acepta su parte
+ * con la versión 2.
  */
 class BudgetItemSeeder extends Seeder
 {
     /** Escenarios con siniestro abierto cuyas líneas paga la aseguradora. */
     private const INSURED = ['C05', 'C07'];
 
+    /** Jefe de taller que otorga la excepción de C05. */
+    private const MANAGER = 'jefetaller1@mail.com.py';
+
     public function run(
         BudgetService $budgetService,
         InsurerAuthorizationService $authorizationService,
-        ClaimDocumentService $documentService
+        ClaimDocumentService $documentService,
+        InternalExceptionService $exceptionService
     ): void {
         foreach (ExampleScenarios::chronological() as $scenario) {
             $budget = isset($scenario['budget']) ? BudgetSeeder::of($scenario) : null;
@@ -77,14 +86,23 @@ class BudgetItemSeeder extends Seeder
             // La respuesta del cliente la registra el recepcionista del escenario (budget_client_acceptances).
             $receptionist = ExampleScenarios::user($scenario['receptionist']);
 
-            if (in_array($scenario['key'], self::INSURED, true)) {
-                $this->authorize($scenario, $budget, $receptionist, $authorizationService, $documentService);
-            }
             $approval = ['channel' => ClientDecisionChannel::WHATSAPP->value];
             $rejection = ['channel' => ClientDecisionChannel::PHONE->value, 'notes' => 'El cliente no aceptó el precio.'];
+            // C05 se aprueba entre las dos versiones de la autorización (M7).
+            $approve = fn () => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->approve($budget->refresh(), $receptionist, $approval));
+            $approved = false;
+
+            if (in_array($scenario['key'], self::INSURED, true)) {
+                $approved = $this->authorize(
+                    $scenario, $budget, $receptionist, $authorizationService, $documentService,
+                    $status === 'approved' ? $approve : null,
+                    fn (array $decision) => $budgetService->reaccept($budget->refresh(), $receptionist, $decision),
+                    fn () => $this->grantStartException($scenario, $budget, $exceptionService)
+                );
+            }
 
             match ($status) {
-                'approved' => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->approve($budget->refresh(), $receptionist, $approval)),
+                'approved' => $approved ? null : $approve(),
                 'rejected' => ExampleScenarios::travel($at(1, 16), fn () => $budgetService->reject($budget->refresh(), $receptionist, $rejection)),
                 'cancelled' => ExampleScenarios::travel($at(2, 9), fn () => $budgetService->cancel($budget->refresh())),
                 'reopened' => [
@@ -98,15 +116,20 @@ class BudgetItemSeeder extends Seeder
 
     /**
      * Autorización de la aseguradora tras el envío (M6). C07: total, que se invalida al reabrir. C05: la primera
-     * versión cubre el servicio solo en parte; la segunda lo cubre entero con el documento de la aseguradora.
+     * versión cubre el servicio solo en parte; la segunda lo cubre entero con el documento de la aseguradora. En C05,
+     * antes de la primera versión se otorga la excepción ($beforeAuthorization), y si el escenario termina aprobado,
+     * el dueño aprueba con la primera ($approve) y re-acepta con la segunda ($reaccept). Devuelve si aprobó.
      */
     private function authorize(
         array $scenario,
         Budget $budget,
         User $user,
         InsurerAuthorizationService $authorizationService,
-        ClaimDocumentService $documentService
-    ): void {
+        ClaimDocumentService $documentService,
+        ?callable $approve,
+        callable $reaccept,
+        callable $beforeAuthorization
+    ): bool {
         $at = fn (int $offset, int $hour) => ExampleScenarios::at($scenario, $offset, $hour);
         $items = $budget->items()->get();
         $base = ['amounts_include_tax' => false, 'channel' => ClientDecisionChannel::EMAIL->value, 'adjuster_name' => 'Ramón Giménez'];
@@ -121,8 +144,10 @@ class BudgetItemSeeder extends Seeder
                 'items' => $all(InsurerAuthorizationDecision::AUTHORIZED),
             ], $user));
 
-            return;
+            return false;
         }
+
+        $beforeAuthorization();
 
         // C05: amortiguadores autorizados; la instalación, a la mitad.
         $service = $items->firstWhere('type', BudgetItemType::SERVICE);
@@ -133,6 +158,10 @@ class BudgetItemSeeder extends Seeder
         ExampleScenarios::travel($at(1, 12), fn () => $authorizationService->register($budget, [
             ...$base, 'decided_at' => now()->toDateString(), 'authorization_number' => 'AUT-0472-1', 'items' => $partial,
         ], $user));
+
+        if ($approve) {
+            $approve();
+        }
 
         ExampleScenarios::travel($at(2, 11), function () use ($budget, $user, $base, $all, $authorizationService, $documentService) {
             $path = tempnam(sys_get_temp_dir(), 'seed');
@@ -149,6 +178,31 @@ class BudgetItemSeeder extends Seeder
                 'items' => $all(InsurerAuthorizationDecision::AUTHORIZED), 'document_ids' => [$document->id],
             ], $user);
         });
+
+        if (!$approve) {
+            return false;
+        }
+
+        // La cobertura subió: el dueño confirma su nueva parte (re-aceptación, M7).
+        ExampleScenarios::travel($at(2, 15), fn () => $reaccept([
+            'channel' => ClientDecisionChannel::PHONE->value,
+            'notes' => 'Confirma que la instalación ya la cubre la aseguradora.',
+        ]));
+
+        return true;
+    }
+
+    /**
+     * C05 (M7): el jefe de taller habilita empezar sin la autorización de la aseguradora, que todavía no llegó. Queda
+     * sin usar: la autorización llega antes de crear la OT.
+     */
+    private function grantStartException(array $scenario, Budget $budget, InternalExceptionService $exceptionService): void
+    {
+        ExampleScenarios::travel(ExampleScenarios::at($scenario, 1, 10), fn () => $exceptionService->grant([
+            'type' => InternalExceptionType::START_WITHOUT_AUTHORIZATION->value,
+            'subject_id' => $budget->id,
+            'reason' => 'El perito confirmó la cobertura por teléfono; la autorización escrita llega después.',
+        ], ExampleScenarios::user(self::MANAGER)));
     }
 
     /**

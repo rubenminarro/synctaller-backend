@@ -34,7 +34,7 @@ class DatabaseSeederTest extends TestCase
         'users', 'roles', 'permissions', 'mechanics', 'brands', 'vehicle_models', 'service_categories', 'services',
         'maintenance_plans', 'check_list_items', 'diagnostic_item_templates', 'clients', 'vehicles', 'receptions', 'reception_check_lists',
         'reception_check_list_items', 'diagnostics', 'diagnostic_items', 'diagnostic_item_photos', 'budgets',
-        'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'claim_documents', 'insurer_authorizations', 'insurer_authorization_items', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
+        'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'claim_documents', 'insurer_authorizations', 'insurer_authorization_items', 'internal_exceptions', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
         'work_orders', 'work_order_items', 'work_order_parts', 'work_order_closings', 'notifications',
         'invoices', 'invoice_items', 'payments', 'vehicle_deliveries', 'client_notifications',
         'purchases', 'purchase_items', 'supplier_payments', 'vehicle_maintenances', 'work_order_commissions',
@@ -111,6 +111,15 @@ class DatabaseSeederTest extends TestCase
         // Autorizaciones (M6): C05 con la versión 2 vigente (la 1, sustituida) y la de C07 invalidada al reabrir.
         $this->assertSame(['current' => 1, 'invalidated' => 1, 'superseded' => 1], $this->statusCounts('insurer_authorizations'));
         $this->assertSame(1, DB::table('claim_documents')->whereNotNull('insurer_authorization_id')->count());
+        // Bloqueo de la OT (M7): C05 aprobado con la versión 1 (el dueño paga la mitad de la instalación) y re-aceptado
+        // con la 2 (ya no paga nada); la excepción para iniciar sin autorización quedó sin usar. El rechazo de C07 también
+        // guarda su autorización vigente.
+        $c05 = DB::table('budget_client_acceptances')->whereNotNull('insurer_authorization_id')
+            ->whereIn('kind', ['approval', 're_acceptance'])->orderBy('id')->get();
+        $this->assertSame(['approval', 're_acceptance'], $c05->pluck('kind')->all());
+        $this->assertSame(1, bccomp((string) $c05[0]->owner_amount, '0', 2));
+        $this->assertSame(0, bccomp((string) $c05[1]->owner_amount, '0', 2));
+        $this->assertSame(['start_without_authorization'], DB::table('internal_exceptions')->whereNull('consumed_at')->pluck('type')->all());
         DB::table('claim_documents')->pluck('path')->each(fn (string $path) => Storage::disk('claim_documents')->assertExists($path));
         $this->assertTrue((bool) Vehicle::where('chassis', VehiclesSeeder::WITHOUT_PLATE_CHASSIS)->value('no_plate'));
         $this->assertGreaterThanOrEqual(30, Client::count());
@@ -129,7 +138,7 @@ class DatabaseSeederTest extends TestCase
             $this->statusCounts('receptions')
         );
         $this->assertSame(
-            ['approved' => 24, 'cancelled' => 2, 'draft' => 2, 'rejected' => 1, 'sent' => 3],
+            ['approved' => 25, 'cancelled' => 2, 'draft' => 2, 'rejected' => 1, 'sent' => 2],
             $this->statusCounts('budgets')
         );
         $this->assertSame(
@@ -140,7 +149,7 @@ class DatabaseSeederTest extends TestCase
         // presupuesto rechazado (también los reabiertos, que vuelven a borrador con su rechazo en el historial).
         $acceptances = DB::table('budget_client_acceptances')->selectRaw('kind, count(*) as total')->groupBy('kind')
             ->pluck('total', 'kind')->map(fn ($total) => (int) $total)->all();
-        $this->assertSame(24, $acceptances['approval'] ?? 0);
+        $this->assertSame(25, $acceptances['approval'] ?? 0);
         $this->assertGreaterThanOrEqual(2, $acceptances['rejection'] ?? 0);
         $this->assertSame(0, DB::table('budgets')->where('status', 'approved')
             ->whereNotExists(fn ($query) => $query->from('budget_client_acceptances')

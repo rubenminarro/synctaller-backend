@@ -436,6 +436,31 @@ Esperado: `201`, `version` 1, `status.value` `current`, `result.value` `partial`
 | Reabrir o cancelar el presupuesto | `POST {{base_url}}/budgets/{{budget_id}}/reject` y `/reopen`, o `/cancel` | — | 200 | La vigente queda `invalidated` con el motivo |
 | Sin permiso | cajero: registrar; mecánico o depósito: listar | — | 403 | `FORBIDDEN` |
 
+Bloqueo de la OT, re-aceptación y excepciones internas (M7, ver `CLAUDE.md` 6.5 y 6.26). Con el presupuesto de arriba
+(líneas `insurer`, siniestro abierto). Importes sin IVA.
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Aprobar antes de la autorización | `POST {{base_url}}/budgets/{{budget_id}}/approve` | `{ "channel": "whatsapp" }` | 200 | `client_acceptances[].owner_amount` = solo las líneas del dueño; `insurer_authorization_id` `null` |
+| Crear la OT sin autorización | `POST {{base_url}}/work-orders` | `{ "budget_id": {{budget_id}}, "mechanic_id": {{mechanic_id}} }` | 422 | `WORK_ORDER_INSURER_AUTHORIZATION_REQUIRED` |
+| Excepción para iniciar sin autorización (jefe de taller) | `POST {{base_url}}/internal-exceptions` | `{ "type": "start_without_authorization", "subject_id": {{budget_id}}, "reason": "El perito confirmó por teléfono." }` | 201 | `subject.type` `budget`, `consumed_at` `null` → `internal_exception_id` |
+| Otra igual sin usar | ídem | ídem | 409 | `INTERNAL_EXCEPTION_ALREADY_GRANTED` |
+| Con importe, o motivo de menos de 10 caracteres | ídem | `"amount": 1000` / `"reason": "Corto"` | 422 | `VALIDATION_ERROR` |
+| Presupuesto ya autorizado, sin siniestro, sin líneas `insurer` o con OT | ídem | — | 422 | `INTERNAL_EXCEPTION_SUBJECT_INVALID` |
+| Crear la OT con la excepción | `POST {{base_url}}/work-orders` | `{ …, "internal_exception_id": {{internal_exception_id}} }` | 201 | `GET internal-exceptions/{{internal_exception_id}}` trae `consumed_by` (`work_order`, código `OT-`) |
+| Excepción de otro presupuesto, o innecesaria (ya autorizado, particular) | ídem | — | 422 | `INTERNAL_EXCEPTION_NOT_APPLICABLE` |
+| La autorización baja después de aprobar (Ejemplo 3) | registrar una versión con menos y crear la OT | — | 422 | `WORK_ORDER_CLIENT_ACCEPTANCE_OUTDATED` (la excepción no lo resuelve) |
+| Re-aceptación | `POST {{base_url}}/budgets/{{budget_id}}/client-acceptances` | `{ "channel": "phone", "contact": "Ana Gómez", "notes": "Acepta la diferencia." }` | 201 | `kind.value` `re_acceptance`; `owner_amount` calculado (sin OT, por el presupuesto; con la OT en curso, por la ejecución sin extras); `insurer_authorization_id` y `deductible_amount` vigentes |
+| Re-aceptación sin medio | ídem | `{}` | 422 | `VALIDATION_ERROR` en `channel` |
+| Re-aceptación con el presupuesto enviado, o con la OT completada o cancelada | ídem | ídem | 422 | `BUDGET_NOT_REACCEPTABLE` |
+| Historial de respuestas | `GET {{base_url}}/budgets/{{budget_id}}/client-acceptances` | — | 200 | Aprobaciones, rechazos y re-aceptaciones, en orden |
+| Advertencia de B | `GET {{base_url}}/work-orders/{{work_order_id}}` tras consumir más de lo autorizado o subir el deducible del siniestro | — | 200 | `owner_amount_warning` con `accepted_amount`, `potential_amount`, `difference`, `amount_exceeded`, `deductible_increased` y `message`; `null` si no hay nada que advertir. Con el token del mecánico la clave no viene |
+| Extra en una OT con siniestro (P5) | `POST {{base_url}}/work-orders/{{work_order_id}}/parts` | el de siempre | 201 | `meta.warnings[0]`: "Este repuesto quedará a cargo del dueño…"; el detalle de la OT trae `has_claim` `true` |
+| Absorción del taller | `POST {{base_url}}/internal-exceptions` | `{ "type": "workshop_absorption", "subject_id": {{work_order_id}}, "amount": 50000, "reason": "Daño causado en el taller." }` | 201 | `subject.type` `work_order`, `amount` `50000.00`; sin `amount` → 422; en una OT particular → `INTERNAL_EXCEPTION_SUBJECT_INVALID`. Se usa en el reparto (M8) |
+| Listado | `GET {{base_url}}/internal-exceptions?type=…&subject_type=budget&subject_id=…&consumed=0` | — | 200 | Con `meta.pagination` |
+| Sin permiso | recepcionista o cajero: otorgar; recepcionista, depósito o mecánico: listar; jefe de taller: re-aceptar | — | 403 | `FORBIDDEN` |
+| Particular | aprobar y crear la OT de un presupuesto sin líneas `insurer` | — | 200 / 201 | Como siempre: `owner_amount` = subtotal, `has_claim` `false`, `owner_amount_warning` `null`, extras sin `meta` |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.

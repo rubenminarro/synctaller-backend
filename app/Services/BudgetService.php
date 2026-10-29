@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Budget;
+use App\Models\BudgetClientAcceptance;
 use App\Models\BudgetItem;
 use App\Models\Diagnostic;
 use App\Models\Part;
@@ -15,6 +16,7 @@ use App\Enums\ClientAcceptanceKind;
 use App\Models\Claim;
 use App\Models\User;
 use App\Enums\DiagnosticStatus;
+use App\Enums\WorkOrderStatus;
 use App\Enums\DocumentSeries;
 use App\Enums\ClientNotificationType;
 use App\Exceptions\BudgetException;
@@ -30,7 +32,8 @@ class BudgetService
         protected ClientNotificationService $clientNotificationService,
         protected InternalNotificationService $internalNotificationService,
         protected DocumentSequenceService $documentSequences,
-        protected InsurerAuthorizationService $insurerAuthorizationService
+        protected InsurerAuthorizationService $insurerAuthorizationService,
+        protected OwnerShareService $ownerShare
     ) {
     }
 
@@ -230,19 +233,69 @@ class BudgetService
     }
 
     /**
-     * Evidencia de la respuesta del cliente: quién la registró, cuándo, por qué
-     * medio y el importe sin IVA a su cargo (en un particular, el subtotal).
+     * Re-aceptación del dueño (M7, decisión B): con el presupuesto aprobado y su OT sin cerrar, confirma el importe
+     * actual a su cargo (sin la OT, según el presupuesto; con la OT, según la ejecución, sin los extras). No exige que
+     * el importe haya subido y no cambia el estado del presupuesto.
+     *
+     * @param array{channel: string, contact?: string|null, notes?: string|null} $decision
      */
-    private function recordClientAcceptance(Budget $budget, ClientAcceptanceKind $kind, User $user, array $decision): void
+    public function reaccept(Budget $budget, User $user, array $decision): BudgetClientAcceptance
     {
-        $budget->clientAcceptances()->create([
+        if ($budget->status !== BudgetStatus::APPROVED) {
+            throw new BudgetException(
+                'Solo se registra una re-aceptación con el presupuesto aprobado.',
+                422,
+                'BUDGET_NOT_REACCEPTABLE'
+            );
+        }
+
+        $this->receptionStatusService->ensureEditable($budget->reception_id);
+
+        return DB::transaction(function () use ($budget, $user, $decision) {
+            $budget = Budget::whereKey($budget->id)->lockForUpdate()->firstOrFail();
+            $workOrder = $budget->workOrder()->first();
+
+            if ($workOrder && in_array($workOrder->status, [WorkOrderStatus::COMPLETED, WorkOrderStatus::CANCELLED], true)) {
+                throw new BudgetException(
+                    'La orden de trabajo del presupuesto ya está cerrada: no admite una re-aceptación.',
+                    422,
+                    'BUDGET_NOT_REACCEPTABLE'
+                );
+            }
+
+            $ownerAmount = $workOrder
+                ? $this->ownerShare->workOrderOwnerAmount($workOrder)
+                : $this->ownerShare->budgetOwnerAmount($budget);
+
+            return $this->recordClientAcceptance($budget, ClientAcceptanceKind::RE_ACCEPTANCE, $user, $decision, $ownerAmount)
+                ->load(['decidedBy', 'insurerAuthorization']);
+        });
+    }
+
+    /**
+     * Evidencia de la respuesta del cliente: quién la registró, cuándo, por qué medio y el importe sin IVA a su cargo
+     * (en un particular, el subtotal; en un siniestro, su parte: OwnerShareService). En un siniestro abierto guarda
+     * además la autorización vigente y el deducible (M7).
+     */
+    private function recordClientAcceptance(
+        Budget $budget,
+        ClientAcceptanceKind $kind,
+        User $user,
+        array $decision,
+        ?string $ownerAmount = null
+    ): BudgetClientAcceptance {
+        $claim = $this->ownerShare->openClaim($budget->reception_id);
+
+        return $budget->clientAcceptances()->create([
             'kind' => $kind,
             'decided_by' => $user->id,
             'decided_at' => now(),
             'channel' => $decision['channel'] ?? null,
             'contact' => $decision['contact'] ?? null,
             'notes' => $decision['notes'] ?? null,
-            'owner_amount' => $budget->subtotal,
+            'owner_amount' => $ownerAmount ?? $this->ownerShare->budgetOwnerAmount($budget),
+            'insurer_authorization_id' => $this->ownerShare->currentAuthorization($budget, $claim)?->id,
+            'deductible_amount' => $claim?->deductible_amount,
         ]);
     }
 

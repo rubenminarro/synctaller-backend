@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\InsurerContactController;
 use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\ClaimDocumentController;
 use App\Http\Controllers\Api\InsurerAuthorizationController;
+use App\Http\Controllers\Api\InternalExceptionController;
+use App\Http\Controllers\Api\BudgetClientAcceptanceController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetItemController;
 use App\Http\Controllers\Api\MechanicController;
@@ -160,6 +162,12 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
 
     // Autorizaciones de la aseguradora (M6): versionadas e inmutables.
     Route::apiResource('budgets.insurer-authorizations', InsurerAuthorizationController::class)->only(['index', 'store', 'show']);
+
+    // Respuestas del cliente y re-aceptación del dueño (M7).
+    Route::apiResource('budgets.client-acceptances', BudgetClientAcceptanceController::class)->only(['index', 'store']);
+
+    // Excepciones internas del flujo de siniestros (M7): inmutables.
+    Route::apiResource('internal-exceptions', InternalExceptionController::class)->only(['index', 'store', 'show']);
 
     Route::apiResource('work-orders', WorkOrderController::class)->except(['update', 'destroy']);
 

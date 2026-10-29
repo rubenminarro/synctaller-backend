@@ -25,6 +25,12 @@ class StoreWorkOrderRequest extends FormRequest
                 'integer',
                 Rule::exists('mechanics', 'id'),
             ],
+            // Siniestro (M7): excepción para crear la OT sin la autorización de la aseguradora.
+            'internal_exception_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('internal_exceptions', 'id'),
+            ],
         ];
     }
 
@@ -40,6 +46,10 @@ class StoreWorkOrderRequest extends FormRequest
                 'required' => 'El mecánico es obligatorio.',
                 'integer' => 'El ID del mecánico debe ser un número entero.',
                 'exists' => 'El mecánico seleccionado no existe.'
+            ],
+            'internal_exception_id' => [
+                'integer' => 'El ID de la excepción debe ser un número entero.',
+                'exists' => 'La excepción seleccionada no existe.',
             ],
         ];
     }
