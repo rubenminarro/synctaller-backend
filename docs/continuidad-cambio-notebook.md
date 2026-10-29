@@ -291,9 +291,11 @@ propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2, E3 y
        hasta adaptar el frontend.**
      * **M2** (aseguradoras, handoff 2.60; migración `000060`) mergeada en `main` el 2026-10-29.
      * **M3** (siniestros, handoff 2.61; migración `000061`) mergeada en `main` el 2026-10-29.
-     * **M4** (documentos privados, handoff 2.62; migración `000062`) en `feature/documentos-siniestro`, pendiente de
+     * **M4** (documentos privados, handoff 2.62; migración `000062`) mergeada en `main` el 2026-10-29.
+     * **M5** (responsable por línea, handoff 2.63; migración `000063`) en `feature/responsabilidad-linea`, pendiente de
        revisión y merge.
-     * Las migraciones ya están aplicadas en la base local. Sigue M5 (responsabilidad por línea del presupuesto).
+     * Las migraciones ya están aplicadas en la base local. Sigue M6 (autorizaciones de la aseguradora); antes de cerrar
+       su carga de importes hace falta V2 (unidad: con o sin IVA).
 
 ---
 

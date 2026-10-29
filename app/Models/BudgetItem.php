@@ -6,6 +6,7 @@ use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Enums\BudgetItemResponsibility;
 use App\Enums\BudgetItemType;
 
 
@@ -17,6 +18,7 @@ class BudgetItem extends Model
     protected $fillable = [
         'budget_id',
         'type',
+        'responsibility',
         'part_id',
         'service_id',
         'description',
@@ -27,8 +29,13 @@ class BudgetItem extends Model
         'notes',
     ];
 
+    protected $attributes = [
+        'responsibility' => 'owner',
+    ];
+
     protected $casts = [
         'type' => BudgetItemType::class,
+        'responsibility' => BudgetItemResponsibility::class,
         'quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
         'total' => 'decimal:2',

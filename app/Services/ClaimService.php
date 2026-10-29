@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\BudgetItemResponsibility;
+use App\Enums\BudgetStatus;
 use App\Enums\ClaimStatus;
 use App\Enums\ClaimType;
 use App\Enums\DocumentSeries;
 use App\Enums\InsurerStatus;
 use App\Exceptions\ClaimException;
+use App\Models\BudgetItem;
 use App\Models\Claim;
 use App\Models\Insurer;
 use App\Models\Reception;
@@ -106,6 +109,13 @@ class ClaimService
                 'cancelled_by' => $user->id,
                 'cancellation_reason' => $reason,
             ]);
+
+            // Sin siniestro, nada queda a cargo de la aseguradora en los borradores (§5.2). Un presupuesto enviado o
+            // aprobado no se toca: se rechaza, se reabre y el cliente vuelve a aprobar (decisión del 2026-10-29).
+            BudgetItem::whereHas('budget', fn ($q) => $q->where('reception_id', $claim->reception_id)->where('status', BudgetStatus::DRAFT))
+                ->where('responsibility', BudgetItemResponsibility::INSURER)
+                ->get()
+                ->each(fn (BudgetItem $item) => $item->update(['responsibility' => BudgetItemResponsibility::OWNER]));
 
             return $this->load($claim);
         });

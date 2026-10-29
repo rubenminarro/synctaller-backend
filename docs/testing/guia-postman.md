@@ -385,6 +385,16 @@ Documentos del siniestro (M4, ver `CLAUDE.md` 6.24). En Postman: Body → form-d
 | Dar de baja (administrador) | `DELETE {{base_url}}/claims/{{claim_id}}/documents/{{claim_document_id}}` | `{ "reason": "Duplicado." }` | 200 | Después, descargar → 404. Con el token del recepcionista → 403 |
 | Sin permiso | cajero: subir; mecánico o depósito: listar o descargar | — | 403 | `FORBIDDEN` |
 
+Responsable por línea del presupuesto (M5, ver `CLAUDE.md` 6.4). Todas las líneas traen `responsibility` (`value`/`label`).
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Línea sin `responsibility` | `POST {{base_url}}/budgets/{{budget_id}}/items` | el de siempre | 201 | `responsibility.value` `owner`, aun con siniestro |
+| Línea a la aseguradora sin siniestro abierto | ídem | `"responsibility": "insurer"` | 422 | `BUDGET_ITEM_INSURER_WITHOUT_CLAIM` |
+| Línea a la aseguradora con siniestro abierto | ídem, en la recepción de `{{claim_id}}` | `"responsibility": "insurer"` | 201 | `insurer` / "Aseguradora" |
+| Cambiarla con el presupuesto enviado | `PATCH {{base_url}}/budgets/{{budget_id}}/items/{id}` | `{ "responsibility": "owner" }` | 422 | `BUDGET_NOT_EDITABLE` |
+| Cancelar el siniestro | `POST {{base_url}}/claims/{{claim_id}}/cancel` | `{ "reason": "..." }` | 200 | Las líneas `insurer` de los borradores vuelven a `owner`; las de los enviados no cambian |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.

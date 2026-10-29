@@ -14,6 +14,10 @@ class BudgetItemResource extends JsonResource
             'budget_id' => $this->budget_id,
             'type' => $this->type?->value,
             'type_label' => $this->type?->label(),
+            'responsibility' => [
+                'value' => $this->responsibility->value,
+                'label' => $this->responsibility->label(),
+            ],
             'part_id' => $this->part_id,
             'part' => $this->whenLoaded('part', fn () => $this->part ? [
                 'id' => $this->part->id,
