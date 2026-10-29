@@ -287,12 +287,13 @@ class WorkOrderInsurerFlowTest extends ClaimTestCase
         $this->postJson($this->partsUrl($workOrder, $extra['id'], 'approve'), ['channel' => 'phone'])->assertOk();
         $this->getJson("/api/work-orders/{$workOrder['id']}")->assertOk()->assertJsonPath('data.owner_amount_warning', null);
 
-        // Con la OT completada ya no hay re-aceptación.
+        // Con la OT completada sigue habiendo re-aceptación (M8: la salida del Ejemplo 2 antes de confirmar el reparto),
+        // por lo ejecutado y sin los extras.
         $this->postJson($this->partsUrl($workOrder, $extra['id'], 'consume'), ['quantity_used' => 2])->assertOk();
         $this->completeAllItems($workOrder);
         $this->postJson("/api/work-orders/{$workOrder['id']}/complete")->assertOk();
         $this->postJson("/api/budgets/{$budget->id}/client-acceptances", ['channel' => 'whatsapp'])
-            ->assertStatus(422)->assertJsonPath('error_code', 'BUDGET_NOT_REACCEPTABLE');
+            ->assertCreated()->assertJsonPath('data.owner_amount', '180000.00');
     }
 
     public function test_the_workshop_absorption_is_granted_on_a_claim_work_order(): void

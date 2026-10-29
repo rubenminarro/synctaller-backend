@@ -77,9 +77,12 @@ class InternalException extends Model
         return $this->morphTo()->withTrashed();
     }
 
+    /**
+     * La operación que la usó: la OT (inicio sin autorización) o el reparto (absorción, que no tiene baja lógica).
+     */
     public function consumedBy(): MorphTo
     {
-        return $this->morphTo()->withTrashed();
+        return $this->morphTo();
     }
 
     public function grantor(): BelongsTo

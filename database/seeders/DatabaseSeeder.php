@@ -44,6 +44,7 @@ class DatabaseSeeder extends Seeder
             BudgetSeeder::class,
             BudgetItemSeeder::class,
             WorkOrderSeeder::class,
+            AllocationSeeder::class,
             ReceptionCancellationSeeder::class,
             // Facturación, cobro y entrega de los trabajos terminados.
             InvoiceStampSeeder::class,

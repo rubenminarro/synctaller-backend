@@ -158,6 +158,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'internal-exceptions.grant',
             'internal-exceptions.show',
 
+            /* work order allocation permissions (M8) */
+            'work-order-allocations.index',
+            'work-order-allocations.store',
+            'work-order-allocations.show',
+            'work-order-allocations.update',
+            'work-order-allocations.confirm',
+            'work-order-allocations.destroy',
+
             /* budget permissions */
             'budgets.index',
             'budgets.store',
@@ -476,6 +484,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'claims.index', 'claims.store', 'claims.show', 'claims.update', 'claims.cancel',
                     'claim-documents.index', 'claim-documents.store', 'claim-documents.download',
                     'insurer-authorizations.index', 'insurer-authorizations.store', 'insurer-authorizations.show',
+                    'work-order-allocations.index', 'work-order-allocations.show',
                     'dashboard.view', 'reports.budgets',
                 ],
             ],
@@ -518,6 +527,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'claim-documents.index', 'claim-documents.store', 'claim-documents.download',
                     'insurer-authorizations.index', 'insurer-authorizations.store', 'insurer-authorizations.show',
                     'internal-exceptions.index', 'internal-exceptions.grant', 'internal-exceptions.show',
+                    'work-order-allocations.index', 'work-order-allocations.show',
                     'dashboard.view', 'reports.productivity',
                 ],
             ],
@@ -542,6 +552,8 @@ class RolesAndPermissionsSeeder extends Seeder
                     'claim-documents.index', 'claim-documents.download',
                     'insurer-authorizations.index', 'insurer-authorizations.show',
                     'internal-exceptions.index', 'internal-exceptions.show',
+                    'work-order-allocations.index', 'work-order-allocations.store', 'work-order-allocations.show',
+                    'work-order-allocations.update', 'work-order-allocations.confirm', 'work-order-allocations.destroy',
                     'dashboard.view', 'reports.sales', 'reports.clients',
                 ],
             ],

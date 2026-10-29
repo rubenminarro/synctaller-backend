@@ -11,6 +11,7 @@ use App\Models\PurchaseItem;
 use App\Models\Reception;
 use App\Models\VehicleMaintenance;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderAllocation;
 use App\Models\WorkOrderItem;
 use App\Models\WorkOrderPart;
 
@@ -37,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
             'work_order_part' => WorkOrderPart::class,
             'work_order_item' => WorkOrderItem::class,
             'work_order' => WorkOrder::class,
+            'work_order_allocation' => WorkOrderAllocation::class,
             'purchase_item' => PurchaseItem::class,
             'budget' => Budget::class,
             'reception' => Reception::class,

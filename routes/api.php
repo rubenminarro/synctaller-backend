@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\ClaimDocumentController;
 use App\Http\Controllers\Api\InsurerAuthorizationController;
 use App\Http\Controllers\Api\InternalExceptionController;
+use App\Http\Controllers\Api\WorkOrderAllocationController;
 use App\Http\Controllers\Api\BudgetClientAcceptanceController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetItemController;
@@ -300,6 +301,19 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
     Route::post('work-orders/{workOrder}/parts/{part}/approve', [WorkOrderPartController::class, 'approve'])->name('work-orders.parts.approve');
 
     Route::post('work-orders/{workOrder}/parts/{part}/reject', [WorkOrderPartController::class, 'reject'])->name('work-orders.parts.reject');
+
+    // Reparto económico de la OT de un siniestro (M8): borrador editable, confirmación con R1–R7 y versiones.
+    Route::get('work-orders/{workOrder}/allocations', [WorkOrderAllocationController::class, 'index'])->name('work-orders.allocations.index');
+
+    Route::post('work-orders/{workOrder}/allocations', [WorkOrderAllocationController::class, 'store'])->name('work-orders.allocations.store');
+
+    Route::get('work-orders/{workOrder}/allocations/{allocation}', [WorkOrderAllocationController::class, 'show'])->name('work-orders.allocations.show');
+
+    Route::patch('work-orders/{workOrder}/allocations/{allocation}', [WorkOrderAllocationController::class, 'update'])->name('work-orders.allocations.update');
+
+    Route::delete('work-orders/{workOrder}/allocations/{allocation}', [WorkOrderAllocationController::class, 'destroy'])->name('work-orders.allocations.destroy');
+
+    Route::post('work-orders/{workOrder}/allocations/{allocation}/confirm', [WorkOrderAllocationController::class, 'confirm'])->name('work-orders.allocations.confirm');
 
     Route::post('work-orders/{workOrder}/parts/{part}/reserve', [WorkOrderPartController::class, 'reserve'])->name('work-orders.parts.reserve');
 

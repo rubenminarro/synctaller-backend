@@ -23,9 +23,9 @@ diga otra); **[pendiente]** = sin verificar o sin decidir.
 | Base de datos | MySQL en Laragon, base `synctaller`, conexión `mysql`. Tests en SQLite (`database/testing.sqlite`) | `CLAUDE.md` §1 y §3 |
 | Servidor local | Nginx de Laragon con `php-cgi` (no Apache) | `CLAUDE.md` §3 |
 | Frontend | Repositorio aparte `../synctaller-frontend` (React 19 + TypeScript + Vite + Tabler) | `CLAUDE.md` §1 |
-| Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico. Módulo de aseguradoras: M1–M7 en `main` (2026-10-29) | `CLAUDE.md` §1 |
-| Tests | **440 tests (6932 aserciones) en verde, en 238 s** [verificado el 2026-10-29: `php artisan test` en la rama de M7, que después se mergeó sin cambios]. Antes: 374 tests el 2026-10-27 | `CLAUDE.md` §1 |
-| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (faltan M8–M12). Abiertas también #14–#16 y las discrepancias D3, D7 y D8 (14.1) | `docs/handoff.md`, §14 |
+| Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico. Módulo de aseguradoras: M1–M8 en `main` (2026-10-29) | `CLAUDE.md` §1 |
+| Tests | **449 tests (7390 aserciones) en verde, en 264 s** [verificado el 2026-10-29: `php artisan test` en la rama de M8]. Antes: 440 con M7 y 374 el 2026-10-27 | `CLAUDE.md` §1 |
+| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (faltan P10 y M9–M12). Abiertas también #14–#16 y las discrepancias D3, D7 y D8 (14.1) | `docs/handoff.md`, §14 |
 
 Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 desde el 2026-10-24 (handoff 2.51).
 
@@ -268,8 +268,12 @@ M8; con eso se resolvieron D4 y D6. **P10 aprobada el 2026-10-29** (handoff 2.66
 registra la nota de crédito emitida fuera del sistema, por línea y hasta el saldo, en cualquier factura; se implementa
 como entrega propia entre M8 y M9. V18 y V19 siguen pendientes con el contador. El mismo día se cerraron internamente
 V21 (las respuestas a G1–G5 las dio un dueño de taller que también lleva la contabilidad; se busca igual la confirmación de un contador), V9 (estándar de 10 talleres para la línea T),
-G6–G9, V1, V2, V4, V6–V8 y V12 (handoff 2.67); ninguna validación pendiente bloquea M8. **Siguiente: diseño de M8
-(reparto económico).** Siguen esperando revisión M10 (modalidad neta del deducible) y M12 (retenciones).
+G6–G9, V1, V2, V4, V6–V8 y V12 (handoff 2.67); ninguna validación pendiente bloquea M8. Siguen esperando revisión
+M10 (modalidad neta del deducible) y M12 (retenciones).
+
+**Actualización (2026-10-29, M8):** el reparto económico está implementado
+(handoff 2.68; migración `000067`, aplicada en la base local) y mergeado en `main`. Incluye una corrección de M7: la re-aceptación ya no
+se bloquea con la OT completada. **Siguiente: P10 (notas de crédito registradas) y después M9.**
 
 **Siguiente paso recomendado, en orden:**
 
@@ -304,7 +308,9 @@ G6–G9, V1, V2, V4, V6–V8 y V12 (handoff 2.67); ninguna validación pendiente
        (`5b06a48`). La unidad de los importes (V2) se declara en cada registro (`amounts_include_tax`).
      * **M7** (bloqueo de la OT, re-aceptación y excepciones internas, handoff 2.65; migraciones `000065` y `000066`)
        revisada por el usuario y mergeada en `main` el 2026-10-29 (`4f1ea1a`). Migraciones aplicadas en la base local.
-     * **Sigue M8** (reparto); después P10 (notas de crédito registradas, handoff 2.66) y M9. El frontend todavía no consume
+     * **M8** (reparto económico, handoff 2.68; migración `000067`, aplicada en la base local) mergeada en `main` el
+       2026-10-29.
+     * **Siguen P10** (notas de crédito registradas, handoff 2.66) **y M9**. El frontend todavía no consume
        nada del módulo: su adaptación (empresas, aseguradoras, siniestros, autorizaciones, excepciones y advertencias)
        se coordina en `../synctaller-frontend`.
 
@@ -321,7 +327,7 @@ G6–G9, V1, V2, V4, V6–V8 y V12 (handoff 2.67); ninguna validación pendiente
    * no usar `config:cache` en desarrollo.
 3. **Verificar el entorno:** `php artisan test` (o `php -d extension=pdo_sqlite -d extension=sqlite3
    vendor/bin/phpunit` si falta `pdo_sqlite`) y anotar el resultado. La última ejecución verificada es la de la
-   sección 1 (440 tests en verde, 2026-10-29); repetirla en el equipo donde se retome.
+   sección 1 (449 tests en verde, 2026-10-29); repetirla en el equipo donde se retome.
 4. **Abrir las páginas de la sección 6** con la cuenta de claude.ai del usuario.
 5. **Abrir Claude Code** en `synctaller-backend` y pedirle que lea `CLAUDE.md`, `docs/handoff.md`, este documento y
    `docs/especificacion-aseguradoras.html` (en especial §9 y §10), verifique el estado de Git y retome desde la

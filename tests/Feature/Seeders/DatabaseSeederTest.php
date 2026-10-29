@@ -34,7 +34,7 @@ class DatabaseSeederTest extends TestCase
         'users', 'roles', 'permissions', 'mechanics', 'brands', 'vehicle_models', 'service_categories', 'services',
         'maintenance_plans', 'check_list_items', 'diagnostic_item_templates', 'clients', 'vehicles', 'receptions', 'reception_check_lists',
         'reception_check_list_items', 'diagnostics', 'diagnostic_items', 'diagnostic_item_photos', 'budgets',
-        'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'claim_documents', 'insurer_authorizations', 'insurer_authorization_items', 'internal_exceptions', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
+        'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'claim_documents', 'insurer_authorizations', 'insurer_authorization_items', 'internal_exceptions', 'work_order_allocations', 'work_order_allocation_lines', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
         'work_orders', 'work_order_items', 'work_order_parts', 'work_order_closings', 'notifications',
         'invoices', 'invoice_items', 'payments', 'vehicle_deliveries', 'client_notifications',
         'purchases', 'purchase_items', 'supplier_payments', 'vehicle_maintenances', 'work_order_commissions',
@@ -120,6 +120,12 @@ class DatabaseSeederTest extends TestCase
         $this->assertSame(1, bccomp((string) $c05[0]->owner_amount, '0', 2));
         $this->assertSame(0, bccomp((string) $c05[1]->owner_amount, '0', 2));
         $this->assertSame(['start_without_authorization'], DB::table('internal_exceptions')->whereNull('consumed_at')->pluck('type')->all());
+        // Reparto (M8): la OT de C05 con las tres versiones (sustituida, confirmada y borrador). La aseguradora autorizó
+        // todo: la venta entera le corresponde y el dueño no paga nada.
+        $this->assertSame(['confirmed' => 1, 'draft' => 1, 'superseded' => 1], $this->statusCounts('work_order_allocations'));
+        $confirmed = DB::table('work_order_allocations')->where('status', 'confirmed')->sole();
+        $this->assertSame(['insurer_covered'], DB::table('work_order_allocation_lines')->where('work_order_allocation_id', $confirmed->id)->distinct()->pluck('portion_type')->all());
+        $this->assertSame(0, bccomp((string) $confirmed->sale_total, (string) DB::table('work_order_allocation_lines')->where('work_order_allocation_id', $confirmed->id)->sum('amount'), 2));
         DB::table('claim_documents')->pluck('path')->each(fn (string $path) => Storage::disk('claim_documents')->assertExists($path));
         $this->assertTrue((bool) Vehicle::where('chassis', VehiclesSeeder::WITHOUT_PLATE_CHASSIS)->value('no_plate'));
         $this->assertGreaterThanOrEqual(30, Client::count());
@@ -134,7 +140,7 @@ class DatabaseSeederTest extends TestCase
     {
         // Estados del flujo del taller (ExampleScenarios): las recepciones los derivan de presupuestos y OT.
         $this->assertSame(
-            ['cancelled' => 2, 'completed' => 4, 'delivered' => 13, 'in_progress' => 9, 'pending' => 3, 'repair' => 4],
+            ['cancelled' => 2, 'completed' => 5, 'delivered' => 13, 'in_progress' => 8, 'pending' => 3, 'repair' => 4],
             $this->statusCounts('receptions')
         );
         $this->assertSame(
@@ -142,7 +148,7 @@ class DatabaseSeederTest extends TestCase
             $this->statusCounts('budgets')
         );
         $this->assertSame(
-            ['cancelled' => 1, 'completed' => 17, 'in_progress' => 3, 'paused' => 1, 'pending' => 2],
+            ['cancelled' => 1, 'completed' => 18, 'in_progress' => 3, 'paused' => 1, 'pending' => 2],
             $this->statusCounts('work_orders')
         );
         // Cada respuesta del cliente queda registrada: una aprobación por presupuesto aprobado y un rechazo por cada
@@ -175,7 +181,7 @@ class DatabaseSeederTest extends TestCase
             ->count());
 
         // Cada OT completada tiene su cierre económico; los datos se reparten en los últimos meses.
-        $this->assertSame(17, DB::table('work_order_closings')->count());
+        $this->assertSame(18, DB::table('work_order_closings')->count());
         $this->assertTrue(DB::table('receptions')->where('reception_date', '<', now()->subDays(80))->exists());
         $this->assertFalse(DB::table('work_orders')->where('created_at', '>', now())->exists());
     }

@@ -460,6 +460,30 @@ Bloqueo de la OT, re-aceptación y excepciones internas (M7, ver `CLAUDE.md` 6.5
 | Listado | `GET {{base_url}}/internal-exceptions?type=…&subject_type=budget&subject_id=…&consumed=0` | — | 200 | Con `meta.pagination` |
 | Sin permiso | recepcionista o cajero: otorgar; recepcionista, depósito o mecánico: listar; jefe de taller: re-aceptar | — | 403 | `FORBIDDEN` |
 | Particular | aprobar y crear la OT de un presupuesto sin líneas `insurer` | — | 200 / 201 | Como siempre: `owner_amount` = subtotal, `has_claim` `false`, `owner_amount_warning` `null`, extras sin `meta` |
+| Re-aceptación con la OT completada (corrección en M8) | `POST {{base_url}}/budgets/{{budget_id}}/client-acceptances` | `{ "channel": "phone" }` | 201 | Toma lo ejecutado sin los extras; con la OT cancelada → `BUDGET_NOT_REACCEPTABLE` |
+
+Reparto económico (M8, ver `CLAUDE.md` 6.27). Con la OT de arriba **completada** (cajero; importes sin IVA salvo el
+deducible).
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Generar el borrador | `POST {{base_url}}/work-orders/{{work_order_id}}/allocations` | — | 201 | `version` 1, `status` `draft`, `lines` propuestas (cubierto hasta lo autorizado, resto `owner_uncovered`, dueño y extras `owner_responsibility`), `summary` por responsable y `checks` → `allocation_id` |
+| Otro borrador | ídem | — | 409 | `ALLOCATION_DRAFT_EXISTS` |
+| OT sin completar / particular | ídem | — | 422 | `WORK_ORDER_NOT_ALLOCATABLE` / `ALLOCATION_NOT_REQUIRED` |
+| Editar | `PATCH {{base_url}}/work-orders/{{work_order_id}}/allocations/{{allocation_id}}` | `{ "lines": [{ "source_type": "work_order_item", "source_id": 1, "portion_type": "owner_uncovered", "amount": 200000 }, …], "deductible_amount": 0, "notes": "…" }` | 200 | `lines` reemplaza todas las porciones; `checks` se recalcula |
+| Concepto ajeno o tipo repetido | ídem | — | 422 | `ALLOCATION_LINE_MISMATCH` |
+| Absorción | ídem, con una porción `workshop_absorbed` e `internal_exception_id` de una excepción `workshop_absorption` de la OT | — | 200 | Al confirmar se consume (`GET internal-exceptions/{id}` trae `consumed_by.type` `work_order_allocation`) |
+| Confirmar | `POST {{base_url}}/work-orders/{{work_order_id}}/allocations/{{allocation_id}}/confirm` | — | 200 | `status` `confirmed`; `checks` `null`; la confirmada anterior queda `superseded` |
+| Reglas al confirmar | ídem, con el borrador incumpliendo | — | 422 / 409 | `CLAIM_DEDUCTIBLE_UNKNOWN`, `CLAIM_DEDUCTIBLE_NOT_ACCEPTED`, `ALLOCATION_INCOMPLETE`, `ALLOCATION_TOTAL_MISMATCH` (409), `ALLOCATION_EXTRA_NOT_COVERABLE`, `ALLOCATION_EXCEEDS_AUTHORIZATION`, `ALLOCATION_ABSORPTION_NOT_AUTHORIZED`, `ALLOCATION_OWNER_AMOUNT_NOT_ACCEPTED`, `ALLOCATION_DEDUCTIBLE_EXCEEDS_CLAIM` |
+| Editar o eliminar la confirmada | `PATCH` / `DELETE …/allocations/{{allocation_id}}` | — | 422 | `ALLOCATION_NOT_EDITABLE` |
+| Nueva versión | `POST …/allocations` con una confirmada | — | 201 | `version` 2, copia de la confirmada |
+| Descartar el borrador | `DELETE …/allocations/{id del borrador}` | — | 200 | Después, `GET` → 404 |
+| Versiones | `GET {{base_url}}/work-orders/{{work_order_id}}/allocations` | — | 200 | Todas, por versión. Con otra OT en la URL → 404 |
+| Detalle de la OT | `GET {{base_url}}/work-orders/{{work_order_id}}` | — | 200 | `requires_allocation` `true`; `allocation` con el resumen de la confirmada (sin el permiso, la clave no viene) |
+| Facturar la OT entera | `POST {{base_url}}/work-orders/{{work_order_id}}/invoice` | — | 422 | `WORK_ORDER_REQUIRES_ALLOCATION_INVOICING` (se factura por responsable en M9) |
+| Cancelar el siniestro con lo cubierto confirmado | `POST {{base_url}}/claims/{{claim_id}}/cancel` | `{ "reason": "…" }` | 422 | `CLAIM_HAS_INSURER_ALLOCATIONS` |
+| Bajar el deducible por debajo de lo asignado | `PATCH {{base_url}}/claims/{{claim_id}}` | `{ "deductible_amount": 0 }` | 422 | `CLAIM_DEDUCTIBLE_BELOW_ALLOCATED` |
+| Sin permiso | recepcionista o jefe de taller: generar, editar, confirmar o eliminar; depósito o mecánico: listar | — | 403 | `FORBIDDEN` |
 
 ### M.5 Vehículos por cliente (rutas anidadas)
 

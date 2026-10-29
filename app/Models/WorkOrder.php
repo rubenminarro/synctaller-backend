@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AllocationStatus;
 use App\Enums\InvoiceStatus;
 use App\Enums\WorkOrderStatus;
 use Illuminate\Database\Eloquent\Model;
@@ -81,6 +82,22 @@ class WorkOrder extends Model
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * Versiones del reparto económico (M8), en orden.
+     */
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(WorkOrderAllocation::class)->orderBy('version');
+    }
+
+    /**
+     * Reparto confirmado vigente (como máximo uno).
+     */
+    public function confirmedAllocation(): HasOne
+    {
+        return $this->hasOne(WorkOrderAllocation::class)->where('status', AllocationStatus::CONFIRMED->value);
     }
 
     /**
