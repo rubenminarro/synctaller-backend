@@ -11,6 +11,7 @@ use App\Http\Requests\UpdateWorkOrderPartRequest;
 use App\Http\Resources\WorkOrderPartResource;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderPart;
+use App\Services\OwnerShareService;
 use App\Services\WorkOrderPartService;
 use App\Traits\ApiResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -50,7 +51,7 @@ class WorkOrderPartController extends Controller implements HasMiddleware
         );
     }
 
-    public function store(StoreWorkOrderPartRequest $request, WorkOrder $workOrder)
+    public function store(StoreWorkOrderPartRequest $request, WorkOrder $workOrder, OwnerShareService $ownerShare)
     {
         $line = $this->workOrderPartService->add(
             $workOrder,
@@ -58,10 +59,13 @@ class WorkOrderPartController extends Controller implements HasMiddleware
             $request->user()
         );
 
+        $warnings = $ownerShare->extraPartWarnings($line);
+
         return $this->successResponse(
             'Repuesto agregado a la orden de trabajo correctamente.',
             new WorkOrderPartResource($line),
-            201
+            201,
+            $warnings ? ['warnings' => $warnings] : null
         );
     }
 

@@ -191,7 +191,8 @@ class WorkOrderController extends Controller implements HasMiddleware
         $workOrder = $this->workOrderService->createFromBudget(
             $budget,
             $mechanic,
-            Auth::id()
+            Auth::id(),
+            $data['internal_exception_id'] ?? null
         );
 
         return $this->successResponse(

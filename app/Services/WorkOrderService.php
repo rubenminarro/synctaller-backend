@@ -10,9 +10,11 @@ use App\Enums\WorkOrderItemType;
 use App\Enums\WorkOrderStatus;
 use App\Exceptions\WorkOrderException;
 use App\Models\Budget;
+use App\Models\InternalException;
 use App\Models\Mechanic;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderItem;
+use App\Support\Format;
 use Illuminate\Support\Facades\DB;
 
 class WorkOrderService
@@ -24,17 +26,20 @@ class WorkOrderService
         protected MaintenanceService $maintenanceService,
         protected ReceptionStatusService $receptionStatusService,
         protected InternalNotificationService $internalNotificationService,
-        protected DocumentSequenceService $documentSequences
+        protected DocumentSequenceService $documentSequences,
+        protected OwnerShareService $ownerShare,
+        protected InternalExceptionService $internalExceptions
     ) {
     }
 
     public function createFromBudget(
         Budget $budget,
         Mechanic $mechanic,
-        int $createdBy
+        int $createdBy,
+        ?int $internalExceptionId = null
     ): WorkOrder {
-        
-        return DB::transaction(function () use ($budget, $mechanic, $createdBy) {
+
+        return DB::transaction(function () use ($budget, $mechanic, $createdBy, $internalExceptionId) {
 
             $budget->loadMissing('items');
 
@@ -71,6 +76,8 @@ class WorkOrderService
             }
 
             $this->receptionStatusService->ensureOpen($budget->reception_id);
+
+            $exception = $this->ensureInsurerRequirements($budget, $internalExceptionId);
 
             $workOrder = $this->documentSequences->create(DocumentSeries::WORK_ORDER, fn (string $code) => WorkOrder::create([
                 'reception_id' => $budget->reception_id,
@@ -110,6 +117,10 @@ class WorkOrderService
                 }
             }
 
+            if ($exception) {
+                $this->internalExceptions->consume($exception, $workOrder);
+            }
+
             // El estado de la recepción se deriva de sus OT.
             $this->receptionStatusService->sync($workOrder->reception_id);
 
@@ -124,6 +135,55 @@ class WorkOrderService
                 'parts.part',
             ]);
         });
+    }
+
+    /**
+     * Siniestro (M7): con líneas a cargo de la aseguradora, la OT exige su autorización vigente (o la excepción
+     * start_without_authorization del presupuesto) y que la última aceptación del dueño cubra su parte actual. La
+     * excepción no reemplaza la aceptación. Sin líneas de la aseguradora (particular) no cambia nada. Devuelve la
+     * excepción a consumir. Orden de bloqueo: presupuesto → autorización → excepción.
+     */
+    private function ensureInsurerRequirements(Budget $budget, ?int $exceptionId): ?InternalException
+    {
+        if (!$this->ownerShare->hasInsurerItems($budget)) {
+            if ($exceptionId) {
+                $this->internalExceptions->notApplicable('El presupuesto no tiene líneas a cargo de la aseguradora: no necesita la excepción.');
+            }
+
+            return null;
+        }
+
+        Budget::whereKey($budget->id)->lockForUpdate()->first();
+
+        $claim = $this->ownerShare->openClaim($budget->reception_id);
+        $exception = $exceptionId ? $this->internalExceptions->forWorkOrderStart($exceptionId, $budget) : null;
+
+        if ($claim && !$this->ownerShare->currentAuthorization($budget, $claim)) {
+            if (!$exception) {
+                throw new WorkOrderException(
+                    'El presupuesto tiene líneas a cargo de la aseguradora sin su autorización: regístrela o use la excepción para iniciar sin autorización.',
+                    422,
+                    'WORK_ORDER_INSURER_AUTHORIZATION_REQUIRED'
+                );
+            }
+        } elseif ($exception) {
+            $this->internalExceptions->notApplicable($claim
+                ? 'El presupuesto ya tiene la autorización de la aseguradora: no necesita la excepción.'
+                : 'La recepción no tiene un siniestro abierto: no necesita la excepción.');
+        }
+
+        $accepted = (string) ($this->ownerShare->lastAcceptance($budget)?->owner_amount ?? '0');
+        $current = $this->ownerShare->budgetOwnerAmount($budget);
+
+        if (bccomp($current, $accepted, 2) > 0) {
+            throw new WorkOrderException(
+                'La parte del dueño (' . Format::money($current) . ') supera lo que aceptó (' . Format::money($accepted) . '): registre una re-aceptación.',
+                422,
+                'WORK_ORDER_CLIENT_ACCEPTANCE_OUTDATED'
+            );
+        }
+
+        return $exception;
     }
 
     public function start(WorkOrder $workOrder): WorkOrder

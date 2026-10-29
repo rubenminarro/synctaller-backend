@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 263 rutas API, 432 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M7, 6.22–6.26). 268 rutas API, 440 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -77,7 +77,7 @@ resultados esperados y casos de error).
 * Operaciones sobre varios registros en `DB::transaction`; concurrencia con `lockForUpdate`.
   Orden de bloqueo: OT → línea → `part_stocks`; OT → recepción (recálculo de estado); factura → pago;
   recepción → entregas; compra → `part_stocks`; compra → pago a proveedor; recepción → siniestro; presupuesto → autorización de la
-  aseguradora → documentos del siniestro; documento → serie de códigos (siempre última).
+  aseguradora → documentos del siniestro; presupuesto u OT → excepción interna; documento → serie de códigos (siempre última).
 * **Códigos internos** (`BUD-`, `OT-`, `COM-`, `REP-`, `SRV-`, `DIA-`, `ASE-`, `SIN-`): salen de `DocumentSequenceService::create()`
   (serie en `App\Enums\DocumentSeries`, contador en `document_sequences`), nunca de `max(id) + 1`. El contador de la
   serie se bloquea dentro de la transacción del alta (un alta fallida no consume el número), se saltan los códigos ya
@@ -142,9 +142,9 @@ Controller (HasMiddleware) → Form Request → Service → Model/Eloquent → A
 
 | Carpeta | Contenido |
 |---|---|
-| `app/Http/Controllers/Api` | 48 controllers |
+| `app/Http/Controllers/Api` | 56 controllers |
 | `app/Http/Requests` | Validación (mensajes en español) |
-| `app/Services` | Reglas de negocio (31 services, incluido `AuditLogger`) |
+| `app/Services` | Reglas de negocio (41 services, incluido `AuditLogger`) |
 | `app/Jobs`, `app/Mail`, `app/Notifications`, `app/Console/Commands` | Envío de avisos (FASE 23) |
 | `app/Models` | Modelos Eloquent (muchos con `SoftDeletes`) |
 | `app/Http/Resources` | Contrato JSON |
@@ -173,7 +173,7 @@ Controller (HasMiddleware) → Form Request → Service → Model/Eloquent → A
 * Excepciones de dominio: `BudgetException`, `WorkOrderException`, `WorkOrderPartException`, `PartException`,
   `SupplierException`, `InventoryException`, `ServiceException`, `InvoiceException`, `PaymentException`,
   `VehicleDeliveryException`, `MaintenanceException`, `ReceptionException`, `PurchaseException`,
-  `SupplierPaymentException`, `NotificationException`, `AuditException`, `VehicleCatalogException`, `ClientException`, `InsurerException`, `ClaimException`, `InsurerAuthorizationException` (todas extienden `AppException(message, status, errorCode, errors)`).
+  `SupplierPaymentException`, `NotificationException`, `AuditException`, `VehicleCatalogException`, `ClientException`, `InsurerException`, `ClaimException`, `InsurerAuthorizationException`, `InternalExceptionException` (todas extienden `AppException(message, status, errorCode, errors)`).
 
 ### Autenticación
 
@@ -193,9 +193,9 @@ de los permisos, ordenados; el administrador recibe todos los del guard `api` po
 |---|---|---|
 | `administrador` | Todo (`Gate::before`) | Exclusivo: usuarios/roles/permisos, auditoría (`audit-logs.*`), logo del sistema (`system-settings.update`), costos y margen (`work-orders.view-economics`), liquidar comisiones, anular entregas, timbrados, ABM de planes de mantenimiento, reporte de rentabilidad |
 | `mechanic` | Ejecuta la OT | Diagnóstico (consulta y usa el catálogo de ítems), iniciar/pausar/completar OT e ítems, consumir/devolver repuestos, sus horas y comisiones, historial, estado de mantenimiento, dashboard (bloque taller) |
-| `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos), siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar) y autorizaciones de la aseguradora (registrar y consultar) |
-| `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras y siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar) y autorizaciones de la aseguradora (registrar y consultar) |
-| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras, siniestros (con la descarga de sus documentos) y autorizaciones de la aseguradora |
+| `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos), siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar), autorizaciones de la aseguradora (registrar y consultar) y re-aceptaciones del dueño |
+| `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras y siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar), autorizaciones de la aseguradora (registrar y consultar) y excepciones internas (otorgar y consultar) |
+| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras, siniestros (con la descarga de sus documentos), autorizaciones de la aseguradora y excepciones internas |
 | `deposito` | Stock | Repuestos, proveedores, inventario, compras completas, repuestos en OT, reporte de inventario, consulta de pagos a proveedores y cuentas por pagar |
 
 El rol del mecánico se llama `mechanic` (no `mecanico`). El seeder crea usuarios de cada rol (README, "Datos de prueba").
@@ -307,9 +307,10 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 * Código `BUD-…`. Estados: `draft → sent → approved`; `sent → rejected → draft` (reabrir, borra `approved_at`);
   cancelar desde `draft` o `sent`.
 * **Respuesta del cliente** (`budget_client_acceptances`, decisión del 2026-10-28): cada `approve` y `reject` crea una
-  fila inmutable (`BUDGET_CLIENT_ACCEPTANCE_IMMUTABLE`, 409) con `kind` (`ClientAcceptanceKind`: `approval|rejection`),
-  quién lo registró (`decided_by`), `decided_at`, `channel` (`ClientDecisionChannel`), `contact`, `notes` y
-  `owner_amount` (importe sin IVA a cargo del cliente: en un particular, el subtotal). El body es **opcional** (sin body,
+  fila inmutable (`BUDGET_CLIENT_ACCEPTANCE_IMMUTABLE`, 409) con `kind` (`ClientAcceptanceKind`: `approval|rejection`, y
+  `re_acceptance` desde M7, 6.26), quién lo registró (`decided_by`), `decided_at`, `channel` (`ClientDecisionChannel`),
+  `contact`, `notes` y `owner_amount` (importe sin IVA a cargo del cliente: en un particular, el subtotal; con líneas
+  `insurer`, su parte, 6.26). El body es **opcional** (sin body,
   el contrato es el de siempre; el motivo del rechazo también es opcional). Reabrir no borra el historial. El detalle
   del presupuesto trae `client_acceptances` en orden. Los presupuestos anteriores a E5 no tienen filas. `Budget` usa
   `Auditable`.
@@ -347,6 +348,13 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 
 * Nace de un presupuesto `approved` con ítems (`WORK_ORDER_BUDGET_NOT_APPROVED`, `WORK_ORDER_BUDGET_WITHOUT_ITEMS`);
   una por presupuesto (`WORK_ORDER_ALREADY_EXISTS`). Código `OT-000001` (serie con bloqueo, ver sección 3).
+* **Con líneas `insurer`** (M7, 6.26; después de las validaciones anteriores): con el siniestro abierto exige la
+  autorización vigente (`WORK_ORDER_INSURER_AUTHORIZATION_REQUIRED`, 422) salvo la excepción
+  `start_without_authorization` del presupuesto (`internal_exception_id` opcional en `POST work-orders`, que la consume);
+  siempre exige que el importe aceptado cubra la parte actual del dueño (`WORK_ORDER_CLIENT_ACCEPTANCE_OUTDATED`, 422:
+  se registra una re-aceptación; la excepción no la reemplaza). Una excepción de otro presupuesto o innecesaria →
+  `INTERNAL_EXCEPTION_NOT_APPLICABLE` (422); ya usada → `INTERNAL_EXCEPTION_ALREADY_CONSUMED` (409). Iniciar, pausar y
+  completar no cambian. Sin líneas `insurer`, nada cambia.
 * Un `WorkOrderItem` por `BudgetItem`. `WorkOrderItem` es ejecución, no inventario ni precios (los precios están en
   `BudgetItem`; los repuestos usados en `WorkOrderPart`).
 * Estados: `pending → in_progress ⇄ paused`, `in_progress → completed`, `pending → cancelled`. Nunca vuelve atrás.
@@ -580,7 +588,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   * Modelos auditados: `Part`, `Service`, `Budget`, `BudgetItem`, `BudgetClientAcceptance`, `PartSupplier`, `Invoice`, `InvoiceItem`, `Payment`,
     `SupplierPayment`, `Purchase`, `PurchaseItem`, `User`, `Role`, `Permission`, `Client`, `Vehicle`, `Mechanic`,
     `InvoiceStamp`, `MaintenancePlan`, `DiagnosticItemTemplate`, `Insurer`, `InsurerContact`, `Claim`, `ClaimDocument` (sin su ruta interna),
-    `InsurerAuthorization` e `InsurerAuthorizationItem`.
+    `InsurerAuthorization`, `InsurerAuthorizationItem` e `InternalException`.
   * **Un modelo nuevo con precios, dinero, seguridad o datos maestros debe usar el trait.**
   * El stock ya se audita en `inventory_movements`.
 * **Exclusiones:** `password`, `remember_token` y `token` se guardan como `********`. Los timestamps no se registran.
@@ -749,7 +757,49 @@ Entrega M6 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-10-29
   `insurer-authorizations.show`.
 * **Permisos:** `insurer-authorizations.index|show` (recepcionista, jefe de taller y cajero) y `store` (recepcionista y
   jefe de taller).
-* **Pendiente:** el bloqueo de la OT sin autorización y las excepciones internas (M7).
+* **Uso:** la OT de un presupuesto con líneas `insurer` exige la autorización vigente (6.5, M7).
+
+### 6.26 Excepciones internas y aceptación del dueño en siniestros
+
+Entrega M7 de `docs/especificacion-aseguradoras.html` (decisiones B y C y decisiones del 2026-10-29; `OwnerShareService`,
+`InternalExceptionService`).
+
+* **Parte del dueño** (sin IVA, `OwnerShareService`): sus líneas más lo no autorizado de las líneas `insurer`
+  (total − autorizado de la versión vigente del siniestro abierto). Sin siniestro abierto, todo es del dueño; **sin
+  autorización todavía, las líneas `insurer` quedan pendientes y no se le suman**. Sin líneas `insurer`, es el subtotal
+  (particular, como siempre).
+* **Aceptación** (`budget_client_acceptances`, 6.4): `approve`, `reject` y la re-aceptación guardan esa parte en
+  `owner_amount`, y con siniestro abierto también `insurer_authorization_id` (la vigente) y `deductible_amount` (el del
+  siniestro). El Resource muestra esas dos claves solo con `claims.show`. El importe aceptado es el de la última
+  aprobación o re-aceptación.
+* **Re-aceptación** (`POST budgets/{budget}/client-acceptances`, permiso `budgets.approve`; `channel` obligatorio,
+  `contact` y `notes` opcionales): presupuesto `approved` y su OT sin cerrar (otro estado, o la OT `completed|cancelled`
+  → `BUDGET_NOT_REACCEPTABLE`, 422; recepción cerrada → `RECEPTION_CLOSED`). Kind `re_acceptance`; el importe lo calcula
+  el sistema: sin OT, por el presupuesto; con la OT, por la ejecución actual sin los extras (lo resuelto por lo usado,
+  lo pendiente por lo previsto). No exige que haya subido y no cambia el estado. `GET` lista todas las respuestas
+  (`budgets.show`).
+* **Excepciones** (`internal_exceptions`, `POST|GET internal-exceptions`, `GET internal-exceptions/{id}`; body `type`,
+  `subject_id`, `amount`, `reason` de 10 a 1000):
+  * `start_without_authorization`: sobre un presupuesto `sent|approved`, sin OT, con líneas `insurer`, siniestro abierto
+    y **sin** autorización vigente; sin importe (`prohibited`). La consume el alta de la OT;
+  * `workshop_absorption`: sobre una OT no cancelada de un siniestro abierto con líneas `insurer`, con importe
+    obligatorio (> 0). Se usa en el reparto (M8);
+  * sujeto inválido → `INTERNAL_EXCEPTION_SUBJECT_INVALID` (422); otra del mismo tipo sin usar para el mismo sujeto →
+    `INTERNAL_EXCEPTION_ALREADY_GRANTED` (409);
+  * inmutables (`INTERNAL_EXCEPTION_IMMUTABLE`, 409): solo se registra una vez la operación que la consumió
+    (`consumed_at`, `consumed_by`). `Auditable`. **Ninguna sube lo que paga la aseguradora ni lo aceptado por el dueño.**
+  * Listado con filtros `type`, `subject_type` (`budget|work_order`), `subject_id` y `consumed` (booleano).
+* **Advertencia de B** (`ShowWorkOrderResource.owner_amount_warning`, solo con `claims.show`): con líneas `insurer`, si
+  la parte potencial del dueño (ejecución actual + extras aprobados) supera lo aceptado (última aceptación + extras
+  aprobados, cantidad × precio) o el deducible del siniestro subió desde la aceptación. Trae `accepted_amount`,
+  `potential_amount`, `difference`, `amount_exceeded`, `accepted_deductible`, `current_deductible`,
+  `deductible_increased` y `message`; `null` si no hay nada que advertir. Informativa: no bloquea (el control es al
+  confirmar el reparto, M8).
+* **Advertencia de P5:** el detalle de la OT trae `has_claim` (siniestro abierto en la recepción, sin permiso) y el alta
+  de un extra con siniestro abierto responde `meta.warnings` ("Este repuesto quedará a cargo del dueño…"). No cambia
+  las reglas del extra (6.7).
+* **Permisos:** `internal-exceptions.grant` (jefe de taller) e `internal-exceptions.index|show` (jefe de taller y
+  cajero). La recepcionista no otorga ni consulta excepciones.
 
 ---
 
@@ -758,8 +808,8 @@ Entrega M6 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-10-29
 `docs/handoff.md`, sección 14. Las deudas nuevas se registran ahí y no se corrigen sin decisión previa del usuario.
 Abiertas (reverificado el 2026-10-28):
 
-* **#13, clientes aseguradoras:** en diseño (`docs/especificacion-aseguradoras.html`, versión 3); el módulo no está
-  implementado.
+* **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M7 hechas
+  (6.1, 6.4, 6.5 y 6.22–6.26); faltan el reparto y la facturación por responsable (M8–M12).
 * **#14:** disco `local` con `serve` activo y sin uso. No se usa para documentos nuevos: los de siniestros van al disco
   `claim_documents`, sin `serve` (6.24).
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes

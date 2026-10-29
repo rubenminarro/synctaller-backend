@@ -27,6 +27,15 @@ class BudgetClientAcceptanceResource extends JsonResource
             'contact' => $this->contact,
             'notes' => $this->notes,
             'owner_amount' => $this->owner_amount,
+            // Siniestro (M7): autorización vigente y deducible al responder, solo con claims.show.
+            'insurer_authorization_id' => $this->when(
+                $request->user()?->can('claims.show') ?? false,
+                fn () => $this->insurer_authorization_id
+            ),
+            'deductible_amount' => $this->when(
+                $request->user()?->can('claims.show') ?? false,
+                fn () => $this->deductible_amount
+            ),
         ];
     }
 }

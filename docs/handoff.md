@@ -1632,6 +1632,34 @@ Reglas vigentes en `CLAUDE.md`, 6.25.
 
 ---
 
+# 2.65 Bloqueo de la OT y excepciones internas (2026-10-29)
+
+Entrega M7 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.4, §5.4, §5.5 y §9;
+decisiones B, C y P5). Reglas vigentes en `CLAUDE.md`, 6.5 y 6.26.
+
+| Tema | Decisión |
+|---|---|
+| Esquema | Migración `000065`: `budget_client_acceptances.insurer_authorization_id` (nulo, `restrictOnDelete`) y `deductible_amount` (`decimal(14,2)`, nulo, tal como se informa). Migración `000066`: `internal_exceptions` (`type`, `subject` morph, `amount`, `reason`, `granted_by`, `granted_at`, `consumed_at`, `consumed_by` morph). Alias `work_order` en el morph map (WorkOrder no se usaba en ninguna relación polimórfica) |
+| Autorización exigida | Decisión del usuario del 2026-10-29 (corrige §5.5, que pedía cada ítem `authorized\|partial`): basta una autorización vigente del siniestro abierto. M6 ya obliga a decidir todas las líneas; lo no cubierto pasa al dueño y lo controla la aceptación |
+| Sin autorización | Decisión del usuario del 2026-10-29: mientras no hay autorización, las líneas `insurer` no se suman a la parte del dueño. Si se sumaran, la aceptación quedaría siempre desactualizada y `start_without_authorization` no serviría |
+| Siniestro cancelado | Las líneas `insurer` de un presupuesto enviado o aprobado no cambian (M5), pero sin siniestro abierto son del dueño: la OT no exige autorización y sí la re-aceptación por el total. Así una cancelación no deja pasar una OT con la aceptación vieja |
+| Excepción al crear la OT | Decisión del usuario del 2026-10-29: `internal_exception_id` opcional en `POST work-orders`; se valida (tipo, presupuesto, sin usar) y se consume en la transacción del alta. Pasarla cuando no hace falta también es un error (`INTERNAL_EXCEPTION_NOT_APPLICABLE`): una excepción habilita una operación concreta |
+| Absorción | Decisión del usuario del 2026-10-29: M7 solo la otorga (sobre la OT, con importe); el reparto la consume en M8 (R6) |
+| Una sin usar | Una excepción sin usar por sujeto y tipo (`INTERNAL_EXCEPTION_ALREADY_GRANTED`, 409). Decisión de implementación para que M8 no tenga que elegir entre varias; se puede revisar en M8 |
+| Body de la excepción | `type` + `subject_id`: el tipo define si el sujeto es un presupuesto o una OT (la tabla guarda el morph) |
+| Re-aceptación | Decisión del usuario del 2026-10-29: con el presupuesto aprobado y la OT sin cerrar, sin exigir que el importe haya subido. `channel` obligatorio (decisión de implementación: es la evidencia de B; en `approve` sigue opcional por compatibilidad). Con la OT, el importe sale de la ejecución actual sin los extras, porque el tope suma los extras aprobados aparte (§5.4) |
+| Ejecución actual | `OwnerShareService::workOrderOwnerAmount`: como el cierre (mano de obra y servicio por lo presupuestado, repuesto de catálogo por lo usado), pero las líneas sin resolver por lo previsto (cantidad × precio): una OT recién creada no muestra una parte menor que la aceptada. El refactor compartido con la factura (`WorkOrderSaleBreakdown`) sigue en M8 |
+| Advertencia de B | Nombre `owner_amount_warning` (decisión del usuario del 2026-10-29; tarea interna de §10.3), solo con `claims.show`. Incluye el deducible que subió desde la aceptación, que en M8 bloquea el reparto (`CLAIM_DEDUCTIBLE_NOT_ACCEPTED`) |
+| Advertencia de P5 | Decisión del usuario del 2026-10-29: `has_claim` en el detalle de la OT (sin permiso: el depósito agrega extras y no tiene `claims.show`) y el texto de la especificación en `meta.warnings` del alta de un extra |
+| Permisos | Los de §8 (confirmados el 2026-10-29): `internal-exceptions.grant` para el jefe de taller; `index\|show` para jefe de taller y cajero. La re-aceptación usa `budgets.approve` y el historial `budgets.show` |
+| Bloqueo | Presupuesto → autorización → excepción en el alta de la OT (el presupuesto solo se bloquea si tiene líneas `insurer`: el particular no cambia); OT → excepción en la absorción |
+| Particular | Sin líneas `insurer` no cambia nada: mismo `owner_amount` (subtotal), mismas validaciones y errores. Claves nuevas en el detalle de la OT (`has_claim`, `owner_amount_warning` en `null`) y en las aceptaciones; contrato aditivo |
+| Seeder | C05 pasa de enviado a aprobado: el jefe de taller otorga la excepción antes de la versión 1 (queda sin usar), el dueño aprueba con la versión 1 (paga la mitad de la instalación) y re-acepta con la 2 (no paga nada). `DatabaseSeederTest` ajusta los conteos de presupuestos (25 aprobados, 2 enviados) y verifica la aprobación, la re-aceptación y la excepción. La absorción no se siembra: llega con su uso en M8 |
+| Pruebas | `tests/Feature/Claims/WorkOrderInsurerFlowTest` (8): autorización exigida, Ejemplo 3 (la excepción no reemplaza la aceptación) y re-aceptación, excepción otorgada y consumida (inmutable y auditada), siniestro cancelado, advertencias de B (Ejemplo 2 y deducible) y P5, absorción, particular sin cambios y permisos. Los tests existentes de OT, presupuestos y repuestos no cambiaron |
+| Fuera de alcance | Reparto, R5 y consumo de la absorción (M8); el bloqueo de entrega y facturación por deducible (M9). Una excepción `start_without_authorization` sin usar sigue valiendo si el presupuesto se reabre y se vuelve a aprobar: si molesta, se decide en M8 |
+
+---
+
 ---
 
 # 2.2 Autenticación
@@ -4134,6 +4162,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Documentos privados de siniestros (2.62)
 [✓] Responsable por línea del presupuesto (2.63)
 [✓] Autorizaciones de la aseguradora (2.64)
+[✓] Bloqueo de la OT, re-aceptación y excepciones internas (2.65)
 ```
 
 ## Próximo

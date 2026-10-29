@@ -153,6 +153,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'insurer-authorizations.store',
             'insurer-authorizations.show',
 
+            /* internal exception permissions (M7) */
+            'internal-exceptions.index',
+            'internal-exceptions.grant',
+            'internal-exceptions.show',
+
             /* budget permissions */
             'budgets.index',
             'budgets.store',
@@ -512,6 +517,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'claims.index', 'claims.store', 'claims.show', 'claims.update', 'claims.cancel',
                     'claim-documents.index', 'claim-documents.store', 'claim-documents.download',
                     'insurer-authorizations.index', 'insurer-authorizations.store', 'insurer-authorizations.show',
+                    'internal-exceptions.index', 'internal-exceptions.grant', 'internal-exceptions.show',
                     'dashboard.view', 'reports.productivity',
                 ],
             ],
@@ -535,6 +541,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'claims.index', 'claims.show',
                     'claim-documents.index', 'claim-documents.download',
                     'insurer-authorizations.index', 'insurer-authorizations.show',
+                    'internal-exceptions.index', 'internal-exceptions.show',
                     'dashboard.view', 'reports.sales', 'reports.clients',
                 ],
             ],

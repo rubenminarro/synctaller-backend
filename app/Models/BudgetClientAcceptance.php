@@ -26,6 +26,8 @@ class BudgetClientAcceptance extends Model
         'contact',
         'notes',
         'owner_amount',
+        'insurer_authorization_id',
+        'deductible_amount',
     ];
 
     protected $casts = [
@@ -33,6 +35,7 @@ class BudgetClientAcceptance extends Model
         'channel' => ClientDecisionChannel::class,
         'decided_at' => 'datetime',
         'owner_amount' => 'decimal:2',
+        'deductible_amount' => 'decimal:2',
     ];
 
     protected static function booted(): void
@@ -52,6 +55,14 @@ class BudgetClientAcceptance extends Model
     public function budget(): BelongsTo
     {
         return $this->belongsTo(Budget::class);
+    }
+
+    /**
+     * Autorización de la aseguradora vigente al responder (M7).
+     */
+    public function insurerAuthorization(): BelongsTo
+    {
+        return $this->belongsTo(InsurerAuthorization::class);
     }
 
     public function decidedBy(): BelongsTo
