@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\DiagnosticController;
 use App\Http\Controllers\Api\DiagnosticItemController;
 use App\Http\Controllers\Api\DiagnosticItemPhotoController;
 use App\Http\Controllers\Api\DiagnosticItemTemplateController;
+use App\Http\Controllers\Api\InsurerController;
+use App\Http\Controllers\Api\InsurerContactController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetItemController;
 use App\Http\Controllers\Api\MechanicController;
@@ -109,6 +111,19 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
     Route::post('diagnostic-item-templates/{diagnostic_item_template}/activate', [DiagnosticItemTemplateController::class, 'activate'])->name('diagnostic-item-templates.activate');
 
     Route::post('diagnostic-item-templates/{diagnostic_item_template}/deactivate', [DiagnosticItemTemplateController::class, 'deactivate'])->name('diagnostic-item-templates.deactivate');
+
+    // Aseguradoras (M2) y sus contactos.
+    Route::apiResource('insurers', InsurerController::class)->except(['update']);
+
+    Route::patch('insurers/{insurer}', [InsurerController::class, 'update'])->name('insurers.update');
+
+    Route::post('insurers/{insurer}/activate', [InsurerController::class, 'activate'])->name('insurers.activate');
+
+    Route::post('insurers/{insurer}/deactivate', [InsurerController::class, 'deactivate'])->name('insurers.deactivate');
+
+    Route::apiResource('insurers.contacts', InsurerContactController::class)->except(['show', 'update']);
+
+    Route::patch('insurers/{insurer}/contacts/{contact}', [InsurerContactController::class, 'update'])->name('insurers.contacts.update');
 
     Route::apiResource('budgets', BudgetController::class);
 

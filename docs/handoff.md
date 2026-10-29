@@ -1538,6 +1538,26 @@ se podían cargar. El nombre se armaba a mano en 15 lugares: los 7 que preveía 
 
 ---
 
+# 2.60 Aseguradoras (2026-10-29)
+
+Entrega M2 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.2 y §9; decisión D). Reglas
+vigentes en `CLAUDE.md`, 6.22.
+
+| Tema | Decisión |
+|---|---|
+| Modelo | Migración `000060`: `insurers` (`client_id`, `code` `ASE-`, `status`, `payment_term_days`, `notes`, `created_by`, baja lógica) e `insurer_contacts` (`name`, `role`, `phone`, `email`, `is_primary`, `notes`). Los datos fiscales y de contacto de la aseguradora son los de su cliente empresa: no se duplican |
+| Unicidad | Una aseguradora vigente por cliente, controlada en `InsurerService` y no con un índice único, para que una aseguradora dada de baja no retenga a su cliente (se puede volver a vincular) |
+| Avisos (D) | Decisión del usuario del 2026-10-29: solo el cliente creado junto con la aseguradora nace con `notifications_enabled = false`. Un cliente existente conserva su configuración y la respuesta lo advierte en `meta.warnings`. Motivo: `notifications_enabled` es un interruptor único para los 6 avisos al cliente; desactivarlo a una empresa con vehículos propios le cortaría también esos avisos. Verificado en el código (`ClientNotificationService`): no afecta a los avisos internos |
+| Alta | `client_id` o `client`, uno de los dos (`required_without` y `prohibits`). Los datos de `client` se validan con las reglas de `StoreClientRequest` con `kind = company`, sin duplicarlas; sus errores vuelven como `client.<campo>` |
+| Código | `ASE-` es una serie nueva de `DocumentSequenceService` (E3): un caso más en `DocumentSeries`, sin migración propia |
+| Fuera de alcance | `deductible_billing_mode` (decisión del usuario del 2026-10-29: se agrega en M10, en `insurers` y `claims`) y el bloqueo de la baja con siniestros (`INSURER_IN_USE`, M3) |
+| Permisos | Los de la especificación (decisión del usuario del 2026-10-29): `insurers.index\|show` para recepcionista, jefe de taller y cajero; `insurers.store\|update\|destroy\|change-status` para recepcionista. Sin permisos propios para contactos |
+| Cliente | `ClientService` bloquea la baja del cliente vinculado (`CLIENT_LINKED_TO_INSURER`, 409) y su cambio a persona (`CLIENT_KIND_NOT_EDITABLE`) |
+| Seeder | `InsurerSeeder` (después de `ClientsSeeder`), por `InsurerService` con el recepcionista: "Seguros del Sur S.A." activa, con dos contactos, y "Aseguradora Guaraní S.A." inactiva. `DatabaseSeederTest` verifica los dos estados, el cliente empresa sin avisos y el contacto principal |
+| Pruebas | `tests/Feature/Insurers/InsurerTest` (7): alta con cliente nuevo y existente (advertencia), validaciones, estados, contactos con un solo principal y binding anidado, protección del cliente y nuevo vínculo tras la baja, y permisos por rol |
+
+---
+
 ---
 
 # 2.2 Autenticación
@@ -4035,6 +4055,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Registro de la respuesta del cliente al presupuesto (2.57)
 [✓] Spike T0 de tenancy, descartado; informe en docs/spike-t0-informe.md (2.58)
 [✓] Cliente persona o empresa (2.59)
+[✓] Aseguradoras y sus contactos (2.60)
 ```
 
 ## Próximo

@@ -25,10 +25,11 @@ class ClientService
             $kind = $this->kindOf($data, $client);
 
             if ($kind !== $client->kind) {
-                // Las facturas y recepciones ya muestran el nombre del cliente: con ellas, el tipo queda fijo.
-                if ($client->receptions()->withTrashed()->exists() || $client->invoices()->exists()) {
+                // Las facturas y recepciones ya muestran el nombre del cliente: con ellas, el tipo queda fijo. El
+                // cliente de una aseguradora es siempre una empresa.
+                if ($client->receptions()->withTrashed()->exists() || $client->invoices()->exists() || $client->insurer()->exists()) {
                     throw new ClientException(
-                        'El cliente ya tiene recepciones o facturas: no se puede cambiar de persona a empresa ni al revés.',
+                        'El cliente ya tiene recepciones o facturas, o es una aseguradora: no se puede cambiar de persona a empresa ni al revés.',
                         422,
                         'CLIENT_KIND_NOT_EDITABLE'
                     );
@@ -45,6 +46,14 @@ class ClientService
 
     public function delete(Client $client): void
     {
+        if ($client->insurer()->exists()) {
+            throw new ClientException(
+                'El cliente está vinculado a una aseguradora y no puede eliminarse. Dé de baja primero la aseguradora.',
+                409,
+                'CLIENT_LINKED_TO_INSURER'
+            );
+        }
+
         if ($client->vehicles()->exists()
             || $client->receptions()->withTrashed()->exists()
             || $client->invoices()->exists()) {
