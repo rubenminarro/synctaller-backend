@@ -204,8 +204,8 @@ Resumen; el detalle está en la especificación §3 y en la revisión §9.
 ## 8. Validación externa (G1–G10, V1–V22)
 
 **Respuestas del 2026-10-28.** G1–G5 tienen primeras respuestas; la transcripción y su efecto están en §10.1 de
-`docs/especificacion-aseguradoras.html` (versión 3). No se indicó quién respondió: falta la confirmación escrita del
-contador (V21). En resumen:
+`docs/especificacion-aseguradoras.html` (versión 3). Las dio un dueño de taller que también lleva la contabilidad (V21, 2026-10-29): valen como base, pero falta la
+confirmación escrita del contador para la parte fiscal. En resumen:
 
 * **G1:** dos facturas desde la OT del siniestro: a la aseguradora, neta del deducible; al dueño, por el deducible con
   un concepto propio. La modalidad varía por aseguradora y póliza.
@@ -266,8 +266,10 @@ propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2, E3 y
 (último merge `4f1ea1a`, M7). La documentación (README, handoff, `CLAUDE.md` y este documento) se puso al día antes de
 M8; con eso se resolvieron D4 y D6. **P10 aprobada el 2026-10-29** (handoff 2.66): la corrección de facturas emitidas
 registra la nota de crédito emitida fuera del sistema, por línea y hasta el saldo, en cualquier factura; se implementa
-como entrega propia entre M8 y M9. V18 y V19 siguen pendientes con el contador. **Siguiente: diseño de M8 (reparto
-económico).** Siguen esperando revisión M10 (modalidad neta del deducible) y M12 (retenciones).
+como entrega propia entre M8 y M9. V18 y V19 siguen pendientes con el contador. El mismo día se cerraron internamente
+V21 (las respuestas a G1–G5 las dio un dueño de taller que también lleva la contabilidad; se busca igual la confirmación de un contador), V9 (estándar de 10 talleres para la línea T),
+G6–G9, V1, V2, V4, V6–V8 y V12 (handoff 2.67); ninguna validación pendiente bloquea M8. **Siguiente: diseño de M8
+(reparto económico).** Siguen esperando revisión M10 (modalidad neta del deducible) y M12 (retenciones).
 
 **Siguiente paso recomendado, en orden:**
 

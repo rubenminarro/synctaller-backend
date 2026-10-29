@@ -1681,6 +1681,21 @@ procedimiento autorizado. El usuario cerró P10 antes de diseñar M8, sin espera
 
 ---
 
+# 2.67 Cierres internos de validaciones (2026-10-29)
+
+Antes de diseñar M8, el usuario cerró como decisiones de producto las preguntas que no necesitan un profesional. Detalle
+en `docs/especificacion-aseguradoras.html`, §10.1 ("Cierres internos").
+
+| Tema | Decisión |
+|---|---|
+| V21 | Las respuestas a G1–G5 las dio **un dueño de taller que también lleva la contabilidad**: valen como base. Por recomendación (decisión del usuario), igual se busca la respuesta correcta y completa de un contador; su parte fiscal (IVA del deducible, retención del 30 %, nota de crédito y su plazo) sigue sin validar. M10 y M12 siguen exigiendo la confirmación escrita del contador. P10 se mantiene: no supone ninguna regla fiscal, solo registra lo emitido afuera |
+| V9 | Muchos talleres a futuro, pocos al principio. Estándar de desarrollo y pruebas de la línea T: 10 talleres (al menos 3 dentro de la suite), con el volumen de los datos de ejemplo por taller. La infraestructura de producción se decide antes de T6 |
+| Cerradas | G6, G7, G8, G9, V1, V2, V4, V6, V7, V8 y V12, con las reglas ya aprobadas o el alcance del MVP. Se revisan con el uso real |
+| Pendientes con profesional | Contador: G1, V15, V16, V20, G3, V17, G4, V22, V18, V19, V11 y la dirección en la factura (V10). Asesor legal: V5, G10, V14 y la parte legal de V13. El dígito verificador del RUC se toma de la documentación oficial de la SET |
+| Efecto | Ninguna pendiente bloquea M8, P10 ni M9 con deducible 0 |
+
+---
+
 ---
 
 # 2.2 Autenticación
