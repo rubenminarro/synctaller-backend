@@ -63,15 +63,15 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 | Auditoría | Quién cambió qué y cuándo (antes/después, IP) en precios, costos, facturación, pagos, compras, usuarios, roles, permisos y datos maestros; login, login fallido y logout. Inmutable, solo para el administrador |
 | Exportación y comprobantes | Reportes en CSV (Excel) y PDF; PDF de presupuesto, factura (representación sin valor fiscal), recibo y comprobante de entrega |
 | Notificaciones | Emails al cliente (presupuesto enviado, vehículo listo, factura por vencer / vencida, mantenimiento próximo / vencido) con registro, reenvío y baja por cliente; bandeja interna por usuario (presupuesto aprobado/rechazado, OT completada, repuesto sin stock, cuentas por pagar vencidas) |
-| Aseguradoras y siniestros (en curso) | Aseguradoras vinculadas a un cliente empresa, con contactos; siniestros por recepción (asegurado, perito, deducible) con documentos privados descargables solo por la API; autorizaciones de la aseguradora por línea y versionadas; excepciones internas. Faltan el reparto y la facturación por responsable (`CLAUDE.md` 6.22–6.26) |
+| Aseguradoras y siniestros (en curso) | Aseguradoras vinculadas a un cliente empresa, con contactos; siniestros por recepción (asegurado, perito, deducible) con documentos privados descargables solo por la API; autorizaciones de la aseguradora por línea y versionadas; excepciones internas; reparto económico de la OT por responsable (aseguradora, dueño, taller) con versiones. Faltan las notas de crédito registradas y la facturación por responsable (`CLAUDE.md` 6.22–6.27) |
 | Preferencias y logo | Preferencias visuales de cada usuario para el frontend (tema, colores, tipografía, distribución y navegación); logo del sistema (solo administrador; con un PNG transparente se recorta y se genera una versión negra) en los PDF y los emails a clientes |
 
 ### Estado real (verificado el 2026-10-29)
 
 | Estado | Qué |
 |---|---|
-| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema, catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 268 rutas API y 440 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
-| En curso | Aseguradoras y siniestros: M1–M7 de `docs/especificacion-aseguradoras.html` implementadas; siguen el reparto económico (M8) y la facturación por responsable (M9–M12) |
+| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema, catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 274 rutas API y 449 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
+| En curso | Aseguradoras y siniestros: M1–M8 de `docs/especificacion-aseguradoras.html` implementadas; siguen las notas de crédito registradas (P10) y la facturación por responsable (M9–M12) |
 | Pendiente, sin diseño | Notificaciones por WhatsApp |
 
 ---
@@ -221,7 +221,7 @@ estado final por los Services, con fechas en los últimos tres meses.
 | H14–H17 | OT completada sin entregar: pagada (H14), al contado sin cobrar (H15), factura en borrador (H16), sin facturar (H17) |
 | C01–C03 | Recepción pendiente: sin diagnóstico, con diagnóstico pendiente, con diagnóstico en curso |
 | C04, C06–C08, C15–C16 | Presupuesto en borrador, rechazado, rechazado y reabierto, cancelado; enviado a clientes que no reciben avisos (omitidos) |
-| C05, C07 | Siniestro abierto con líneas a cargo de la aseguradora. C05: autorización en dos versiones (la segunda con un documento como evidencia), presupuesto aprobado y re-aceptado, y una excepción para iniciar sin autorización sin usar. C07: autorización invalidada al reabrir el presupuesto |
+| C05, C07 | Siniestro abierto con líneas a cargo de la aseguradora. C05: autorización en dos versiones (la segunda con un documento como evidencia), presupuesto aprobado y re-aceptado, una excepción para iniciar sin autorización sin usar y la OT completada con su reparto en tres versiones (sustituida, confirmada y borrador). C07: autorización invalidada al reabrir el presupuesto |
 | C09, C14 | OT pendiente (C14 con repuestos reservados) |
 | C10–C13 | OT en curso (C12 con un extra pendiente de la respuesta del cliente, C13 esperando un repuesto sin stock) o pausada (C11) |
 | X01–X02 | Recepción cancelada (X02 con la OT cancelada) |
@@ -318,7 +318,7 @@ vendor/bin/phpunit
 composer test
 ```
 
-440 tests en `tests/Feature`, uno o más archivos por módulo. No necesitan internet: `phpunit.xml` desactiva la
+449 tests en `tests/Feature`, uno o más archivos por módulo. No necesitan internet: `phpunit.xml` desactiva la
 consulta DNS de los emails (`EMAIL_DNS_CHECK=false`).
 
 Usan una base SQLite en archivo, `database/testing.sqlite` (la crea `tests/bootstrap.php`; está en `.gitignore`):
@@ -357,9 +357,9 @@ API Resource (Resource para listados, ShowResource para detalle)
 
 | Carpeta | Contenido |
 |---|---|
-| `app/Http/Controllers/Api` | Endpoints (56 controllers) |
+| `app/Http/Controllers/Api` | Endpoints (57 controllers) |
 | `app/Http/Requests` | Validación |
-| `app/Services` | Lógica de negocio (41 services) |
+| `app/Services` | Lógica de negocio (43 services) |
 | `app/Models` | Modelos Eloquent |
 | `app/Http/Resources` | Contrato JSON público |
 | `app/Enums` | Estados y tipos |

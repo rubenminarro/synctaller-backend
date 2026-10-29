@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Services\WorkOrderClosingService;
+use App\Services\AllocationService;
 use App\Services\OwnerShareService;
 use App\Services\WorkOrderCommissionService;
 use Illuminate\Http\Request;
@@ -94,6 +95,17 @@ class ShowWorkOrderResource extends JsonResource
                 $this->relationLoaded('parts') &&
                 (bool) $request->user()?->can('claims.show'),
                 fn () => app(OwnerShareService::class)->workOrderWarning($this->resource)
+            ),
+            // Reparto (M8): si la OT lo requiere y, con permiso, el resumen de la versión confirmada.
+            'requires_allocation' => app(OwnerShareService::class)->requiresAllocation($this->resource),
+            'allocation' => $this->when(
+                (bool) $request->user()?->can('work-order-allocations.show'),
+                fn () => ($confirmed = $this->resource->confirmedAllocation()->first()) ? [
+                    'id' => $confirmed->id,
+                    'version' => $confirmed->version,
+                    'confirmed_at' => $confirmed->confirmed_at,
+                    ...collect(app(AllocationService::class)->summary($confirmed))->only(['responsibles', 'total', 'deductible_amount', 'deductible_fiscal_pending'])->all(),
+                ] : null
             ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

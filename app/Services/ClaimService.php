@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\AllocationPortionType;
+use App\Enums\AllocationStatus;
 use App\Enums\BudgetItemResponsibility;
 use App\Enums\BudgetStatus;
 use App\Enums\ClaimStatus;
@@ -14,6 +16,9 @@ use App\Models\Claim;
 use App\Models\Insurer;
 use App\Models\Reception;
 use App\Models\User;
+use App\Models\WorkOrderAllocation;
+use App\Models\WorkOrderAllocationLine;
+use App\Support\Format;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -84,6 +89,10 @@ class ClaimService
                 $this->ensureUniqueClaimNumber($claim->insurer_id, $data['claim_number'], $claim->id);
             }
 
+            if (array_key_exists('deductible_amount', $data)) {
+                $this->ensureDeductibleCoversAllocations($claim, $data['deductible_amount']);
+            }
+
             $claim->update($data);
 
             return $this->load($claim);
@@ -91,8 +100,9 @@ class ClaimService
     }
 
     /**
-     * Cancelación manual (por ejemplo, la aseguradora rechaza la cobertura y el dueño paga como particular). Los
-     * controles sobre el reparto y las facturas de la aseguradora llegan con M8 y M9.
+     * Cancelación manual (por ejemplo, la aseguradora rechaza la cobertura y el dueño paga como particular). Con lo
+     * cubierto en un reparto confirmado no se cancela (M8): primero se corrige el reparto. El control sobre las
+     * facturas de la aseguradora llega con M9.
      */
     public function cancel(Claim $claim, string $reason, User $user): Claim
     {
@@ -102,6 +112,18 @@ class ClaimService
             $claim = Claim::whereKey($claim->id)->lockForUpdate()->firstOrFail();
 
             $this->ensureOpen($claim, 'cancelarse', 'CLAIM_NOT_CANCELLABLE');
+
+            $covered = WorkOrderAllocationLine::where('portion_type', AllocationPortionType::INSURER_COVERED)
+                ->whereHas('allocation', fn ($q) => $q->where('claim_id', $claim->id)->where('status', AllocationStatus::CONFIRMED))
+                ->exists();
+
+            if ($covered) {
+                throw new ClaimException(
+                    'El siniestro tiene un reparto confirmado con importes a cargo de la aseguradora: corrija el reparto antes de cancelarlo.',
+                    422,
+                    'CLAIM_HAS_INSURER_ALLOCATIONS'
+                );
+            }
 
             $claim->update([
                 'status' => ClaimStatus::CANCELLED,
@@ -119,6 +141,25 @@ class ClaimService
 
             return $this->load($claim);
         });
+    }
+
+    /**
+     * El deducible no baja de lo ya asignado en los repartos confirmados (M8, decisión del 2026-10-29): primero se
+     * corrige el reparto. Desconocido (nulo) tampoco, si ya hay deducible asignado.
+     */
+    private function ensureDeductibleCoversAllocations(Claim $claim, int|float|string|null $deductible): void
+    {
+        $allocated = (string) WorkOrderAllocation::where('claim_id', $claim->id)
+            ->where('status', AllocationStatus::CONFIRMED)
+            ->sum('deductible_amount');
+
+        if (bccomp($allocated, '0', 2) > 0 && ($deductible === null || bccomp((string) $deductible, $allocated, 2) < 0)) {
+            throw new ClaimException(
+                'El deducible no puede quedar por debajo de lo ya asignado en los repartos confirmados (' . Format::money($allocated) . '): corrija primero el reparto.',
+                422,
+                'CLAIM_DEDUCTIBLE_BELOW_ALLOCATED'
+            );
+        }
     }
 
     public function load(Claim $claim): Claim

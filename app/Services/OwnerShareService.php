@@ -47,6 +47,34 @@ class OwnerShareService
         return $budget->items()->where('responsibility', BudgetItemResponsibility::INSURER)->exists();
     }
 
+    /**
+     * La OT requiere reparto (M8): su presupuesto tiene líneas de la aseguradora y la recepción, un siniestro no
+     * cancelado. Si no, es particular (R10).
+     */
+    public function requiresAllocation(WorkOrder $workOrder): bool
+    {
+        $workOrder->loadMissing('budget');
+
+        return $workOrder->budget !== null
+            && $this->hasInsurerItems($workOrder->budget)
+            && Claim::where('reception_id', $workOrder->reception_id)->where('status', '!=', ClaimStatus::CANCELLED)->exists();
+    }
+
+    /**
+     * Tope aceptado por el dueño en la OT (decisión B, R5): la última aceptación de su presupuesto más los extras que
+     * aprobó (cantidad × precio aprobados).
+     */
+    public function acceptedLimit(WorkOrder $workOrder): string
+    {
+        $workOrder->loadMissing(['budget', 'parts']);
+
+        return bcadd(
+            Decimal::of($this->lastAcceptance($workOrder->budget)?->owner_amount, 2),
+            $this->extras($workOrder->parts)[0],
+            2
+        );
+    }
+
     public function openClaim(int $receptionId): ?Claim
     {
         return Claim::where('reception_id', $receptionId)->where('status', ClaimStatus::OPEN)->first();

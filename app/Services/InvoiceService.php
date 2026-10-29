@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\InvoiceCondition;
 use App\Enums\InvoiceStatus;
 use App\Enums\TaxRate;
-use App\Enums\WorkOrderItemStatus;
 use App\Enums\WorkOrderStatus;
 use App\Exceptions\InvoiceException;
 use App\Models\Invoice;
@@ -23,6 +22,12 @@ use Illuminate\Support\Facades\DB;
  */
 class InvoiceService
 {
+    public function __construct(
+        protected WorkOrderSaleBreakdown $saleBreakdown,
+        protected OwnerShareService $ownerShare
+    ) {
+    }
+
     public function generate(WorkOrder $workOrder, User $user): Invoice
     {
         return DB::transaction(function () use ($workOrder, $user) {
@@ -34,6 +39,15 @@ class InvoiceService
                     'Solo puede facturarse una orden de trabajo completada.',
                     422,
                     'WORK_ORDER_NOT_INVOICEABLE'
+                );
+            }
+
+            // Siniestro (M8, R10): una OT con reparto nunca se factura entera al dueño; se factura por responsable (M9).
+            if ($this->ownerShare->requiresAllocation($workOrder)) {
+                throw new InvoiceException(
+                    'La orden de trabajo es de un siniestro con líneas a cargo de la aseguradora: se factura por responsable desde su reparto.',
+                    422,
+                    'WORK_ORDER_REQUIRES_ALLOCATION_INVOICING'
                 );
             }
 
@@ -238,50 +252,21 @@ class InvoiceService
      * Mano de obra y servicios no cancelados, repuestos fuera de catálogo no
      * cancelados (lo presupuestado) y repuestos de catálogo usados (cantidad neta).
      */
+    /**
+     * Una línea por concepto vendido (WorkOrderSaleBreakdown, compartido con el reparto).
+     */
     private function linesFromWorkOrder(WorkOrder $workOrder): array
     {
-        $lines = [];
-
-        foreach ($workOrder->items as $item) {
-            $budgetItem = $item->budgetItem;
-
-            if ($item->status === WorkOrderItemStatus::CANCELLED || $budgetItem === null) {
-                continue;
-            }
-
-            // Los repuestos de catálogo se facturan por lo consumido (abajo).
-            if (!$item->isCommissionable() && $budgetItem->part_id !== null) {
-                continue;
-            }
-
-            $lines[] = [
-                'source_type' => $item->getMorphClass(),
-                'source_id' => $item->id,
-                'description' => $item->description,
-                'quantity' => $budgetItem->quantity,
-                'base_unit_price' => $budgetItem->unit_price,
-                'base_total' => $budgetItem->total,
-            ];
-        }
-
-        foreach ($workOrder->parts as $line) {
-            $net = $line->netQuantity();
-
-            if (bccomp($net, '0', 3) === 0) {
-                continue;
-            }
-
-            $lines[] = [
-                'source_type' => $line->getMorphClass(),
-                'source_id' => $line->id,
-                'description' => $line->part->name,
-                'quantity' => $net,
-                'base_unit_price' => $line->unit_price,
-                'base_total' => $line->totalPrice(),
-            ];
-        }
-
-        return $lines;
+        return $this->saleBreakdown->concepts($workOrder)
+            ->map(fn (array $concept) => [
+                'source_type' => $concept['source_type'],
+                'source_id' => $concept['source_id'],
+                'description' => $concept['description'],
+                'quantity' => $concept['quantity'],
+                'base_unit_price' => $concept['base_unit_price'],
+                'base_total' => $concept['base_total'],
+            ])
+            ->all();
     }
 
     /**

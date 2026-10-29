@@ -22,7 +22,8 @@ use Illuminate\Database\Seeder;
  * completada (con cierre económico y comisiones congeladas) y cancelada.
  *
  * Línea de tiempo (días desde la llegada): se crea el día 1 a la tarde, se
- * inicia el día 2 y se completa `done` días después del día 1.
+ * inicia el día 2 y se completa `done` días después del día 1. Con `day`, todo corre esos días más tarde (C05: la
+ * OT se crea después de la segunda versión de la autorización y de la re-aceptación).
  */
 class WorkOrderSeeder extends Seeder
 {
@@ -52,7 +53,7 @@ class WorkOrderSeeder extends Seeder
     private function play(array $scenario, $budget, $manager): void
     {
         $plan = $scenario['work_order'];
-        $at = fn (int $offset, int $hour) => ExampleScenarios::at($scenario, $offset, $hour);
+        $at = fn (int $offset, int $hour) => ExampleScenarios::at($scenario, ExampleScenarios::workOrderDay($scenario) + $offset, $hour);
         $mechanic = ExampleScenarios::mechanic($plan['mechanic']);
 
         $workOrder = ExampleScenarios::travel($at(1, 17), fn () => $this->workOrderService->createFromBudget($budget->refresh(), $mechanic, $manager->id));
@@ -120,7 +121,7 @@ class WorkOrderSeeder extends Seeder
         foreach ($extras as [$sku, $quantity, $decision]) {
             $part = Part::where('sku', $sku)->firstOrFail();
 
-            $line = ExampleScenarios::travel(ExampleScenarios::at($scenario, 2, 11), fn () => $this->workOrderPartService->add($workOrder, [
+            $line = ExampleScenarios::travel(ExampleScenarios::at($scenario, ExampleScenarios::workOrderDay($scenario) + 2, 11), fn () => $this->workOrderPartService->add($workOrder, [
                 'part_id' => $part->id,
                 'quantity' => $quantity,
                 'unit_price' => $part->sale_price,
@@ -134,8 +135,8 @@ class WorkOrderSeeder extends Seeder
             ];
 
             match ($decision) {
-                'approve' => ExampleScenarios::travel(ExampleScenarios::at($scenario, 2, 13), fn () => $this->workOrderPartService->approve($workOrder, $line, $answer, $receptionist)),
-                'reject' => ExampleScenarios::travel(ExampleScenarios::at($scenario, 2, 13), fn () => $this->workOrderPartService->reject($workOrder, $line, $answer, $receptionist)),
+                'approve' => ExampleScenarios::travel(ExampleScenarios::at($scenario, ExampleScenarios::workOrderDay($scenario) + 2, 13), fn () => $this->workOrderPartService->approve($workOrder, $line, $answer, $receptionist)),
+                'reject' => ExampleScenarios::travel(ExampleScenarios::at($scenario, ExampleScenarios::workOrderDay($scenario) + 2, 13), fn () => $this->workOrderPartService->reject($workOrder, $line, $answer, $receptionist)),
                 default => null,
             };
         }
@@ -147,7 +148,7 @@ class WorkOrderSeeder extends Seeder
      */
     private function finish(array $scenario, WorkOrder $workOrder, $items, $manager, int $doneDay): void
     {
-        $at = fn (int $hour) => ExampleScenarios::at($scenario, $doneDay, $hour);
+        $at = fn (int $hour) => ExampleScenarios::at($scenario, ExampleScenarios::workOrderDay($scenario) + $doneDay, $hour);
         $mechanicUser = $workOrder->mechanic->user;
 
         ExampleScenarios::travel($at(11), function () use ($workOrder, $mechanicUser) {

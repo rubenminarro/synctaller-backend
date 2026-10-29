@@ -233,9 +233,10 @@ class BudgetService
     }
 
     /**
-     * Re-aceptación del dueño (M7, decisión B): con el presupuesto aprobado y su OT sin cerrar, confirma el importe
-     * actual a su cargo (sin la OT, según el presupuesto; con la OT, según la ejecución, sin los extras). No exige que
-     * el importe haya subido y no cambia el estado del presupuesto.
+     * Re-aceptación del dueño (M7, decisión B): con el presupuesto aprobado y su OT no cancelada, confirma el importe
+     * actual a su cargo (sin la OT, según el presupuesto; con la OT, según la ejecución, sin los extras). Con la OT
+     * completada también: es la salida del Ejemplo 2 cuando el reparto supera lo aceptado (R5, M8). La recepción
+     * cerrada la impide. No exige que el importe haya subido y no cambia el estado del presupuesto.
      *
      * @param array{channel: string, contact?: string|null, notes?: string|null} $decision
      */
@@ -255,9 +256,9 @@ class BudgetService
             $budget = Budget::whereKey($budget->id)->lockForUpdate()->firstOrFail();
             $workOrder = $budget->workOrder()->first();
 
-            if ($workOrder && in_array($workOrder->status, [WorkOrderStatus::COMPLETED, WorkOrderStatus::CANCELLED], true)) {
+            if ($workOrder && $workOrder->status === WorkOrderStatus::CANCELLED) {
                 throw new BudgetException(
-                    'La orden de trabajo del presupuesto ya está cerrada: no admite una re-aceptación.',
+                    'La orden de trabajo del presupuesto está cancelada: no admite una re-aceptación.',
                     422,
                     'BUDGET_NOT_REACCEPTABLE'
                 );
