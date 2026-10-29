@@ -395,6 +395,47 @@ Responsable por línea del presupuesto (M5, ver `CLAUDE.md` 6.4). Todas las lín
 | Cambiarla con el presupuesto enviado | `PATCH {{base_url}}/budgets/{{budget_id}}/items/{id}` | `{ "responsibility": "owner" }` | 422 | `BUDGET_NOT_EDITABLE` |
 | Cancelar el siniestro | `POST {{base_url}}/claims/{{claim_id}}/cancel` | `{ "reason": "..." }` | 200 | Las líneas `insurer` de los borradores vuelven a `owner`; las de los enviados no cambian |
 
+Autorizaciones de la aseguradora (M6, ver `CLAUDE.md` 6.25). Sobre un presupuesto **enviado o aprobado** de la recepción
+de `{{claim_id}}` con líneas `insurer`. Importes sin IVA salvo `"amounts_include_tax": true`.
+
+`POST {{base_url}}/budgets/{{budget_id}}/insurer-authorizations`
+
+```json
+{
+  "amounts_include_tax": true,
+  "decided_at": "2026-10-29",
+  "channel": "email",
+  "authorization_number": "AUT-001",
+  "adjuster_name": "Ramón Giménez",
+  "items": [
+    { "budget_item_id": {{budget_item_id}}, "decision": "partial", "authorized_total": 330000, "notes": "Tope del baremo." },
+    { "budget_item_id": {{budget_item2_id}}, "decision": "authorized" }
+  ]
+}
+```
+
+Esperado: `201`, `version` 1, `status.value` `current`, `result.value` `partial`; la primera línea con
+`authorized_total` `300000.00` (330.000 con IVA) → `insurer_authorization_id`.
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Presupuesto en borrador | `POST …/budgets/{borrador}/insurer-authorizations` | el de arriba | 422 | `INSURER_AUTHORIZATION_BUDGET_NOT_AUTHORIZABLE` |
+| Sin siniestro abierto | ídem, en una recepción sin siniestro (o cancelado) | ídem | 422 | `BUDGET_WITHOUT_CLAIM` |
+| Falta una línea `insurer` | ídem | `items` con una sola línea | 422 | `INSURER_AUTHORIZATION_ITEMS_INCOMPLETE` |
+| Línea del dueño u otro presupuesto | ídem | `budget_item_id` ajeno | 422 | `INSURER_AUTHORIZATION_ITEM_MISMATCH` |
+| Más que lo presupuestado | ídem | `partial` con `authorized_total` mayor al total del ítem, o `authorized_quantity` mayor | 422 | `INSURER_AUTHORIZATION_EXCEEDS_BUDGET` |
+| Parcial sin importe, sin IVA indicado o sin medio | ídem | — | 422 | `VALIDATION_ERROR` |
+| Nueva versión igual o menor | `POST` de nuevo | otra decisión, sin subir importes | 201 | `version` 2; la anterior queda `superseded` |
+| Nueva versión que sube un importe sin documento | ídem | `authorized` donde antes era `partial` | 422 | `INSURER_AUTHORIZATION_EVIDENCE_REQUIRED` |
+| Con documento | ídem | `"document_ids": [{{claim_document_id}}]` | 201 | `documents` lo trae, con `insurer_authorization_id` |
+| Documento de otro siniestro o ya vinculado | ídem | `document_ids` ajeno | 422 | `INSURER_AUTHORIZATION_DOCUMENT_MISMATCH` |
+| Dar de baja el documento vinculado | `DELETE {{base_url}}/claims/{{claim_id}}/documents/{{claim_document_id}}` | `{ "reason": "..." }` | 409 | `CLAIM_DOCUMENT_IN_USE` |
+| Versiones | `GET {{base_url}}/budgets/{{budget_id}}/insurer-authorizations` | — | 200 | Todas, por versión |
+| Detalle | `GET {{base_url}}/budgets/{{budget_id}}/insurer-authorizations/{{insurer_authorization_id}}` | — | 200 | Con otro presupuesto en la URL → 404 |
+| Detalle del presupuesto | `GET {{base_url}}/budgets/{{budget_id}}` | — | 200 | `insurer_authorization` con la vigente (sin el permiso, la clave no viene) |
+| Reabrir o cancelar el presupuesto | `POST {{base_url}}/budgets/{{budget_id}}/reject` y `/reopen`, o `/cancel` | — | 200 | La vigente queda `invalidated` con el motivo |
+| Sin permiso | cajero: registrar; mecánico o depósito: listar | — | 403 | `FORBIDDEN` |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.

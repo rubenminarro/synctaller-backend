@@ -148,6 +148,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'claim-documents.download',
             'claim-documents.destroy',
 
+            /* insurer authorization permissions (M6) */
+            'insurer-authorizations.index',
+            'insurer-authorizations.store',
+            'insurer-authorizations.show',
+
             /* budget permissions */
             'budgets.index',
             'budgets.store',
@@ -465,6 +470,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'insurers.index', 'insurers.store', 'insurers.show', 'insurers.update', 'insurers.destroy', 'insurers.change-status',
                     'claims.index', 'claims.store', 'claims.show', 'claims.update', 'claims.cancel',
                     'claim-documents.index', 'claim-documents.store', 'claim-documents.download',
+                    'insurer-authorizations.index', 'insurer-authorizations.store', 'insurer-authorizations.show',
                     'dashboard.view', 'reports.budgets',
                 ],
             ],
@@ -505,6 +511,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'insurers.index', 'insurers.show',
                     'claims.index', 'claims.store', 'claims.show', 'claims.update', 'claims.cancel',
                     'claim-documents.index', 'claim-documents.store', 'claim-documents.download',
+                    'insurer-authorizations.index', 'insurer-authorizations.store', 'insurer-authorizations.show',
                     'dashboard.view', 'reports.productivity',
                 ],
             ],
@@ -527,6 +534,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'insurers.index', 'insurers.show',
                     'claims.index', 'claims.show',
                     'claim-documents.index', 'claim-documents.download',
+                    'insurer-authorizations.index', 'insurer-authorizations.show',
                     'dashboard.view', 'reports.sales', 'reports.clients',
                 ],
             ],

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Enums\BudgetStatus;
+use App\Enums\InsurerAuthorizationStatus;
 use App\Traits\Auditable;
 
 class Budget extends Model
@@ -53,6 +54,22 @@ class Budget extends Model
     public function workOrder(): HasOne
     {
         return $this->hasOne(WorkOrder::class);
+    }
+
+    /**
+     * Autorizaciones de la aseguradora, todas las versiones.
+     */
+    public function insurerAuthorizations(): HasMany
+    {
+        return $this->hasMany(InsurerAuthorization::class)->orderBy('version');
+    }
+
+    /**
+     * Autorización vigente (como máximo una).
+     */
+    public function currentInsurerAuthorization(): HasOne
+    {
+        return $this->hasOne(InsurerAuthorization::class)->where('status', InsurerAuthorizationStatus::CURRENT->value);
     }
 
     /**

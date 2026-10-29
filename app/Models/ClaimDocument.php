@@ -18,6 +18,7 @@ class ClaimDocument extends Model
 
     protected $fillable = [
         'claim_id',
+        'insurer_authorization_id',
         'type',
         'original_name',
         'path',
@@ -44,6 +45,11 @@ class ClaimDocument extends Model
     public function claim(): BelongsTo
     {
         return $this->belongsTo(Claim::class);
+    }
+
+    public function insurerAuthorization(): BelongsTo
+    {
+        return $this->belongsTo(InsurerAuthorization::class);
     }
 
     public function uploader(): BelongsTo

@@ -32,6 +32,21 @@ class ShowBudgetResource extends JsonResource
             'client_acceptances' => BudgetClientAcceptanceResource::collection(
                 $this->whenLoaded('clientAcceptances')
             ),
+            // Autorización vigente de la aseguradora (M6): solo con insurer-authorizations.show.
+            'insurer_authorization' => $this->when(
+                $request->user()?->can('insurer-authorizations.show') ?? false,
+                fn () => $this->currentInsurerAuthorization ? [
+                    'id' => $this->currentInsurerAuthorization->id,
+                    'version' => $this->currentInsurerAuthorization->version,
+                    'result' => [
+                        'value' => $this->currentInsurerAuthorization->result->value,
+                        'label' => $this->currentInsurerAuthorization->result->label(),
+                    ],
+                    'authorization_number' => $this->currentInsurerAuthorization->authorization_number,
+                    'decided_at' => $this->currentInsurerAuthorization->decided_at?->format('Y-m-d'),
+                    'authorized_total' => $this->currentInsurerAuthorization->authorized_total,
+                ] : null
+            ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

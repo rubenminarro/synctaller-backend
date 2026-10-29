@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\InsurerController;
 use App\Http\Controllers\Api\InsurerContactController;
 use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\ClaimDocumentController;
+use App\Http\Controllers\Api\InsurerAuthorizationController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetItemController;
 use App\Http\Controllers\Api\MechanicController;
@@ -156,6 +157,9 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
     Route::get('budgets/{budget}/pdf', [BudgetController::class, 'pdf'])->name('budgets.pdf');
 
     Route::apiResource('budgets.items', BudgetItemController::class);
+
+    // Autorizaciones de la aseguradora (M6): versionadas e inmutables.
+    Route::apiResource('budgets.insurer-authorizations', InsurerAuthorizationController::class)->only(['index', 'store', 'show']);
 
     Route::apiResource('work-orders', WorkOrderController::class)->except(['update', 'destroy']);
 

@@ -29,7 +29,8 @@ class BudgetService
         protected ReceptionStatusService $receptionStatusService,
         protected ClientNotificationService $clientNotificationService,
         protected InternalNotificationService $internalNotificationService,
-        protected DocumentSequenceService $documentSequences
+        protected DocumentSequenceService $documentSequences,
+        protected InsurerAuthorizationService $insurerAuthorizationService
     ) {
     }
 
@@ -258,11 +259,15 @@ class BudgetService
             );
         }
 
-        $budget->update([
-            'status' => BudgetStatus::CANCELLED,
-        ]);
+        return DB::transaction(function () use ($budget) {
+            $budget->update([
+                'status' => BudgetStatus::CANCELLED,
+            ]);
 
-        return $budget->refresh();
+            $this->insurerAuthorizationService->invalidateCurrent($budget, 'Presupuesto cancelado.');
+
+            return $budget->refresh();
+        });
     }
 
     public function reopen(Budget $budget): Budget
@@ -277,12 +282,17 @@ class BudgetService
 
         $this->receptionStatusService->ensureEditable($budget->reception_id);
 
-        $budget->update([
-            'status' => BudgetStatus::DRAFT,
-            'approved_at' => null,
-        ]);
+        return DB::transaction(function () use ($budget) {
+            $budget->update([
+                'status' => BudgetStatus::DRAFT,
+                'approved_at' => null,
+            ]);
 
-        return $budget->refresh();
+            // El presupuesto puede cambiar: la autorización deja de valer y se registra de nuevo al reenviarlo (M6).
+            $this->insurerAuthorizationService->invalidateCurrent($budget, 'Presupuesto reabierto.');
+
+            return $budget->refresh();
+        });
     }
 
     /**
