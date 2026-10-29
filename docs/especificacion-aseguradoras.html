@@ -708,7 +708,7 @@ stateDiagram-v2
     <li><b>Formas de resolver la diferencia:</b> una re-aceptación del dueño, una excepción <code>workshop_absorption</code> autorizada y justificada, o un presupuesto complementario con su propia aceptación, según corresponda.</li>
     <li><b>Una excepción interna nunca aumenta el tope</b> ni evita R5. Solo puede bajar lo que paga el dueño (absorción) o permitir empezar sin autorización.</li>
     <li><b>La ejecución no se detiene:</b> el control se aplica al confirmar el reparto. Lo que queda bloqueado es la facturación y, por lo tanto, la entrega.</li>
-    <li><b>Advertencia en la OT (B):</b> cuando el importe potencial a cargo del dueño, calculado con la ejecución actual, supera lo aceptado, el detalle de la OT con siniestro muestra una advertencia visible para que el taller lo resuelva durante la reparación. Es informativa: no bloquea ni cambia ninguna regla. El nombre del campo en la API se define en M7–M8.</li>
+    <li><b>Advertencia en la OT (B):</b> cuando el importe potencial a cargo del dueño, calculado con la ejecución actual, supera lo aceptado, el detalle de la OT con siniestro muestra una advertencia visible para que el taller lo resuelva durante la reparación. Es informativa: no bloquea ni cambia ninguna regla. <span class="tag h">Hecho</span> En la API es <code>owner_amount_warning</code> (M7, handoff 2.65).</li>
     <li>No se modifica la regla actual de consumo de repuestos (6.7) y el flujo particular no tiene este control.</li>
   </ul>
   <div class="tablewrap"><table>
@@ -730,7 +730,7 @@ stateDiagram-v2
   <div class="tablewrap"><table>
     <thead><tr><th>Momento</th><th>Condición (solo con siniestro)</th><th>Error propuesto</th><th>Excepción</th></tr></thead>
     <tbody>
-      <tr><td>Crear la OT (<code>WorkOrderService::createFromBudget</code>)</td><td>Cada ítem <code>insurer</code> está <code>authorized</code> o <code>partial</code> en la autorización vigente</td><td><code>WORK_ORDER_INSURER_AUTHORIZATION_REQUIRED</code> (422)</td><td><code>start_without_authorization</code> sobre el presupuesto</td></tr>
+      <tr><td>Crear la OT (<code>WorkOrderService::createFromBudget</code>)</td><td>Hay una autorización vigente del siniestro abierto. <span class="tag h">Hecho</span> Decisión del 2026-10-29 (M7): no se exige <code>authorized</code> o <code>partial</code> en cada ítem; M6 ya obliga a decidir todas las líneas y lo <code>not_covered</code> pasa al dueño, que lo controla la aceptación</td><td><code>WORK_ORDER_INSURER_AUTHORIZATION_REQUIRED</code> (422)</td><td><code>start_without_authorization</code> sobre el presupuesto</td></tr>
       <tr><td>Crear la OT</td><td>La última aceptación del dueño cubre su parte bajo la autorización vigente (<code>owner_amount</code> aceptado ≥ parte actual del dueño)</td><td><code>WORK_ORDER_CLIENT_ACCEPTANCE_OUTDATED</code> (422)</td><td>No: se registra una re-aceptación. <code>start_without_authorization</code> no la reemplaza</td></tr>
       <tr><td>Iniciar, pausar, completar</td><td>Sin cambios. Si la autorización baja o se consume más de lo presupuestado durante la ejecución, no se bloquea: la OT muestra la advertencia de B (§5.4) y la diferencia se resuelve al confirmar el reparto (R5)</td><td>—</td><td>—</td></tr>
       <tr><td>Extras (<code>WorkOrderPart</code> sin <code>budget_item</code>, P5)</td><td>Flujo vigente (<code>awaiting_approval</code> con decisión del cliente), sin cambios. En el reparto quedan <b>a cargo del dueño</b>, salvo absorción autorizada del taller; no pueden asignarse a la aseguradora en el MVP. <b>Antes de confirmar el alta</b> de un extra en una OT con siniestro, se muestra: «Este repuesto quedará a cargo del dueño. Si debe cubrirlo la aseguradora, cargalo en un presupuesto complementario». La advertencia informa el criterio: no autoriza excepciones ni cambia las reglas de aprobación del extra</td><td><code>ALLOCATION_EXTRA_NOT_COVERABLE</code> (422)</td><td>No: para cubrirlos se hace un complementario</td></tr>
@@ -1413,7 +1413,7 @@ flowchart LR
     <li><b>Antes de M2:</b> verificar el impacto de desactivar los avisos de un cliente existente que ya se usa en otros flujos (D).</li>
     <li><b>Al iniciar T0:</b> revisar el changelog de <code>spatie/laravel-multitenancy</code> (4.2.2 y 4.2.3 incluidas), elegir y registrar la versión (P2) y medir la línea base de S13 (G).</li>
     <li><b>E1 (handoff):</b> registrar la deuda del disco <code>local</code> con <code>serve</code> activo (E), la deuda de seguridad de fotos y firmas públicas (P8), el antivirus como riesgo pendiente (E) y la discrepancia entre <code>CLAUDE.md</code> §7 y la deuda #13.</li>
-    <li><b>M7–M8:</b> definir el nombre del campo de la advertencia de B en la API.</li>
+    <li><s><b>M7–M8:</b> definir el nombre del campo de la advertencia de B en la API.</s> Hecho en M7: <code>owner_amount_warning</code>.</li>
     <li><b>M8:</b> la concurrencia real del deducible compartido se prueba en MySQL, fuera de la suite SQLite.</li>
   </ul>
   <h4>Propuestas de la versión 3, pendientes de decisión</h4>

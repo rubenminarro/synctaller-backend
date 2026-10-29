@@ -21,7 +21,7 @@ Cliente → Vehículo → Recepción → Diagnóstico → Presupuesto → Aproba
 
 ## Stack
 
-Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 2026-10-24):
+Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 2026-10-29):
 
 | Capa | Tecnología |
 |---|---|
@@ -32,7 +32,6 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 | Tests | PHPUnit 12.5 |
 | PDF | barryvdh/laravel-dompdf 3.1 (dompdf 3.1; requiere la extensión `gd` para imágenes) |
 | Base de datos | MySQL (Laragon con MySQL 8.4); SQLite en archivo (`database/testing.sqlite`) para los tests |
-| Tests | PHPUnit 11.5 |
 | Assets | Vite 7 + Tailwind CSS 4 + axios (scaffold por defecto de Laravel, sin uso: la app es solo API) |
 | Frontend | **No incluido en este repositorio** (ver [Frontend](#frontend)) |
 | Entorno local | Laragon (Windows) con **Nginx** en el puerto 80 (no Apache: ver `docs/handoff.md`, sección 14, #12) |
@@ -45,11 +44,11 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 |---|---|
 | Autenticación | Login / logout con token Sanctum |
 | Usuarios, roles y permisos | Roles `administrador`, `mechanic`, `recepcionista`, `jefe-taller`, `cajero` y `deposito`; permisos por operación |
-| Clientes y vehículos | Clientes, marcas, modelos, vehículos (también anidados por cliente) |
+| Clientes y vehículos | Clientes (personas o empresas), marcas, modelos, vehículos (también anidados por cliente) |
 | Recepción | Ingreso del vehículo, categorías de servicio, checklist y fotos; estado derivado del flujo (en proceso, en reparación, terminado) y cancelación con motivo |
 | Diagnóstico | Diagnóstico técnico con ítems y fotos; cada ítem se elige de un catálogo reutilizable (copia sus valores, que se ajustan en cada revisión) |
-| Presupuestos | Ítems de mano de obra, servicio y repuesto; estados `draft → sent → approved` |
-| Órdenes de trabajo | Nace de un presupuesto aprobado; estados, ítems, mecánico responsable |
+| Presupuestos | Ítems de mano de obra, servicio y repuesto, cada uno a cargo del dueño o de la aseguradora; estados `draft → sent → approved`; respuesta del cliente registrada (aprobación, rechazo y re-aceptación) |
+| Órdenes de trabajo | Nace de un presupuesto aprobado (en un siniestro, con la autorización de la aseguradora y la aceptación del dueño, o con una excepción interna); estados, ítems, mecánico responsable |
 | Repuestos e inventario | Catálogo, proveedores, stock con movimientos inmutables, reservas y consumo en la OT; repuestos extra con la aprobación del cliente registrada |
 | Compras | Factura del proveedor con IVA incluido (10% / 5% / exento por línea), borrador → recibida (ingresa el stock al costo sin IVA y actualiza el costo del proveedor) → anulada (revierte el stock) |
 | Pagos a proveedores | Pagos parciales contra compras recibidas (contado o crédito), comprobante `PAG-000001`, anulación con motivo, resumen de egresos y cuentas por pagar por proveedor (vencido / por vencer) |
@@ -64,13 +63,15 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 | Auditoría | Quién cambió qué y cuándo (antes/después, IP) en precios, costos, facturación, pagos, compras, usuarios, roles, permisos y datos maestros; login, login fallido y logout. Inmutable, solo para el administrador |
 | Exportación y comprobantes | Reportes en CSV (Excel) y PDF; PDF de presupuesto, factura (representación sin valor fiscal), recibo y comprobante de entrega |
 | Notificaciones | Emails al cliente (presupuesto enviado, vehículo listo, factura por vencer / vencida, mantenimiento próximo / vencido) con registro, reenvío y baja por cliente; bandeja interna por usuario (presupuesto aprobado/rechazado, OT completada, repuesto sin stock, cuentas por pagar vencidas) |
+| Aseguradoras y siniestros (en curso) | Aseguradoras vinculadas a un cliente empresa, con contactos; siniestros por recepción (asegurado, perito, deducible) con documentos privados descargables solo por la API; autorizaciones de la aseguradora por línea y versionadas; excepciones internas. Faltan el reparto y la facturación por responsable (`CLAUDE.md` 6.22–6.26) |
 | Preferencias y logo | Preferencias visuales de cada usuario para el frontend (tema, colores, tipografía, distribución y navegación); logo del sistema (solo administrador; con un PNG transparente se recorta y se genera una versión negra) en los PDF y los emails a clientes |
 
-### Estado real (verificado el 2026-10-20)
+### Estado real (verificado el 2026-10-29)
 
 | Estado | Qué |
 |---|---|
-| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema y catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 268 rutas API y 440 tests automatizados en verde (incluye el módulo de aseguradoras en curso, M1–M7: ver `CLAUDE.md` 6.22–6.26); cada módulo tiene sus tests en `tests/Feature` |
+| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema, catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 268 rutas API y 440 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
+| En curso | Aseguradoras y siniestros: M1–M7 de `docs/especificacion-aseguradoras.html` implementadas; siguen el reparto económico (M8) y la facturación por responsable (M9–M12) |
 | Pendiente, sin diseño | Notificaciones por WhatsApp |
 
 ---
@@ -206,7 +207,8 @@ Qué puede hacer cada rol está en la sección 5 de [`CLAUDE.md`](CLAUDE.md).
 | deposito | `deposito1`, `deposito2` |
 | mechanic | `jperez` (MEC-001), `cgomez` (MEC-002), `mecanico3`–`mecanico4` (activos), `mecanico5` (inactivo), `mecanico6` (de licencia) |
 
-**Catálogos:** 30 clientes (uno sin email, `30111222`, y uno dado de baja de los avisos, `30222333`), 45 vehículos (uno
+**Catálogos:** 33 clientes (uno sin email, `30111222`, uno dado de baja de los avisos, `30222333`, una empresa,
+`80045678-1`, y los clientes empresa de las dos aseguradoras), 45 vehículos (uno
 sin placa), 18 servicios (uno inactivo), 32 ítems de diagnóstico en el catálogo (uno inactivo; todos los ítems de los escenarios salen de él), 5 proveedores (uno inactivo), 18 repuestos (uno inactivo, uno descontinuado,
 dos bajo el mínimo y el kit de embrague sin stock).
 
@@ -218,12 +220,14 @@ estado final por los Services, con fechas en los últimos tres meses.
 | H01–H13 | OT completada, facturada y entregada: contado y crédito, pagadas, parciales, vencidas (H06, H07), una factura anulada y vuelta a emitir (H04), un cobro anulado (H05), una entrega anulada y vuelta a registrar (H03) |
 | H14–H17 | OT completada sin entregar: pagada (H14), al contado sin cobrar (H15), factura en borrador (H16), sin facturar (H17) |
 | C01–C03 | Recepción pendiente: sin diagnóstico, con diagnóstico pendiente, con diagnóstico en curso |
-| C04–C08, C15–C16 | Presupuesto en borrador, enviado, rechazado, rechazado y reabierto, cancelado; enviado a clientes que no reciben avisos (omitidos) |
+| C04, C06–C08, C15–C16 | Presupuesto en borrador, rechazado, rechazado y reabierto, cancelado; enviado a clientes que no reciben avisos (omitidos) |
+| C05, C07 | Siniestro abierto con líneas a cargo de la aseguradora. C05: autorización en dos versiones (la segunda con un documento como evidencia), presupuesto aprobado y re-aceptado, y una excepción para iniciar sin autorización sin usar. C07: autorización invalidada al reabrir el presupuesto |
 | C09, C14 | OT pendiente (C14 con repuestos reservados) |
 | C10–C13 | OT en curso (C12 con un extra pendiente de la respuesta del cliente, C13 esperando un repuesto sin stock) o pausada (C11) |
 | X01–X02 | Recepción cancelada (X02 con la OT cancelada) |
 
-Además: compras recibidas, anulada y en borrador, con cuentas por pagar vencidas y por vencer
+Además: dos aseguradoras (`InsurerSeeder`, una inactiva), siniestros cerrado (H07) y cancelado (X01) además de los
+abiertos (`ClaimSeeder`) con sus documentos (`ClaimDocumentSeeder`); compras recibidas, anulada y en borrador, con cuentas por pagar vencidas y por vencer
 (`PurchaseSeeder`, `SupplierPaymentSeeder`); ajustes de inventario (`InventoryAdjustmentSeeder`); mantenimientos al
 día, por vencer y vencidos (`VehicleMaintenanceSeeder`); comisiones liquidadas de los meses cerrados
 (`CommissionSeeder`); y avisos a clientes enviados, fallido, reenviado, omitidos y pendientes, con los avisos internos
@@ -237,8 +241,8 @@ quedan pendientes se envían con `php artisan queue:work` (en desarrollo, `MAIL_
 Este repositorio contiene **solo la API**. No hay código del frontend: `resources/` y `package.json` son el scaffold
 por defecto de Laravel (Vite + Tailwind) y `routes/web.php` no define rutas.
 
-Lo que está preparado para un frontend SPA separado (por ejemplo el React 19 previsto en el handoff, que no pudo
-verificarse):
+El frontend es un repositorio aparte, `../synctaller-frontend` (React 19 + TypeScript + Vite + Tabler). Lo que está
+preparado para él:
 
 | Configuración | Valor actual |
 |---|---|
@@ -254,13 +258,13 @@ la usa. Si el frontend corre en otro origen, agregarlo en `config/cors.php`.
 
 ## Uso de la API
 
-Todas las rutas (salvo `POST /api/login`) requieren el header `Authorization: Bearer {token}`. Todo `/api`
+Todas las rutas (salvo `POST /api/login` y `GET /api/branding`) requieren el header `Authorization: Bearer {token}`. Todo `/api`
 responde JSON con el formato de la API aunque no se envíe `Accept: application/json` (middleware global
 `EnsureJsonResponse`); se recomienda enviarlo igual.
 
 Autenticación con Sanctum: `POST /api/login` devuelve `data.token` y `data.user` (con roles); `GET /api/me` devuelve
 el usuario autenticado (`data.user`), los nombres de sus permisos (`data.permissions`) y su ficha de mecánico, si
-la tiene (`data.mechanic`); `POST /api/logout` revoca
+la tiene (`data.mechanic`), y sus preferencias visuales (`data.preferences`); `POST /api/logout` revoca
 el token actual. Los tokens no expiran. Cada endpoint exige un permiso (`recurso.acción`) asignado al rol del usuario.
 
 ```http
@@ -353,9 +357,9 @@ API Resource (Resource para listados, ShowResource para detalle)
 
 | Carpeta | Contenido |
 |---|---|
-| `app/Http/Controllers/Api` | Endpoints (42 controllers) |
+| `app/Http/Controllers/Api` | Endpoints (56 controllers) |
 | `app/Http/Requests` | Validación |
-| `app/Services` | Lógica de negocio (20 services) |
+| `app/Services` | Lógica de negocio (41 services) |
 | `app/Models` | Modelos Eloquent |
 | `app/Http/Resources` | Contrato JSON público |
 | `app/Enums` | Estados y tipos |
