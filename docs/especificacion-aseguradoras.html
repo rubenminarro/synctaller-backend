@@ -1286,7 +1286,7 @@ flowchart LR
   <span class="secnum">§10</span>
   <h2>Validaciones pendientes, decisiones aprobadas y riesgos</h2>
 
-  <p>El 2026-10-28 llegaron las primeras respuestas a G1–G5 (tabla «Respuestas recibidas», abajo); G6–G10 y V1–V14 siguen sin respuesta. Ninguna validación se considera completada por la aprobación de las decisiones internas de §10.2. Las respuestas recibidas todavía no tienen confirmación escrita del contador (V21).</p>
+  <p><b>Cierres internos del 2026-10-29</b> al final de esta sección: V21 (respondió un dueño de taller que también lleva la contabilidad), V9, G6–G9, V1, V2, V4, V6–V8 y V12. El 2026-10-28 llegaron las primeras respuestas a G1–G5 (tabla «Respuestas recibidas», abajo); G6–G10 y V1–V14 siguen sin respuesta. Ninguna validación se considera completada por la aprobación de las decisiones internas de §10.2. Las respuestas recibidas todavía no tienen confirmación escrita del contador (V21).</p>
   <h3>10.1 Validaciones externas <span class="tag u">Respondidas en parte</span></h3>
   <h4>Preguntas G1–G10</h4>
   <div class="tablewrap"><table>
@@ -1306,7 +1306,7 @@ flowchart LR
   </table></div>
 
   <h4>Respuestas recibidas (2026-10-28) <span class="tag h">Registro</span></h4>
-  <p>Transcripción de las respuestas del cuestionario. Ese cuestionario numera distinto: su G2 (retenciones) es la G3 de esta especificación, su G3 (anticipos) es la G4 y su G4 (notas de crédito y SIFEN) es la G5. No se indicó quién respondió (V21).</p>
+  <p>Transcripción de las respuestas del cuestionario. <b>Las dio un dueño de taller que también lleva la contabilidad</b> (V21, 2026-10-29): valen como base; se busca igual la confirmación completa de un contador. Ese cuestionario numera distinto: su G2 (retenciones) es la G3 de esta especificación, su G3 (anticipos) es la G4 y su G4 (notas de crédito y SIFEN) es la G5. No se indicó quién respondió (V21).</p>
   <div class="tablewrap"><table>
     <thead><tr><th>#</th><th>Respuesta</th><th>Efecto en la especificación</th><th>Queda abierto</th></tr></thead>
     <tbody>
@@ -1387,6 +1387,27 @@ flowchart LR
       <tr><td>V14</td><td>Obligaciones de conservación y acceso a documentos fiscales y datos personales durante una suspensión, y plazos. Términos comerciales de la suspensión (aviso, gracia, solo lectura)</td><td>Contador o asesor legal; decisión comercial</td><td>P9</td></tr>
     </tbody>
   </table></div>
+
+  <h4>Cierres internos (2026-10-29) <span class="tag h">Aprobado</span></h4>
+  <p>Preguntas que no necesitan un contador ni un asesor legal: el usuario las cerró como decisiones de producto. Se revisan con el uso real; no cambian ninguna decisión de §10.2.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>#</th><th>Cierre</th></tr></thead>
+    <tbody>
+      <tr><td>V21</td><td>Las respuestas del 2026-10-28 (G1–G5) las dio <b>un dueño de taller que también lleva la contabilidad</b> del taller: valen como base. Por recomendación, igual se busca la respuesta correcta y completa de un contador; su parte fiscal (IVA del deducible, retención del 30 %, nota de crédito y su plazo) sigue sin validar y M10 y M12 siguen exigiendo la confirmación escrita del contador</td></tr>
+      <tr><td>V9</td><td>Muchos talleres a futuro, pocos al principio. Estándar de desarrollo y pruebas: <b>10 talleres</b> para las pruebas de carga, migraciones y aislamiento de la línea T (al menos 3 dentro de la suite), con el volumen de datos de ejemplo por taller. Hosting, servidor de base y red se deciden antes de T6</td></tr>
+      <tr><td>G6</td><td>El modelo por línea de M6 cubre los dos casos (una autorización total es una línea por ítem)</td></tr>
+      <tr><td>G7</td><td>Tarifas, convenios y repuestos provistos por la aseguradora, fuera del MVP; el descuento por línea de la factura ya existe</td></tr>
+      <tr><td>G8</td><td>MVP: una factura por OT, con <code>payment_term_days</code> de la aseguradora; la factura consolidada de varias OT queda para después</td></tr>
+      <tr><td>G9</td><td>MVP: una aseguradora por siniestro (sin coaseguro); el reparto ya admite N responsables</td></tr>
+      <tr><td>V1, V12</td><td>Siguen las reglas conservadoras aprobadas: tope de lo autorizado en lo presupuestado (P7) y presupuesto complementario para lo que deba cubrir la aseguradora (P5). La práctica de los talleres podrá relajarlas</td></tr>
+      <tr><td>V2</td><td>Quien carga la autorización declara si el importe incluye IVA (<code>amounts_include_tax</code>, M6)</td></tr>
+      <tr><td>V4</td><td>Sin tolerancia automática, como decidió B</td></tr>
+      <tr><td>V6</td><td>Cubierto por la excepción <code>start_without_authorization</code> (M7)</td></tr>
+      <tr><td>V7</td><td>Sin recordatorios a las aseguradoras por ahora (decisión D); se revisa en M11</td></tr>
+      <tr><td>V8</td><td>Se mantiene el límite de 10 MB; se ajusta con el uso</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Siguen pendientes con un profesional:</b> contador, G1, V15, V16 y V20 (deducible), G3 y V17 (retenciones), G4 y V22 (anticipos), V18 y V19 (notas de crédito), V11 (numeración legal) y la parte de V10 sobre la dirección en la factura; asesor legal, V5, G10, V14 y la parte legal de V13. <b>Siguen pendientes con talleres</b> (no bloquean): V3 y la práctica de V13. El dígito verificador del RUC (V10) se toma de la documentación oficial de la SET al implementarlo. Ninguna bloquea M8, P10 ni M9 con deducible 0.</p>
 
   <h3>10.2 Decisiones aprobadas (2026-10-27) <span class="tag h">Aprobada</span></h3>
   <p>Decisiones internas, aprobadas una por una. Su aprobación no resuelve las validaciones externas de §10.1.</p>
