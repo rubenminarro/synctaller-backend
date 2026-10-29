@@ -1516,6 +1516,28 @@ en T2, está en `docs/spike-t0-informe.md`.
 
 ---
 
+# 2.59 Cliente persona o empresa (2026-10-29)
+
+Entrega M1 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.1 y §9; decisión P3). El
+cliente era siempre una persona: nombre y apellido obligatorios y solo letras, así que una aseguradora o una flota no
+se podían cargar. El nombre se armaba a mano en 15 lugares: los 7 que preveía la especificación y 8 Resources más.
+
+| Tema | Decisión |
+|---|---|
+| Esquema | Migración `000059`: `clients.kind` (`person` por defecto, así los existentes quedan como personas), `business_name` (150) y `address` (255) nulos, e índice en `business_name`. `first_name`/`last_name` pasan a nulos |
+| Validación | `StoreClientRequest`: sin `kind`, persona como siempre. Empresa: `business_name` obligatorio y nombre y apellido `prohibited`; persona, al revés. `UpdateClientRequest`: el tipo efectivo es el enviado o el actual. Al cambiar de tipo, los campos del nuevo son obligatorios y `ClientService` vacía los del anterior |
+| Cambio de tipo | Bloqueado con recepciones o facturas: `CLIENT_KIND_NOT_EDITABLE` (422, `ClientException`). Ya muestran el nombre del cliente |
+| Nombre | `Client::display_name` reemplazó las 15 concatenaciones (factura, PDF, reportes, mantenimiento, historial y los Resources de recepción, vehículo, entrega, diagnóstico y avisos), sin cambiar las claves. Para personas el texto es idéntico: los tests existentes de esas áreas pasaron sin tocarlos |
+| Saludo | `greeting_name`: el nombre de pila de una persona, como antes ("Hola, Ana"; decisión del usuario del 2026-10-29), y la razón social de una empresa |
+| Búsquedas | `search` en clientes, vehículos, presupuestos, OT, recepciones y diagnósticos (solo el bloque del cliente; el del mecánico no cambia) y los filtros `first_name` (clientes) y `client_first_name` (vehículos) también buscan por razón social (decisión del usuario del 2026-10-29) |
+| Baja (D9) | Pasó de `ClientController` a `ClientService::delete`. Con vehículos vigentes, recepciones (incluidas las eliminadas) o facturas responde `409 CLIENT_IN_USE` (decisión del usuario del 2026-10-29). **Cambio de comportamiento:** antes esa baja funcionaba |
+| Seeder | `ClientsSeeder` agrega una empresa (`ClientsSeeder::COMPANY`, "Transportes del Este S.A.") sin vehículos ni recepciones. `DatabaseSeederTest` verifica los dos tipos |
+| Pruebas | `tests/Feature/Clients/ClientKindTest` (7): alta de persona como antes, alta de empresa, validaciones por tipo, cambio de tipo con y sin recepciones, baja en uso, empresa mostrada y encontrada por razón social, y saludo |
+| Fuera de alcance | El dígito verificador del RUC (V10), la baja del cliente de una aseguradora (M2) y el email único en la base (D7, decisión del usuario del 2026-10-29: queda para después) |
+| Frontend | **No crear empresas en producción hasta adaptar `../synctaller-frontend`**: `first_name`/`last_name` como `string \| null`, `clientName()` con `display_name`, y el selector persona/empresa en el formulario. Para personas el contrato es el de antes, con campos agregados |
+
+---
+
 ---
 
 # 2.2 Autenticación
@@ -4012,6 +4034,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Importes del presupuesto en decimal(14,2) (2.56)
 [✓] Registro de la respuesta del cliente al presupuesto (2.57)
 [✓] Spike T0 de tenancy, descartado; informe en docs/spike-t0-informe.md (2.58)
+[✓] Cliente persona o empresa (2.59)
 ```
 
 ## Próximo
@@ -4123,5 +4146,5 @@ corregir: las que siguen abiertas esperan decisión del usuario.
 | D6 | La cabecera del handoff tiene fecha 2026-10-17 con contenido posterior, y en esta tabla la fila #9 está después de la #13 | `docs/handoff.md:6`; tabla de arriba | **A decidir**: actualizar la fecha y reordenar (solo documentación) |
 | D7 | `CLAUDE.md` 6.1 dice que el email del cliente es único, pero la unicidad existe solo en la validación: `clients.email` no tiene índice único | Migración `000005:20`; `StoreClientRequest` | **A decidir**: índice único en la base (con los datos existentes revisados) o corregir la regla en `CLAUDE.md` |
 | D8 | `document_number` y `email` del cliente son opcionales en la base pero obligatorios en la API | Migración `000005:16,20`; `StoreClientRequest` | **A decidir**. Relacionado con M1 (cliente empresa), que redefine qué es obligatorio por tipo |
-| D9 | "Datos maestros en uso no se eliminan" (6.1) no incluye a los clientes: `ClientController::destroy` hace la baja con sufijo sin verificar si el cliente tiene vehículos, recepciones o facturas, y la lógica está en el controller, no en un Service | `ClientController.php:127-142` | **A decidir**. M1 propone llevar la baja a un Service y bloquearla para el cliente de una aseguradora (`CLIENT_LINKED_TO_INSURER`) |
+| D9 | "Datos maestros en uso no se eliminan" (6.1) no incluye a los clientes: `ClientController::destroy` hace la baja con sufijo sin verificar si el cliente tiene vehículos, recepciones o facturas, y la lógica está en el controller, no en un Service | `ClientController.php:127-142` | **Resuelta el 2026-10-29** (M1, 2.59): la baja pasó a `ClientService::delete` y responde `409 CLIENT_IN_USE` con vehículos vigentes, recepciones o facturas. El bloqueo para el cliente de una aseguradora (`CLIENT_LINKED_TO_INSURER`) llega con M2 |
 | D10 | Un pedido citaba dos informes `.md` (`Aseguradoras y siniestros en SyncTaller.md`, `Decisiones del módulo de aseguradoras.md`) que no están en el repositorio | Búsqueda en el repositorio | **Sin acción**: el contenido está en las páginas publicadas (ver `docs/continuidad-cambio-notebook.md`, sección 6) |

@@ -242,7 +242,7 @@ class MaintenanceService
                     ],
                     'client' => $vehicle->client ? [
                         'id' => $vehicle->client->id,
-                        'full_name' => trim("{$vehicle->client->first_name} {$vehicle->client->last_name}"),
+                        'full_name' => $vehicle->client->display_name,
                         'phone' => $vehicle->client->phone,
                         'email' => $vehicle->client->email,
                     ] : null,

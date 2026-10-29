@@ -50,7 +50,7 @@ class VehicleHistoryController extends Controller implements HasMiddleware
                     'mileage' => $vehicle->mileage,
                     'client' => $vehicle->client ? [
                         'id' => $vehicle->client->id,
-                        'full_name' => trim("{$vehicle->client->first_name} {$vehicle->client->last_name}"),
+                        'full_name' => $vehicle->client->display_name,
                     ] : null,
                 ],
                 'summary' => $this->historyService->summary(

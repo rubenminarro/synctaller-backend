@@ -286,7 +286,9 @@ propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2, E3 y
    * ~~spike T0 en una rama descartable~~ Hecho el 2026-10-28/29 y descartado. Informe: `docs/spike-t0-informe.md`
      (handoff 2.58). Sin fallas críticas. No cumplen S8 (jobs), S10 y S13 (unos 30–45 ms por request), con
      mitigaciones previstas para T2. La dependencia no está aprobada;
-   * módulo desde M1 (tipo de cliente), coordinado con el frontend.
+   * módulo desde M1 (tipo de cliente), coordinado con el frontend. **M1** implementada el 2026-10-29 en
+     `feature/cliente-empresa` (handoff 2.59; migración `000059`, ya aplicada en la base local), pendiente de revisión y
+     merge. **No crear empresas en producción hasta adaptar el frontend.** Sigue M2 (aseguradoras).
 
 ---
 

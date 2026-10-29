@@ -301,6 +301,27 @@ Esperado: `201` → `vehicle_id`.
 | Vaciar opcionales del vehículo | `PATCH {{base_url}}/vehicles/{{vehicle_id}}` con el body de M.4 y `"notes": null, "year": null` | 200 | `data.notes` y `data.year` en `null` |
 | Vaciar notas del cliente | `PATCH {{base_url}}/clients/{{client_id}}` con `{ "notes": null }` | 200 | `data.notes = null` |
 
+Cliente persona o empresa (M1, ver `docs/handoff.md`, 2.59). Todos los clientes traen `kind` (`value`/`label`),
+`business_name`, `display_name` y `address`. Body de una empresa:
+
+```json
+{ "kind": "company", "document_number": "80012345-6", "business_name": "Seguros del Sur S.A.",
+  "email": "facturacion@segurosdelsur.com.py", "phone": "+595211234567", "address": "Av. Mcal. López 1234, Asunción" }
+```
+
+| Caso | Método / Endpoint | HTTP | Resultado / error_code |
+|---|---|---|---|
+| Persona sin `kind` (body de siempre) | `POST {{base_url}}/clients` | 201 | `kind.value` `person`, `display_name` "Nombre Apellido" |
+| Empresa | `POST {{base_url}}/clients` con el body de arriba | 201 | `first_name`/`last_name` `null`, `display_name` = razón social |
+| Empresa sin razón social / con nombre | ídem, sin `business_name` o con `first_name` | 422 | `VALIDATION_ERROR` en `business_name` / `first_name` |
+| Persona con razón social | `POST {{base_url}}/clients` (persona) con `business_name` | 422 | `VALIDATION_ERROR` en `business_name` |
+| Pasar una persona sin recepciones a empresa | `PATCH {{base_url}}/clients/{id}` con `{ "kind": "company", "business_name": "..." }` | 200 | Nombre y apellido quedan en `null` |
+| Cambiar el tipo con recepciones o facturas | ídem, sobre un cliente con recepciones | 422 | `CLIENT_KIND_NOT_EDITABLE` |
+| Buscar por razón social | `GET {{base_url}}/clients?search=Seguros` (también `?first_name=Seguros`, `vehicles?client_first_name=Seguros` y el `search` de recepciones, presupuestos, OT y diagnósticos) | 200 | Encuentra la empresa |
+| Detalle de recepción o vehículo de una empresa | `GET {{base_url}}/receptions/{id}` | 200 | `client.full_name` = razón social |
+| Eliminar un cliente con vehículos, recepciones o facturas | `DELETE {{base_url}}/clients/{{client_id}}` | 409 | `CLIENT_IN_USE` (antes se eliminaba) |
+| Eliminar un cliente sin uso | `DELETE {{base_url}}/clients/{id}` | 200 | Baja lógica con sufijo en documento y email |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.

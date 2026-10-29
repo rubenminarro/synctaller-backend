@@ -29,7 +29,7 @@ class ShowVehicleDeliveryResource extends JsonResource
             ]),
             'client' => $this->whenLoaded('client', fn () => [
                 'id' => $this->client->id,
-                'full_name' => trim("{$this->client->first_name} {$this->client->last_name}"),
+                'full_name' => $this->client->display_name,
                 'document_number' => $this->client->document_number,
             ]),
             'delivered_at' => $this->delivered_at,

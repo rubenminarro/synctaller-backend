@@ -13,7 +13,7 @@ class ShowClientNotificationResource extends JsonResource
             'id' => $this->id,
             'client' => $this->whenLoaded('client', fn () => $this->client ? [
                 'id' => $this->client->id,
-                'full_name' => trim("{$this->client->first_name} {$this->client->last_name}"),
+                'full_name' => $this->client->display_name,
                 'email' => $this->client->email,
                 'phone' => $this->client->phone,
                 'notifications_enabled' => $this->client->notifications_enabled,

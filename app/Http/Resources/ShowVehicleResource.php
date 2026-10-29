@@ -29,9 +29,7 @@ class ShowVehicleResource extends JsonResource
                     'document_number' => $this->client->document_number,
                     'phone' => $this->client->phone,
                     'email' => $this->client->email,
-                    'full_name' => trim(
-                        $this->client->first_name . ' ' . $this->client->last_name
-                    ),
+                    'full_name' => $this->client->display_name,
                 ];
             }),
             'brand' => $this->whenLoaded('brand', function () {

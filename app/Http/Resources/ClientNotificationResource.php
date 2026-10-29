@@ -12,7 +12,7 @@ class ClientNotificationResource extends JsonResource
         return [
             'id' => $this->id,
             'client_id' => $this->client_id,
-            'client_name' => $this->whenLoaded('client', fn () => trim("{$this->client?->first_name} {$this->client?->last_name}")),
+            'client_name' => $this->whenLoaded('client', fn () => $this->client?->display_name ?? ''),
             'type' => [
                 'value' => $this->type?->value,
                 'label' => $this->type?->label(),

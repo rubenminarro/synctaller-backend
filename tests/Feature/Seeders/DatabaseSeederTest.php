@@ -89,6 +89,10 @@ class DatabaseSeederTest extends TestCase
         // Casos especiales de clientes y vehículos; cada vehículo usa un modelo de su propia marca.
         $this->assertNull(Client::where('document_number', ClientsSeeder::WITHOUT_EMAIL)->value('email'));
         $this->assertFalse((bool) Client::where('document_number', ClientsSeeder::NOTIFICATIONS_DISABLED)->value('notifications_enabled'));
+        $this->assertEqualsCanonicalizing(['person', 'company'], DB::table('clients')->distinct()->pluck('kind')->all());
+        $company = Client::where('document_number', ClientsSeeder::COMPANY)->sole();
+        $this->assertNull($company->first_name);
+        $this->assertSame('Transportes del Este S.A.', $company->display_name);
         $this->assertTrue((bool) Vehicle::where('chassis', VehiclesSeeder::WITHOUT_PLATE_CHASSIS)->value('no_plate'));
         $this->assertGreaterThanOrEqual(30, Client::count());
         $this->assertGreaterThanOrEqual(45, Vehicle::count());

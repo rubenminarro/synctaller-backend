@@ -75,6 +75,7 @@ class ReceptionController extends Controller implements HasMiddleware
                     ->orWhereHas('client', function ($c) use ($search) {
                         $c->where('first_name', 'like', "%{$search}%")
                             ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('business_name', 'like', "%{$search}%")
                             ->orWhere('document_number', 'like', "%{$search}%");
                     })
                     ->orWhereHas('vehicle', function ($v) use ($search) {

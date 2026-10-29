@@ -11,11 +11,18 @@ class ClientResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'kind' => [
+                'value' => $this->kind->value,
+                'label' => $this->kind->label(),
+            ],
             'document_number' => $this->document_number,
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
+            'business_name' => $this->business_name,
+            'display_name' => $this->display_name,
             'phone' => $this->phone,
             'email' => $this->email,
+            'address' => $this->address,
             'notifications_enabled' => $this->notifications_enabled,
             'notes' => $this->notes,
         ];

@@ -169,7 +169,7 @@ class DocumentPdfService
     private function client(?Client $client): ?array
     {
         return $client ? [
-            'name' => trim("{$client->first_name} {$client->last_name}"),
+            'name' => $client->display_name,
             'document' => $client->document_number,
             'phone' => $client->phone,
             'email' => $client->email,

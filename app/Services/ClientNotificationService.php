@@ -160,7 +160,7 @@ class ClientNotificationService
         }
 
         return [
-            'greeting' => "Hola, {$notification->client->first_name}",
+            'greeting' => "Hola, {$notification->client->greeting_name}",
             'rows' => [],
             ...match ($notification->type) {
                 ClientNotificationType::BUDGET_SENT => $this->budgetContent($subject),

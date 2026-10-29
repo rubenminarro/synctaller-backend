@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ClientKind;
 use Illuminate\Database\Seeder;
 use App\Models\Client;
 
@@ -19,6 +20,9 @@ class ClientsSeeder extends Seeder
 
     /** Documento del cliente dado de baja de los avisos. */
     public const NOTIFICATIONS_DISABLED = '30222333';
+
+    /** RUC del cliente empresa. */
+    public const COMPANY = '80045678-1';
 
     public function run(): void
     {
@@ -71,5 +75,17 @@ class ClientsSeeder extends Seeder
                 ]
             );
         }
+
+        // Empresa (M1): razón social en lugar de nombre y apellido. Sin vehículos ni recepciones en los escenarios.
+        Client::firstOrCreate(
+            ['document_number' => self::COMPANY],
+            [
+                'kind' => ClientKind::COMPANY,
+                'business_name' => 'Transportes del Este S.A.',
+                'phone' => '595216001234',
+                'email' => 'administracion@transportes-este.example.com',
+                'address' => 'Ruta 2 km 15, Capiatá',
+            ]
+        );
     }
 }
