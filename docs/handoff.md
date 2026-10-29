@@ -1578,6 +1578,25 @@ vigentes en `CLAUDE.md`, 6.23.
 
 ---
 
+# 2.62 Documentos privados de siniestros (2026-10-29)
+
+Entrega M4 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.3, §8 y §9; decisión E).
+Reglas vigentes en `CLAUDE.md`, 6.24.
+
+| Tema | Decisión |
+|---|---|
+| Disco | `claim_documents` en `config/filesystems.php`: privado, `serve => false`, `throw => true`. `php artisan route:list --path=storage` sigue mostrando solo las 2 rutas del disco `local` (deuda #14): el disco nuevo no agrega ninguna |
+| Tabla | Migración `000062`: `claim_documents` (`type`, `original_name`, `path` único, `mime`, `size`, `sha256`, `notes`, `uploaded_by`, `deleted_by`, `deletion_reason`, baja lógica). `insurer_authorization_id` se agrega en M6 (decisión del usuario del 2026-10-29) |
+| Validación | `UploadClaimDocumentRequest`: `extensions` (nombre), `mimetypes` (contenido, por `finfo`) y una regla `after` que exige que la extensión coincida con el contenido (un PNG llamado `.pdf` se rechaza). 10 MB. Hallazgo: `UploadedFile::fake()` informa el tipo según la extensión del nombre, así que con fakes la validación por contenido pasa siempre; los tests usan archivos reales |
+| Estado | Se suben documentos con el siniestro abierto o cerrado (decisión del usuario del 2026-10-29: el informe final del perito puede llegar después de la entrega); cancelado → `CLAIM_NOT_EDITABLE` |
+| Descarga | `FileResponse::storedFileResponse` (nuevo): adjunto, tipo guardado y `nosniff`; el `fileResponse` de los PDF y CSV no cambió. Nombre saneado (sin comillas, barras ni caracteres de control). Evento de auditoría nuevo `AuditEvent::DOWNLOADED` (`downloaded`, "Descargado") con el siniestro, el tipo y el nombre. Archivo faltante en el disco → `CLAIM_DOCUMENT_FILE_MISSING` (404), sin registrar la descarga |
+| Baja | Solo administrador (`claim-documents.destroy`), con motivo (`DestroyClaimDocumentRequest`). Lógica: el archivo queda en el disco hasta definir la retención (G10) |
+| Auditoría | `ClaimDocument` es `Auditable` con `$auditExclude = ['path']`: la ruta interna no queda en `audit_logs` |
+| Seeder | `ClaimDocumentSeeder` (después de `ClaimSeeder`): denuncia en PDF y foto PNG del siniestro abierto (C07), por el Service con el recepcionista. `DatabaseSeederTest` usa `Storage::fake('claim_documents')` y verifica los archivos |
+| Pruebas | `tests/Feature/Claims/ClaimDocumentTest` (6): almacenamiento privado con UUID y sha256 (sin `path` en la API ni en la auditoría), rechazo de SVG, HTML, extensión que no coincide y más de 10 MB, descarga auditada como adjunto, baja (403 para el recepcionista, 404 después y archivo conservado), aislamiento por siniestro y estados, y permisos. Los helpers de los tests de siniestros pasaron a `ClaimTestCase` |
+
+---
+
 ---
 
 # 2.2 Autenticación
@@ -4077,6 +4096,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Cliente persona o empresa (2.59)
 [✓] Aseguradoras y sus contactos (2.60)
 [✓] Siniestros (2.61)
+[✓] Documentos privados de siniestros (2.62)
 ```
 
 ## Próximo

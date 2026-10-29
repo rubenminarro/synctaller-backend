@@ -13,6 +13,7 @@ enum AuditEvent: string
     case LOGOUT = 'logout';
     case PERMISSIONS_SYNCED = 'permissions_synced';
     case ROLES_SYNCED = 'roles_synced';
+    case DOWNLOADED = 'downloaded';
 
     public function label(): string {
         return match($this) {
@@ -25,6 +26,7 @@ enum AuditEvent: string
             self::LOGOUT => 'Cierre de sesión',
             self::PERMISSIONS_SYNCED => 'Permisos del rol actualizados',
             self::ROLES_SYNCED => 'Roles del usuario actualizados',
+            self::DOWNLOADED => 'Descargado',
         };
     }
 

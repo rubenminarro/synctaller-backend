@@ -34,7 +34,7 @@ class DatabaseSeederTest extends TestCase
         'users', 'roles', 'permissions', 'mechanics', 'brands', 'vehicle_models', 'service_categories', 'services',
         'maintenance_plans', 'check_list_items', 'diagnostic_item_templates', 'clients', 'vehicles', 'receptions', 'reception_check_lists',
         'reception_check_list_items', 'diagnostics', 'diagnostic_items', 'diagnostic_item_photos', 'budgets',
-        'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
+        'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'claim_documents', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
         'work_orders', 'work_order_items', 'work_order_parts', 'work_order_closings', 'notifications',
         'invoices', 'invoice_items', 'payments', 'vehicle_deliveries', 'client_notifications',
         'purchases', 'purchase_items', 'supplier_payments', 'vehicle_maintenances', 'work_order_commissions',
@@ -43,6 +43,7 @@ class DatabaseSeederTest extends TestCase
     public function test_seeders_cover_every_state_and_are_idempotent(): void
     {
         Storage::fake('public');
+        Storage::fake('claim_documents');
         Queue::fake();
 
         $this->seed(DatabaseSeeder::class);
@@ -103,6 +104,9 @@ class DatabaseSeederTest extends TestCase
 
         // Siniestros (M3): el estado sale de la sincronización con la recepción (C07 abierta, H07 entregada, X01 cancelada).
         $this->assertSame(['cancelled' => 1, 'closed' => 1, 'open' => 1], $this->statusCounts('claims'));
+        // Documentos (M4): denuncia y foto del siniestro abierto, con su archivo en el disco privado.
+        $this->assertEqualsCanonicalizing(['loss_report', 'photo'], DB::table('claim_documents')->pluck('type')->all());
+        DB::table('claim_documents')->pluck('path')->each(fn (string $path) => Storage::disk('claim_documents')->assertExists($path));
         $this->assertTrue((bool) Vehicle::where('chassis', VehiclesSeeder::WITHOUT_PLATE_CHASSIS)->value('no_plate'));
         $this->assertGreaterThanOrEqual(30, Client::count());
         $this->assertGreaterThanOrEqual(45, Vehicle::count());

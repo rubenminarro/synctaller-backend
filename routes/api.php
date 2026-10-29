@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\DiagnosticItemTemplateController;
 use App\Http\Controllers\Api\InsurerController;
 use App\Http\Controllers\Api\InsurerContactController;
 use App\Http\Controllers\Api\ClaimController;
+use App\Http\Controllers\Api\ClaimDocumentController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetItemController;
 use App\Http\Controllers\Api\MechanicController;
@@ -101,6 +102,11 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
     Route::post('claims/{claim}/cancel', [ClaimController::class, 'cancel'])->name('claims.cancel');
 
     Route::get('receptions/{reception}/claim', [ClaimController::class, 'forReception'])->name('receptions.claim');
+
+    // Documentos privados del siniestro (M4): solo se descargan por la API.
+    Route::apiResource('claims.documents', ClaimDocumentController::class)->only(['index', 'store', 'destroy']);
+
+    Route::get('claims/{claim}/documents/{document}/download', [ClaimDocumentController::class, 'download'])->name('claims.documents.download');
 
     Route::get('/reception-check-lists/{receptionCheckList}', [ReceptionCheckListController::class, 'show'])->name('reception-check-lists.show');
         
