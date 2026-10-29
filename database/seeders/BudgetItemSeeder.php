@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Part;
 use App\Models\Service;
+use App\Enums\BudgetItemResponsibility;
 use App\Enums\BudgetItemType;
 use App\Enums\ClientDecisionChannel;
 use App\Services\BudgetService;
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\DB;
  */
 class BudgetItemSeeder extends Seeder
 {
+    /** Escenarios con siniestro abierto cuyas líneas paga la aseguradora. */
+    private const INSURED = ['C07'];
+
     public function run(BudgetService $budgetService): void
     {
         foreach (ExampleScenarios::chronological() as $scenario) {
@@ -33,6 +37,11 @@ class BudgetItemSeeder extends Seeder
                     foreach ($scenario['budget']['items'] as $item) {
                         // Igual que BudgetItemController::store.
                         $data = $budgetService->prepareCatalogItem(self::itemData($item));
+                        // C07 tiene un siniestro abierto (ClaimSeeder): su reparación la cubre la aseguradora (M5).
+                        if (in_array($scenario['key'], self::INSURED, true)) {
+                            $data['responsibility'] = BudgetItemResponsibility::INSURER->value;
+                            $budgetService->ensureResponsibilityAllowed($budget, $data);
+                        }
                         $data['total'] = $budgetService->itemTotal($data['quantity'], $data['unit_price']);
                         $budget->items()->create($data);
                     }

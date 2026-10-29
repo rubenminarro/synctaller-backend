@@ -1597,6 +1597,23 @@ Reglas vigentes en `CLAUDE.md`, 6.24.
 
 ---
 
+# 2.63 Responsable por línea del presupuesto (2026-10-29)
+
+Entrega M5 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.4, §5.2 y §9). Reglas
+vigentes en `CLAUDE.md`, 6.4.
+
+| Tema | Decisión |
+|---|---|
+| Columna | Migración `000063`: `budget_items.responsibility` (`string(20)`, `owner` por defecto). Las líneas existentes quedaron a cargo del dueño sin migrar datos (en la base local, las 73) |
+| Por defecto | `owner` aunque la recepción tenga siniestro (decisión del usuario del 2026-10-29): lo que paga la aseguradora se marca a propósito, y el frontend actual, que no manda el campo, no cambia nada |
+| Regla | `insurer` exige un siniestro abierto en la recepción del presupuesto (`BUDGET_ITEM_INSURER_WITHOUT_CLAIM`, 422). Lo valida `BudgetService::ensureResponsibilityAllowed`, desde `BudgetItemController` (alta y edición) y desde el seeder. Solo en borrador, como el resto del ítem |
+| Siniestro cancelado | `ClaimService::cancel` devuelve a `owner` las líneas `insurer` de los presupuestos **en borrador** de la recepción, uno por uno (queda en la auditoría de `BudgetItem`). Los enviados y aprobados no se tocan (decisión del usuario del 2026-10-29). La cancelación de la recepción ya cancela sus borradores |
+| API | `BudgetItemResource` agrega `responsibility` (`value`/`label`). Aditivo |
+| Seeder | `BudgetItemSeeder` carga a la aseguradora la línea del presupuesto del siniestro abierto (C07). `DatabaseSeederTest` verifica los dos valores |
+| Pruebas | `tests/Feature/Budgets/BudgetItemResponsibilityTest` (4): dueño por defecto aun con siniestro, aseguradora solo con siniestro abierto (y valor inválido), solo en borrador, y vuelta al dueño al cancelar el siniestro (el enviado no cambia) |
+
+---
+
 ---
 
 # 2.2 Autenticación
@@ -4097,6 +4114,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Aseguradoras y sus contactos (2.60)
 [✓] Siniestros (2.61)
 [✓] Documentos privados de siniestros (2.62)
+[✓] Responsable por línea del presupuesto (2.63)
 ```
 
 ## Próximo

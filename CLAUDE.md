@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3). 260 rutas API, 421 tests en verde.
+  (6.3). 260 rutas API, 425 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -329,6 +329,17 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   → `INVENTORY_FRACTIONAL_QUANTITY_NOT_ALLOWED`). `service_id` solo en `service` (sin `unit_price` toma
   `standard_price`; inactivo → `SERVICE_NOT_USABLE`). `estimated_hours`: service = catálogo × cantidad si no se informa;
   labor opcional; part prohibido.
+* **Responsable de la línea** (`budget_items.responsibility`, `BudgetItemResponsibility`: `owner|insurer`; M5, decisiones
+  del 2026-10-29):
+  * sin enviarlo, la línea queda a cargo del dueño, también si hay siniestro: lo que paga la aseguradora se marca a
+    propósito;
+  * `insurer` solo si la recepción tiene un siniestro **abierto** (`BUDGET_ITEM_INSURER_WITHOUT_CLAIM`, 422,
+    `BudgetService::ensureResponsibilityAllowed`);
+  * se edita solo en borrador, como el resto del ítem;
+  * al cancelar el siniestro, las líneas `insurer` de los presupuestos **en borrador** vuelven a `owner`. Un presupuesto
+    enviado o aprobado no se toca: se rechaza, se reabre y el cliente vuelve a aprobar.
+
+  No cambia totales, IVA, estados, OT ni factura.
 * Contrato: el detalle trae cada ítem con `part` / `service` (`id`, `code`, `name`) y la recepción con marca y modelo
   del vehículo. Editar un ítem acepta los mismos caracteres que el alta y vacía `notes` con `null`.
 
@@ -666,7 +677,8 @@ Entrega M3 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-10-29
 * **Edición** (`PATCH`): solo `open` (`CLAIM_NOT_EDITABLE`) y con la recepción editable. Recepción, aseguradora y tipo no
   cambian (`prohibited`: se cancela y se registra otro). El deducible se edita libremente: su bloqueo con facturas llega
   con M9.
-* **Cancelación** (`POST claims/{id}/cancel`, motivo obligatorio): solo `open` (`CLAIM_NOT_CANCELLABLE`).
+* **Cancelación** (`POST claims/{id}/cancel`, motivo obligatorio): solo `open` (`CLAIM_NOT_CANCELLABLE`). Las líneas
+  `insurer` de los presupuestos en borrador de la recepción vuelven a `owner` (6.4).
 * **Estado sincronizado con la recepción** (`ClaimStatusService`, en la transacción del evento): la entrega lo cierra, la
   anulación de la entrega lo reabre y la cancelación de la recepción lo cancela ("Recepción cancelada: <motivo>").
 * **Visibilidad:** el detalle de la recepción trae `claim` (código, número, estado y aseguradora) solo si el usuario tiene

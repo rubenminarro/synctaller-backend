@@ -104,6 +104,8 @@ class DatabaseSeederTest extends TestCase
 
         // Siniestros (M3): el estado sale de la sincronización con la recepción (C07 abierta, H07 entregada, X01 cancelada).
         $this->assertSame(['cancelled' => 1, 'closed' => 1, 'open' => 1], $this->statusCounts('claims'));
+        // Responsabilidad por línea (M5): el presupuesto del siniestro abierto (C07) lo paga la aseguradora.
+        $this->assertEqualsCanonicalizing(['owner', 'insurer'], DB::table('budget_items')->distinct()->pluck('responsibility')->all());
         // Documentos (M4): denuncia y foto del siniestro abierto, con su archivo en el disco privado.
         $this->assertEqualsCanonicalizing(['loss_report', 'photo'], DB::table('claim_documents')->pluck('type')->all());
         DB::table('claim_documents')->pluck('path')->each(fn (string $path) => Storage::disk('claim_documents')->assertExists($path));

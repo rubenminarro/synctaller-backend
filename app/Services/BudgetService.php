@@ -8,8 +8,11 @@ use App\Models\Diagnostic;
 use App\Models\Part;
 use App\Models\Service;
 use App\Enums\BudgetItemType;
+use App\Enums\BudgetItemResponsibility;
 use App\Enums\BudgetStatus;
+use App\Enums\ClaimStatus;
 use App\Enums\ClientAcceptanceKind;
+use App\Models\Claim;
 use App\Models\User;
 use App\Enums\DiagnosticStatus;
 use App\Enums\DocumentSeries;
@@ -67,6 +70,29 @@ class BudgetService
         ]);
 
         return $budget->refresh();
+    }
+
+    /**
+     * Una línea a cargo de la aseguradora exige un siniestro abierto en la recepción del presupuesto (M5). Sin
+     * enviarla, la línea queda (o sigue) a cargo del dueño.
+     */
+    public function ensureResponsibilityAllowed(Budget $budget, array $data): void
+    {
+        if (($data['responsibility'] ?? null) !== BudgetItemResponsibility::INSURER->value) {
+            return;
+        }
+
+        $hasOpenClaim = Claim::where('reception_id', $budget->reception_id)
+            ->where('status', ClaimStatus::OPEN)
+            ->exists();
+
+        if (!$hasOpenClaim) {
+            throw new BudgetException(
+                'Solo se puede cargar una línea a la aseguradora si la recepción tiene un siniestro abierto.',
+                422,
+                'BUDGET_ITEM_INSURER_WITHOUT_CLAIM'
+            );
+        }
     }
 
     /**

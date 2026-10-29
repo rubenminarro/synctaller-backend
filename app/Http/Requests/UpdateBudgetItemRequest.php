@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Enums\BudgetItemResponsibility;
 use App\Enums\BudgetItemType;
 use Illuminate\Validation\Rules\Enum;
 
@@ -20,6 +21,11 @@ class UpdateBudgetItemRequest extends FormRequest
             'type' => [
                 'sometimes',
                 Rule::enum(BudgetItemType::class)
+            ],
+            // Quién paga la línea; sin enviarlo, el dueño. 'insurer' exige un siniestro abierto (BudgetService).
+            'responsibility' => [
+                'sometimes',
+                Rule::enum(BudgetItemResponsibility::class),
             ],
             'part_id' => [
                 'sometimes',
@@ -78,6 +84,9 @@ class UpdateBudgetItemRequest extends FormRequest
         return [
             'type' => [
                 Enum::class => 'El tipo debe ser un valor válido.',
+            ],
+            'responsibility' => [
+                Enum::class => 'El responsable debe ser owner (dueño) o insurer (aseguradora).',
             ],
             'part_id' => [
                 'integer' => 'El ID del repuesto debe ser un número entero.',

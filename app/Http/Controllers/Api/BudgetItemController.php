@@ -51,6 +51,8 @@ class BudgetItemController extends Controller implements HasMiddleware
 
         $data = $this->budgetService->prepareCatalogItem($request->validated());
 
+        $this->budgetService->ensureResponsibilityAllowed($budget, $data);
+
         $data['total'] = $this->budgetService->itemTotal($data['quantity'], $data['unit_price']);
 
         // Si el nuevo total del presupuesto queda fuera de rango, el ítem no se guarda.
@@ -84,6 +86,8 @@ class BudgetItemController extends Controller implements HasMiddleware
         $this->budgetService->ensureEditable($budget);
 
         $data = $this->budgetService->prepareCatalogItem($request->validated(), $item);
+
+        $this->budgetService->ensureResponsibilityAllowed($budget, $data);
 
         $quantity = $data['quantity'] ?? $item->quantity;
         $unitPrice = $data['unit_price'] ?? $item->unit_price;
