@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\DiagnosticItemPhotoController;
 use App\Http\Controllers\Api\DiagnosticItemTemplateController;
 use App\Http\Controllers\Api\InsurerController;
 use App\Http\Controllers\Api\InsurerContactController;
+use App\Http\Controllers\Api\ClaimController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetItemController;
 use App\Http\Controllers\Api\MechanicController;
@@ -91,6 +92,15 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
     Route::apiResource('receptions', ReceptionController::class);
 
     Route::post('receptions/{reception}/cancel', [ReceptionController::class, 'cancel'])->name('receptions.cancel');
+
+    // Siniestros (M3).
+    Route::apiResource('claims', ClaimController::class)->except(['update', 'destroy']);
+
+    Route::patch('claims/{claim}', [ClaimController::class, 'update'])->name('claims.update');
+
+    Route::post('claims/{claim}/cancel', [ClaimController::class, 'cancel'])->name('claims.cancel');
+
+    Route::get('receptions/{reception}/claim', [ClaimController::class, 'forReception'])->name('receptions.claim');
 
     Route::get('/reception-check-lists/{receptionCheckList}', [ReceptionCheckListController::class, 'show'])->name('reception-check-lists.show');
         

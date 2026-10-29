@@ -48,6 +48,11 @@ class Insurer extends Model
         return $this->hasMany(InsurerContact::class)->orderByDesc('is_primary')->orderBy('name');
     }
 
+    public function claims(): HasMany
+    {
+        return $this->hasMany(Claim::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by')->withTrashed();

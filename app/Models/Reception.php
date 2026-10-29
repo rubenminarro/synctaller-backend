@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Enums\ClaimStatus;
 use App\Enums\ReceptionStatus;
 
 class Reception extends Model
@@ -72,6 +73,22 @@ class Reception extends Model
     public function diagnostics(): HasMany
     {
         return $this->hasMany(Diagnostic::class);
+    }
+
+    /**
+     * Siniestros de la recepción, incluidos los cancelados (historial).
+     */
+    public function claims(): HasMany
+    {
+        return $this->hasMany(Claim::class);
+    }
+
+    /**
+     * Siniestro vigente (no cancelado): como máximo uno por recepción.
+     */
+    public function currentClaim(): HasOne
+    {
+        return $this->hasOne(Claim::class)->where('status', '!=', ClaimStatus::CANCELLED->value);
     }
 
     public function budgets(): HasMany

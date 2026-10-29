@@ -30,6 +30,11 @@ class VehicleDeliveryService
         WorkOrderStatus::PAUSED,
     ];
 
+    public function __construct(
+        protected ClaimStatusService $claimStatusService
+    ) {
+    }
+
     public function deliver(Reception $reception, array $data, ?UploadedFile $signature, User $user): VehicleDelivery
     {
         $storedPath = null;
@@ -94,6 +99,9 @@ class VehicleDeliveryService
 
                 $reception->update(['status' => ReceptionStatus::DELIVERED]);
 
+                // El siniestro vigente se cierra con la entrega.
+                $this->claimStatusService->receptionDelivered($reception);
+
                 // El kilometraje del vehículo solo avanza.
                 Vehicle::whereKey($reception->vehicle_id)
                     ->where(fn ($q) => $q->whereNull('mileage')->orWhere('mileage', '<', $finalMileage))
@@ -154,6 +162,9 @@ class VehicleDeliveryService
             ]);
 
             $reception->update(['status' => $restoredStatus]);
+
+            // El siniestro cerrado por la entrega vuelve a abrirse.
+            $this->claimStatusService->deliveryCancelled($reception);
 
             return $this->load($delivery);
         });

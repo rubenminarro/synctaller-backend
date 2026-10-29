@@ -1558,6 +1558,26 @@ vigentes en `CLAUDE.md`, 6.22.
 
 ---
 
+# 2.61 Siniestros (2026-10-29)
+
+Entrega M3 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.3, §5.2 y §9). Reglas
+vigentes en `CLAUDE.md`, 6.23.
+
+| Tema | Decisión |
+|---|---|
+| Modelo | Migración `000061`: `claims` con los campos de §4.3 (número y póliza, tipo, fecha y descripción, asegurado, perito, deducible, notas de cobertura, estado y datos de cierre y cancelación). `SIN-` es una serie más de `DocumentSequenceService` |
+| Unicidad | Un siniestro vigente (no cancelado) por recepción, controlado en `ClaimService` (decisión del usuario del 2026-10-29): el cancelado queda en el historial y se puede abrir otro, por ejemplo con otra aseguradora. `Reception::currentClaim()` es el vigente |
+| Asegurado | En uno propio, sin datos del asegurado se copian los del cliente de la recepción, con `insured_client_id` (decisión del usuario del 2026-10-29). En uno de tercero el nombre es obligatorio |
+| Sincronización | `ClaimStatusService`, sin dependencias para evitar un ciclo (`ClaimService` usa `ReceptionStatusService`): `VehicleDeliveryService::deliver` lo cierra, `cancel` lo reabre y `ReceptionStatusService::cancel` lo cancela con el motivo de la recepción. Todo en la transacción del evento. Orden de bloqueo: recepción → siniestro |
+| Edición | Solo `open` y con la recepción editable. Recepción, aseguradora y tipo son `prohibited`. El deducible se edita libremente hasta M9 (`CLAIM_DEDUCTIBLE_LOCKED` con facturas). La cancelación manual reutiliza `CancelReceptionRequest` (motivo obligatorio) |
+| Aseguradora | La baja con siniestros, incluso cancelados, responde `INSURER_IN_USE` (409): completa lo que M2 dejó pendiente |
+| Visibilidad | El detalle de la recepción agrega `claim` solo si el usuario tiene `claims.show` (decisión del usuario del 2026-10-29): el mecánico tiene `receptions.show`, pero no debe ver pólizas ni datos del asegurado (§8 de la especificación) |
+| Permisos | `claims.index\|show` para recepcionista, jefe de taller y cajero; `claims.store\|update\|cancel` para recepcionista y jefe de taller. Mecánico y depósito sin acceso |
+| Seeder | `ClaimSeeder` (después de `ReceptionSeeder`), con la aseguradora activa de `InsurerSeeder` y el recepcionista del escenario. Los tres nacen abiertos; el estado final sale de la sincronización: C07 abierto, H07 cerrado (se entrega) y X01 cancelado (se cancela la recepción) |
+| Pruebas | `tests/Feature/Claims/ClaimTest` (8): asegurado copiado y visibilidad en la recepción, tercero, unicidades y nuevo siniestro tras cancelar, aseguradora inactiva y recepción cerrada, edición y cancelación, sincronización con entrega, anulación y cancelación de la recepción, aseguradora en uso y permisos |
+
+---
+
 ---
 
 # 2.2 Autenticación
@@ -4056,6 +4076,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Spike T0 de tenancy, descartado; informe en docs/spike-t0-informe.md (2.58)
 [✓] Cliente persona o empresa (2.59)
 [✓] Aseguradoras y sus contactos (2.60)
+[✓] Siniestros (2.61)
 ```
 
 ## Próximo

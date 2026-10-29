@@ -49,6 +49,17 @@ class ShowReceptionResource extends JsonResource
                     'name' => optional($this->approvedBy)->name,
                 ];
             }),
+            // Siniestro vigente: solo con claims.show (el mecánico ve la recepción, pero no pólizas ni datos del asegurado).
+            'claim' => $this->when($request->user()?->can('claims.show') ?? false, fn () => $this->currentClaim ? [
+                'id' => $this->currentClaim->id,
+                'code' => $this->currentClaim->code,
+                'claim_number' => $this->currentClaim->claim_number,
+                'status' => [
+                    'value' => $this->currentClaim->status->value,
+                    'label' => $this->currentClaim->status->label(),
+                ],
+                'insurer' => $this->currentClaim->insurer?->client?->display_name,
+            ] : null),
             'client' => $this->whenLoaded('client', function () {
                 return [
                     'id' => $this->client->id,

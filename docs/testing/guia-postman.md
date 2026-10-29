@@ -346,6 +346,31 @@ Aseguradoras (M2, ver `CLAUDE.md` 6.22 y `docs/handoff.md` 2.60). Alta con su cl
 | Eliminar la aseguradora | `DELETE {{base_url}}/insurers/{{insurer_id}}` | — | 200 | Baja lógica; el cliente se puede vincular a otra aseguradora |
 | Sin permiso | cajero: `POST {{base_url}}/insurers`; mecánico o depósito: `GET {{base_url}}/insurers` | — | 403 | `FORBIDDEN` |
 
+Siniestros (M3, ver `CLAUDE.md` 6.23 y `docs/handoff.md` 2.61). Alta sobre una recepción abierta:
+
+```json
+{ "reception_id": {{reception_id}}, "insurer_id": {{insurer_id}}, "claim_type": "own", "loss_date": "2026-10-25",
+  "claim_number": "SDS-2026-0457", "policy_number": "POL-778812", "adjuster_name": "Ramón Giménez", "deductible_amount": 0 }
+```
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Alta propia | `POST {{base_url}}/claims` | el de arriba | 201 | `code` `SIN-…`, `status` `open`, `insured` copiado del cliente. Guardar `{{claim_id}}` |
+| Alta de tercero sin asegurado | ídem, con `"claim_type": "third_party"` | — | 422 | `VALIDATION_ERROR` en `insured_name` |
+| Otro siniestro en la misma recepción | ídem | — | 409 | `RECEPTION_ALREADY_HAS_CLAIM` |
+| Número repetido en la aseguradora | ídem, otra recepción, mismo `claim_number` | — | 409 | `CLAIM_NUMBER_DUPLICATE` |
+| Aseguradora inactiva / recepción cerrada | ídem | — | 422 | `INSURER_INACTIVE` / `RECEPTION_CLOSED` |
+| Detalle de la recepción | `GET {{base_url}}/receptions/{{reception_id}}` | — | 200 | `claim` (código, número, estado, aseguradora); con el token del mecánico no aparece |
+| Siniestro de la recepción | `GET {{base_url}}/receptions/{{reception_id}}/claim` | — | 200 | 404 si no tiene |
+| Editar deducible | `PATCH {{base_url}}/claims/{{claim_id}}` | `{ "deductible_amount": 500000 }` (o `null`: desconocido) | 200 | — |
+| Cambiar aseguradora o tipo | ídem | `{ "insurer_id": 1 }` | 422 | `VALIDATION_ERROR` (se cancela y se registra otro) |
+| Cancelar | `POST {{base_url}}/claims/{{claim_id}}/cancel` | `{ "reason": "La aseguradora rechazó la cobertura." }` | 200 | `cancelled`; después, editar → `CLAIM_NOT_EDITABLE` y cancelar otra vez → `CLAIM_NOT_CANCELLABLE` |
+| Entregar el vehículo | `POST {{base_url}}/receptions/{{reception_id}}/delivery` | — | 201 | El siniestro pasa a `closed`; al anular la entrega, vuelve a `open` |
+| Cancelar la recepción | `POST {{base_url}}/receptions/{id}/cancel` | `{ "reason": "..." }` | 200 | El siniestro pasa a `cancelled` con "Recepción cancelada: …" |
+| Eliminar una aseguradora con siniestros | `DELETE {{base_url}}/insurers/{{insurer_id}}` | — | 409 | `INSURER_IN_USE` |
+| Listar / filtrar | `GET {{base_url}}/claims?search=SDS&status=open&insurer_id={{insurer_id}}` | — | 200 | Con `plate` y la aseguradora |
+| Sin permiso | cajero: `PATCH {{base_url}}/claims/{id}`; mecánico o depósito: `GET {{base_url}}/claims` | — | 403 | `FORBIDDEN` |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.
