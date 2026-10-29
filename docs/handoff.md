@@ -1661,6 +1661,26 @@ decisiones B, C y P5). Reglas vigentes en `CLAUDE.md`, 6.5 y 6.26.
 
 ---
 
+# 2.66 Decisión P10: notas de crédito emitidas fuera del sistema (2026-10-29)
+
+Decisión de diseño, **sin código todavía**. La primera respuesta a G5 (2026-10-28) indica que una factura emitida y
+cuestionada se corrige con una nota de crédito, no anulándola, y que mientras SyncTaller no las emita se acepta otro
+procedimiento autorizado. El usuario cerró P10 antes de diseñar M8, sin esperar V18–V19. Texto aprobado en
+`docs/especificacion-aseguradoras.html` (§5.7 y §10.2).
+
+| Tema | Decisión del usuario (2026-10-29) |
+|---|---|
+| Mecanismo | Se registra en SyncTaller la nota de crédito emitida fuera del sistema (número, fecha, motivo y líneas). Emitirlas desde SyncTaller queda para cuando SIFEN sea obligatorio o se decida |
+| Alcance | Cualquier factura emitida, también la del flujo particular: la regla es fiscal. Aditivo: las validaciones y errores actuales no cambian |
+| Importe | Por línea y parcial: cada línea de la nota referencia una línea de la factura y no supera lo que esa línea tiene sin acreditar. Libera exactamente la porción del reparto (R8 es por porción) |
+| Con pagos | El total de la nota no supera el saldo pendiente. Para acreditar lo cobrado se anulan antes los pagos (procedimiento vigente). Sin saldos a favor ni devoluciones en el MVP |
+| Efectos | El saldo y el estado de cobro descuentan lo acreditado. El facturado de una porción es el neto (base facturada menos acreditada): P6 permite sustituir una versión del reparto cuando su facturado neto es 0, y `ALLOCATION_HAS_INVOICES` informa también lo acreditado |
+| Anulación | La vigente (6.10) no cambia mientras V19 no diga lo contrario: una emitida sin pagos todavía puede anularse |
+| Implementación | Entrega propia, después de M8 y antes de cerrar M9. Tablas, errores, anulación de un registro mal cargado y efectos en la entrega, los recordatorios y los reportes se diseñan al iniciarla |
+| Pendiente externo | V18 (procedimiento autorizado y plazo de un año) y V19 (anulación de una factura que la aseguradora todavía no recibió). Aprobar P10 no las resuelve |
+
+---
+
 ---
 
 # 2.2 Autenticación

@@ -146,7 +146,7 @@ footer { margin-top: 32px; font-size: 14px; color: var(--muted); }
     <span><b>Fecha:</b> 2026-10-28 (versión 2: 2026-10-27)</span>
     <span><b>Backend:</b> main (716010f), Laravel 13.38.0</span>
     <span><b>Frontend revisado:</b> main (cbbb559)</span>
-    <span><b>Estado:</b> decisiones A–G y P1–P9 aprobadas; cambios de la versión 3 <b>pendientes de revisión</b>; G1–G5 respondidas en parte, el resto de las validaciones pendientes (§10.1). <b>No apto para producción</b></span>
+    <span><b>Estado:</b> decisiones A–G, P1–P9 y P10 (2026-10-29) aprobadas; M10 y M12 de la versión 3 <b>pendientes de revisión</b>; G1–G5 respondidas en parte, el resto de las validaciones pendientes (§10.1). <b>No apto para producción</b></span>
   </div>
   <div class="legend" aria-label="Leyenda">
     <span class="item"><span class="tag h">Hecho</span> comprobado en el código o el entorno</span>
@@ -173,7 +173,7 @@ footer { margin-top: 32px; font-size: 14px; color: var(--muted); }
         <li><b>G1:</b> con deducible se emiten dos facturas desde la OT del siniestro: a la aseguradora, por su parte <b>neta del deducible</b>; al dueño, por el deducible con un concepto propio. La modalidad puede variar por aseguradora y por póliza. Con eso M10 tiene una modalidad concreta que diseñar (§6.6), sujeta a precisiones (V15–V16) y a la confirmación escrita del contador (V21).</li>
         <li><b>G2:</b> se factura a quien paga; en siniestros de tercero, a la aseguradora del responsable.</li>
         <li><b>G3:</b> las aseguradoras retienen el 30 % del IVA y la factura a crédito se cancela con un recibo que descuenta la retención. Hoy no hay forma de registrarlo: entrega nueva <b>M12</b>.</li>
-        <li><b>G5:</b> la corrección de una factura emitida es una nota de crédito. P6 (corregir anulando) queda en revisión.</li>
+        <li><b>G5:</b> la corrección de una factura emitida es una nota de crédito. <b>P10 aprobada (2026-10-29):</b> se registra la nota de crédito emitida fuera del sistema; P6 se corrige en consecuencia (§5.7).</li>
       </ul>
     </li>
     <li><b>Primeros pasos recomendados:</b> la línea E (E0–E5) está completa (2026-10-28). Pedir las precisiones V15–V22 y las validaciones todavía abiertas (§10.1). Seguir con el spike de tenancy (T0) y M1. Después, el módulo desde M1 (tipo de cliente).</li>
@@ -776,17 +776,23 @@ stateDiagram-v2
     <li><b>Corrección (P6):</b> se genera una nueva versión desde la confirmada. Para confirmarla, la versión anterior <b>no puede tener facturas vigentes</b> (<code>ALLOCATION_HAS_INVOICES</code>, 409). El error incluye en <code>errors</code> el detalle de cada factura a resolver: número, destinatario, estado y si tiene pagos. El orden es:
       <ol class="plain">
         <li>los borradores de factura se eliminan;</li>
-        <li>las facturas emitidas sin pagos se anulan con motivo (procedimiento vigente);</li>
-        <li>si hay pagos, primero se anulan con el procedimiento vigente (<code>INVOICE_HAS_PAYMENTS</code> sigue vigente) y después la factura;</li>
-        <li>se confirma la nueva versión, se vuelve a facturar y se registran nuevamente los pagos.</li>
+        <li>las facturas emitidas se acreditan con una <b>nota de crédito registrada</b> (P10) por lo que corresponda corregir; mientras V19 no diga lo contrario, una emitida sin pagos también puede anularse con motivo (procedimiento vigente, 6.10);</li>
+        <li>la nota de crédito no supera el saldo pendiente: si hay que acreditar lo ya cobrado, primero se anulan esos pagos con el procedimiento vigente;</li>
+        <li>se confirma la nueva versión, se factura lo que falte y se registran nuevamente los pagos que correspondan.</li>
       </ol>
+      Lo que cuenta es el <b>facturado neto</b> de cada porción (base de las líneas de facturas vigentes menos lo acreditado por notas de crédito): la versión anterior se puede sustituir cuando su facturado neto es 0. El detalle de <code>ALLOCATION_HAS_INVOICES</code> incluye además lo acreditado de cada factura.
       Las versiones sustituidas, las facturas anuladas y los pagos anulados quedan vinculados: no se pierde historial. Los números de factura anulados no se reutilizan. No cambia ninguna otra regla de facturación o pagos.</li>
-    <li><span class="tag w">En revisión (versión 3)</span> La primera respuesta a G5 (2026-10-28) indica que una factura emitida y cuestionada se corrige con una <b>nota de crédito</b> a favor de la aseguradora, no anulándola. Mientras SyncTaller no emita notas de crédito, se acepta otro procedimiento autorizado y no tiene consecuencias fiscales. Por eso este circuito <b>no se implementa como está</b> hasta definir (V18–V19):
+    <li><span class="tag h">Aprobada (P10, 2026-10-29)</span> La primera respuesta a G5 (2026-10-28) indica que una factura emitida y cuestionada se corrige con una <b>nota de crédito</b>, no anulándola, y que mientras SyncTaller no las emita se acepta otro procedimiento autorizado. Decisión: <b>se registra en SyncTaller la nota de crédito emitida fuera del sistema</b>:
       <ul>
-        <li>cuál es ese procedimiento (por ejemplo, una nota de crédito en talonario o en otro sistema);</li>
-        <li>si se puede anular una factura emitida que la aseguradora todavía no recibió.</li>
-      </ul>
-      Propuesta a decidir (P10, §10.3): <b>registrar en SyncTaller la nota de crédito emitida fuera del sistema</b> (número, fecha, importe y factura afectada), para que baje el saldo de la factura y libere la porción del reparto, en lugar de anular la factura. La regla vigente de anulación (6.10) no cambia mientras tanto.</li>
+        <li><b>Alcance:</b> cualquier factura emitida, también la del flujo particular (la regla es fiscal, no propia de las aseguradoras). Es aditivo: las validaciones y errores actuales no cambian.</li>
+        <li><b>Datos:</b> número y fecha de la nota de crédito externa, motivo y líneas.</li>
+        <li><b>Por línea y parcial:</b> cada línea de la nota referencia una línea de la factura y no supera lo que esa línea tiene sin acreditar. Así libera exactamente la porción del reparto que factura (R8 es por porción) y admite correcciones parciales.</li>
+        <li><b>Hasta el saldo:</b> el total de la nota no supera el saldo pendiente de la factura. Para acreditar lo cobrado, primero se anulan los pagos (procedimiento vigente). En el MVP no hay saldos a favor ni devoluciones.</li>
+        <li><b>Efectos:</b> el saldo y el estado de cobro de la factura descuentan lo acreditado, y el facturado de una porción es su base facturada menos la acreditada (R8, P6). Los efectos en la entrega, los recordatorios y los reportes se detallan al implementarla.</li>
+        <li><b>Sin cambios:</b> la anulación vigente (6.10) sigue igual mientras V19 no diga lo contrario. Emitir notas de crédito desde SyncTaller queda para cuando SIFEN sea obligatorio o se decida.</li>
+        <li><b>Implementación:</b> entrega propia, después de M8 y antes de cerrar M9 (la corrección de repartos facturados la necesita). Tablas, códigos de error, anulación de un registro mal cargado y efectos en reportes se diseñan al iniciarla.</li>
+        <li><span class="tag u">Pendiente</span> V18 (cuál es el procedimiento autorizado y si el plazo de un año es para emitir la nota) y V19 (si se puede anular una factura que la aseguradora todavía no recibió). Aprobar P10 no las resuelve.</li>
+      </ul></li>
     <li><b>Sin siniestro, o sin líneas a cargo de la aseguradora:</b> no se genera reparto. Se usa el flujo actual.</li>
   </ul>
 </section>
@@ -1401,10 +1407,12 @@ flowchart LR
       <tr><td>P3</td><td>Nombre y apellido de empresas</td><td>Nulos solo para empresas; <code>business_name</code> y <code>display_name</code> (también en el historial del vehículo); búsquedas por razón social; ninguna empresa en producción antes de adaptar el frontend; tests de igualdad para personas</td><td>§4.1, §7.1, M1</td></tr>
       <tr><td>P4</td><td>Correlativos no fiscales</td><td>Se aceptan huecos (sin garantía de continuidad); contador en la misma transacción con bloqueo de fila por serie; ocho series internas; 409 ante un duplicado imprevisto</td><td>§6.4, E3</td></tr>
       <tr><td>P5</td><td>Extras en siniestros</td><td>A cargo del dueño, salvo absorción autorizada; lo que deba cubrir la aseguradora va a un complementario; advertencia antes de confirmar el extra; un complementario no corrige un extra ya consumido</td><td>§5.5, §5.6, R4, M7</td></tr>
-      <tr><td>P6</td><td>Corrección de un reparto</td><td>Exige resolver todas las facturas vigentes de la versión anterior; 409 <code>ALLOCATION_HAS_INVOICES</code> con detalle; resumen previo a confirmar; trazabilidad; <b>sujeta a G5</b>. <b>Versión 3:</b> en revisión, porque la respuesta a G5 indica nota de crédito (P10)</td><td>§5.7, M8</td></tr>
+      <tr><td>P6</td><td>Corrección de un reparto</td><td>Exige resolver todas las facturas vigentes de la versión anterior; 409 <code>ALLOCATION_HAS_INVOICES</code> con detalle; resumen previo a confirmar; trazabilidad; <b>sujeta a G5</b>. Corregida por P10 (2026-10-29): las emitidas se acreditan con nota de crédito registrada; cuenta el facturado neto</td><td>§5.7, M8</td></tr>
       <tr><td>P7</td><td>Tope de la autorización</td><td>Por línea, en importe y en cantidad; el exceso va a un complementario; pregunta externa V1 (no G6); unidades explícitas en M6</td><td>§4.4, §5.3, M6</td></tr>
       <tr><td>P8</td><td>Fotos y firmas públicas</td><td>Deuda de seguridad; tarea independiente después de T4, primero la firma; resuelta antes del primer taller comercial; ningún tipo nuevo de archivo en <code>public</code> salvo branding</td><td>§3.7, §9 (tarea P8), T6</td></tr>
       <tr><td>P9</td><td>Taller suspendido</td><td>Bloqueo total y reversible, también en rutas públicas; avisos en cola → <code>failed</code> con <code>Taller suspendido</code>; pantalla específica en el frontend; exportación asistida como procedimiento operativo; solo lectura como alternativa futura</td><td>§3.5, §3.9, §3.12, §7.3, T5</td></tr>
+      <tr class="grp"><td colspan="4">Versión 3 (aprobadas el 2026-10-29)</td></tr>
+      <tr><td>P10</td><td>Corrección de facturas emitidas</td><td>Se registra la nota de crédito emitida fuera del sistema, en cualquier factura emitida; por línea y parcial, sin superar lo no acreditado de la línea ni el saldo pendiente (para acreditar lo cobrado se anulan antes los pagos); baja el saldo y el facturado neto de la porción; la anulación vigente no cambia hasta V19; emitir notas de crédito desde SyncTaller queda para SIFEN. Pendientes V18 y V19</td><td>§5.7, P6, M8, M9 (entrega propia)</td></tr>
     </tbody>
   </table></div>
 
@@ -1422,7 +1430,6 @@ flowchart LR
     <tbody>
       <tr><td>M10</td><td>Modalidad neta del deducible (§6.6): modalidad en el siniestro, porciones <code>owner_deductible</code> descontadas de lo cubierto y línea propia en la factura del dueño</td><td>Aprobar el diseño. La implementación espera M9, V15, V16 y V21</td><td>G1 (respondida en parte)</td></tr>
       <tr><td>M12</td><td>Retenciones de IVA como cancelación sin caja (§9)</td><td>Aprobar el diseño y hacerla antes de M9 si ya se facturan aseguradoras editando el borrador. La implementación espera V17</td><td>G3 (respondida)</td></tr>
-      <tr><td>P10</td><td>Corrección de facturas emitidas: registrar en SyncTaller la nota de crédito emitida fuera del sistema (número, fecha, importe, factura afectada), que baja el saldo de la factura y libera su porción del reparto. La emisión de notas de crédito desde SyncTaller queda para cuando SIFEN sea obligatorio o se decida</td><td>Esperar V18–V19 antes de decidir. Mientras tanto no se implementa el circuito de corrección de P6 y la anulación vigente (6.10) no cambia</td><td>G5 (respondida en parte)</td></tr>
     </tbody>
   </table></div>
 
@@ -1434,7 +1441,7 @@ flowchart LR
     <li><b>Datos personales en documentos:</b> almacenamiento privado, permisos restringidos y descargas auditadas. Sin antivirus (riesgo técnico pendiente).</li>
     <li><b>Fotos y firmas con URL pública permanente (P8):</b> una URL filtrada no se puede revocar hasta migrar el archivo. Mitigación: tarea P8 antes del primer taller comercial, con la firma primero.</li>
     <li><b>Utilidad comercial del MVP (A):</b> si la mayoría de los siniestros tiene deducible mayor a 0, el MVP no los factura ni los entrega hasta M10. Mitigación: G1 ya tiene una modalidad candidata (versión 3); falta confirmarla por escrito (V21) y precisar V15–V16.</li>
-    <li><b>Validez fiscal de la corrección (P6):</b> la primera respuesta a G5 indica nota de crédito. El circuito de anulación no se implementa hasta resolver V18–V19 y decidir P10.</li>
+    <li><b>Validez fiscal de la corrección (P6, P10):</b> la corrección usa notas de crédito emitidas fuera del sistema y registradas (P10). Falta confirmar con el contador el procedimiento autorizado y el plazo (V18) y si la anulación de una factura no recibida sigue siendo válida (V19).</li>
     <li><b>Saldos de aseguradoras sin retenciones (M12):</b> hasta registrar la retención, las facturas a aseguradoras quedan con un saldo pendiente que nunca se cobra. Esto afecta los recordatorios, los reportes de cobros y la entrega con facturas a crédito.</li>
     <li><b>Desvío de alcance:</b> convenios, coaseguro y liquidaciones quedan fuera de forma explícita.</li>
   </ul>
@@ -1453,10 +1460,10 @@ flowchart LR
     <li><b>T0:</b> spike de tenancy (descartable) con las condiciones de P2 y los umbrales de G, e informe de resultados. La dependencia se aprueba aparte; ante un fallo crítico, me detengo y te consulto.</li>
     <li><b>M1</b>, coordinado con el frontend; después M2 → M3 → M4 → M5 → M6 → M7, con revisión en M7 (flujo hasta la OT).</li>
     <li><b>T1–T5</b> en paralelo a M, según la capacidad disponible; después de T4, la <b>tarea P8</b> (fotos y firmas a privado, primero la firma).</li>
-    <li><b>M8 → M9</b> (revisión económica), con el circuito de corrección revisado contra G5 si ya hay respuesta. <b>M10</b> solo con G1 respondida. <b>M11</b> al final.</li>
+    <li><b>M8 → P10 → M9</b> (revisión económica): la corrección de repartos facturados usa las notas de crédito registradas (P10). <b>M10</b> solo con G1 respondida. <b>M11</b> al final.</li>
     <li><b>T6</b> (primer taller comercial) cuando T1–T5, la tarea P8 y el MVP estén aprobados. Los siniestros con deducible mayor a 0 no se habilitan comercialmente sin M10.</li>
   </ol>
-  <footer>Punto de control: la especificación termina aquí. Las decisiones técnicas de §10.2 están aprobadas. Las propuestas de la versión 3 (M10 neta, M12 y P10) esperan tu revisión. Las validaciones de §10.1 están respondidas en parte y el módulo no está listo para producción. Ningún paso de implementación empieza sin tu autorización.</footer>
+  <footer>Punto de control: la especificación termina aquí. Las decisiones técnicas de §10.2 están aprobadas. P10 se aprobó el 2026-10-29; las propuestas M10 (neta) y M12 de la versión 3 esperan tu revisión. Las validaciones de §10.1 están respondidas en parte y el módulo no está listo para producción. Ningún paso de implementación empieza sin tu autorización.</footer>
 </section>
 </main>
 </div>

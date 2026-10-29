@@ -264,9 +264,10 @@ propuestas esperan revisión, y faltan pedir las precisiones V15–V22. E2, E3 y
 
 **Actualización (2026-10-29):** la línea E está completa, el spike T0 se hizo y se descartó, y M1–M7 están en `main`
 (último merge `4f1ea1a`, M7). La documentación (README, handoff, `CLAUDE.md` y este documento) se puso al día antes de
-M8; con eso se resolvieron D4 y D6. **Siguiente: M8 (reparto económico).** Antes de diseñar su circuito de corrección
-conviene decidir P10 (notas de crédito, respuesta a G5; especificación §10.3): mientras tanto P6 no se implementa como
-está.
+M8; con eso se resolvieron D4 y D6. **P10 aprobada el 2026-10-29** (handoff 2.66): la corrección de facturas emitidas
+registra la nota de crédito emitida fuera del sistema, por línea y hasta el saldo, en cualquier factura; se implementa
+como entrega propia entre M8 y M9. V18 y V19 siguen pendientes con el contador. **Siguiente: diseño de M8 (reparto
+económico).** Siguen esperando revisión M10 (modalidad neta del deducible) y M12 (retenciones).
 
 **Siguiente paso recomendado, en orden:**
 
@@ -301,7 +302,7 @@ está.
        (`5b06a48`). La unidad de los importes (V2) se declara en cada registro (`amounts_include_tax`).
      * **M7** (bloqueo de la OT, re-aceptación y excepciones internas, handoff 2.65; migraciones `000065` y `000066`)
        revisada por el usuario y mergeada en `main` el 2026-10-29 (`4f1ea1a`). Migraciones aplicadas en la base local.
-     * **Sigue M8** (reparto), con P10 decidida antes del circuito de corrección. El frontend todavía no consume
+     * **Sigue M8** (reparto); después P10 (notas de crédito registradas, handoff 2.66) y M9. El frontend todavía no consume
        nada del módulo: su adaptación (empresas, aseguradoras, siniestros, autorizaciones, excepciones y advertencias)
        se coordina en `../synctaller-frontend`.
 
