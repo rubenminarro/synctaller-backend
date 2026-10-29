@@ -1500,6 +1500,22 @@ de aceptación del dueño en siniestros (decisión B, M7).
 
 ---
 
+# 2.58 Spike T0 de tenancy (2026-10-28/29, descartado)
+
+Prueba técnica de `spatie/laravel-multitenancy` **4.2.1** (P2) en una rama descartable. No se mergeó código ni se
+aprobó la dependencia. El informe completo, con los criterios S1–S13, las mediciones y lo que se armó para retomarlo
+en T2, está en `docs/spike-t0-informe.md`.
+
+| Tema | Resultado |
+|---|---|
+| Críticos (S1, S2, S4, S5, S7) | Cumplen. Los 393 tests en verde con el paquete y un taller activo; aislamiento de base, tokens, `exists`, bindings, SQL crudo, permisos y cache; un worker alternando talleres sin cruces |
+| No cumplen | S8 (un job con la base del taller caída consume su único intento) y S10 (la falla de un taller corta las migraciones de los demás). Los dos se resuelven con código propio ya previsto (§3.5, §3.8) |
+| Rendimiento (S13) | Con OPcache, unos 30–45 ms más por request, por encima de los umbrales de G. Hay mitigaciones para probar en T2 |
+| Hallazgos de diseño | El paquete identifica el taller al arrancar, no en un middleware (se usó un middleware propio con errores JSON). La cache y `failed_jobs` tienen que ir en la base central. Spatie Permission necesita una tarea propia para olvidar los permisos al cambiar de taller |
+| Entorno local | OPcache quedó activado para `php-cgi` (copia del `php.ini` original junto al archivo). Las bases del spike se eliminaron |
+
+---
+
 ---
 
 # 2.2 Autenticación
@@ -3995,6 +4011,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Códigos internos con bloqueo (2.55)
 [✓] Importes del presupuesto en decimal(14,2) (2.56)
 [✓] Registro de la respuesta del cliente al presupuesto (2.57)
+[✓] Spike T0 de tenancy, descartado; informe en docs/spike-t0-informe.md (2.58)
 ```
 
 ## Próximo
