@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ClientKind;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 use App\Http\Requests\StoreClientRequest;
 use App\Http\Requests\UpdateClientRequest;
 use App\Http\Resources\ClientResource;
@@ -36,8 +39,16 @@ class ClientController extends Controller implements HasMiddleware
 
     public function index(Request $request)
     {
-        
+        // Filtro por tipo (FA1: el alta de una aseguradora busca solo empresas).
+        $request->validate(
+            ['kind' => ['nullable', Rule::enum(ClientKind::class)]],
+            ['kind.' . Enum::class => 'El tipo de cliente debe ser person o company.']
+        );
+
         $clients = Client::query()
+        ->when($request->filled('kind'), function ($query) use ($request) {
+            $query->where('kind', $request->kind);
+        })
         ->when($request->filled('search'), function ($query) use ($request) {
             $search = $request->search;
             

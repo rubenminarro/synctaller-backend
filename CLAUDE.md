@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M9, P10 y M11, 6.22–6.30). 282 rutas API, 464 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M9, P10 y M11, 6.22–6.30). 282 rutas API, 465 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -236,8 +236,9 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   reportes, el mantenimiento, el historial y los Resources de recepción, vehículo, entrega, diagnóstico y avisos (las
   claves no cambiaron). El saludo de los avisos usa `greeting_name`: el nombre de pila de una persona (como antes) o la
   razón social. Las búsquedas de cliente (`search` y los filtros `first_name` y `client_first_name`) también buscan por
-  razón social. **No crear empresas en producción hasta adaptar el frontend** (tipos que admiten `null` en nombre y
-  apellido, y `display_name`). El dígito verificador del RUC no se valida (pendiente V10).
+  razón social. `GET clients?kind=person|company` filtra por tipo (valor inválido → 422; lo usa el alta de una
+  aseguradora para buscar solo empresas). El frontend ya admite empresas (FA0, 2026-10-30). El dígito verificador del
+  RUC no se valida (pendiente V10).
 * Vehículo: `plate` obligatoria salvo `no_plate = true` (entonces `chassis` obligatorio); placa y chasis únicos;
   `year` ≤ año actual; color, combustible y transmisión por enum. Rutas anidadas `clients/{client}/vehicles` (index,
   store, show; el `client_id` sale de la URL); editar y eliminar solo en `vehicles/{vehicle}`. La tabla es `vehicles`

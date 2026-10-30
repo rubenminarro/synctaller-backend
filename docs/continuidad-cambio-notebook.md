@@ -307,8 +307,8 @@ G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
      (handoff 2.58). Sin fallas críticas. No cumplen S8 (jobs), S10 y S13 (unos 30–45 ms por request), con
      mitigaciones previstas para T2. La dependencia no está aprobada;
    * módulo desde M1 (tipo de cliente), coordinado con el frontend:
-     * **M1** (handoff 2.59; migración `000059`) mergeada en `main` el 2026-10-29. **No crear empresas en producción
-       hasta adaptar el frontend.**
+     * **M1** (handoff 2.59; migración `000059`) mergeada en `main` el 2026-10-29. El frontend admite empresas desde
+       FA0 (2026-10-30).
      * **M2** (aseguradoras, handoff 2.60; migración `000060`) mergeada en `main` el 2026-10-29.
      * **M3** (siniestros, handoff 2.61; migración `000061`) mergeada en `main` el 2026-10-29.
      * **M4** (documentos privados, handoff 2.62; migración `000062`) mergeada en `main` el 2026-10-29.
@@ -321,8 +321,10 @@ G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
        2026-10-29.
      * **P10** (notas de crédito registradas, handoff 2.69; migración `000068`) mergeada en `main` el 2026-10-29.
      * **M9** (facturas por responsable, handoff 2.70; migración `000069`) mergeada en `main` el 2026-10-29.
-     * **M11** (reportes: cuentas por cobrar por destinatario y resumen del siniestro, handoff 2.71; sin migración) en
-       `feature/reportes-aseguradoras`, pendiente de revisión y merge. Los avisos a la aseguradora quedaron fuera (V7).
+     * **M11** (reportes: cuentas por cobrar por destinatario y resumen del siniestro, handoff 2.71; sin migración)
+       mergeada en `main` el 2026-10-30 (`cbc1924`). Los avisos a la aseguradora quedaron fuera (V7).
+     * **Frontend:** adaptación en cinco fases (`../synctaller-frontend/docs/plan-desarrollo.md`). FA0 (compatibilidad)
+       mergeada el 2026-10-30; FA1 (aseguradoras y siniestros) en curso, con el filtro `GET clients?kind=` (handoff 2.72).
      * El 2026-10-30, en esta notebook, la base local tenía pendientes las migraciones `000065`–`000069`: se aplicaron
        y se resembraron los permisos. `AllocationInvoiceSeeder` fallaba en MySQL (DISTINCT con ORDER BY); corregido en
        `main` (`fab7c4e`).

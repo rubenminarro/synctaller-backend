@@ -317,6 +317,7 @@ Cliente persona o empresa (M1, ver `docs/handoff.md`, 2.59). Todos los clientes 
 | Persona con razón social | `POST {{base_url}}/clients` (persona) con `business_name` | 422 | `VALIDATION_ERROR` en `business_name` |
 | Pasar una persona sin recepciones a empresa | `PATCH {{base_url}}/clients/{id}` con `{ "kind": "company", "business_name": "..." }` | 200 | Nombre y apellido quedan en `null` |
 | Cambiar el tipo con recepciones o facturas | ídem, sobre un cliente con recepciones | 422 | `CLIENT_KIND_NOT_EDITABLE` |
+| Solo empresas (o personas) | `GET {{base_url}}/clients?kind=company` (`person`; otro valor → 422) | 200 | Solo clientes de ese tipo |
 | Buscar por razón social | `GET {{base_url}}/clients?search=Seguros` (también `?first_name=Seguros`, `vehicles?client_first_name=Seguros` y el `search` de recepciones, presupuestos, OT y diagnósticos) | 200 | Encuentra la empresa |
 | Detalle de recepción o vehículo de una empresa | `GET {{base_url}}/receptions/{id}` | 200 | `client.full_name` = razón social |
 | Eliminar un cliente con vehículos, recepciones o facturas | `DELETE {{base_url}}/clients/{{client_id}}` | 409 | `CLIENT_IN_USE` (antes se eliminaba) |
