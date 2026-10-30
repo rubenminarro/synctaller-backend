@@ -88,6 +88,15 @@ class AllocationBillingService
     }
 
     /**
+     * El deducible del siniestro se factura (M10): modalidad neta en vigor y sabiendo si incluye el IVA. Sin eso, un
+     * deducible mayor a 0 queda con el tratamiento fiscal pendiente (`deductible_fiscal_pending`).
+     */
+    public function deductibleInvoiced(Claim $claim): bool
+    {
+        return $this->netMode($claim) && $claim->deductible_includes_tax !== null;
+    }
+
+    /**
      * Un importe de deducible tal como se informa, sin IVA (V15: el siniestro dice si lo incluye). Null si el importe
      * es desconocido o no se indicó si incluye el IVA.
      */

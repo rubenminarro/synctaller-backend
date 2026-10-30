@@ -79,7 +79,9 @@ class DeductibleNetModeTest extends ClaimTestCase
         $this->assertTrue(collect($draft['checks'])->every(fn (array $check) => $check['ok']));
         $this->assertSame(['insurer' => '1600000.00', 'owner' => '1170000.00'], collect($draft['summary']['responsibles'])->pluck('amount', 'role')->sortKeys()->all());
 
-        $this->postJson($this->url($workOrder, $draft['id'], 'confirm'))->assertOk();
+        // El deducible se factura: no queda con el tratamiento fiscal pendiente (ni en el reparto ni en el resumen).
+        $this->postJson($this->url($workOrder, $draft['id'], 'confirm'))->assertOk()->assertJsonPath('data.summary.deductible_fiscal_pending', false);
+        $this->getJson("/api/claims/{$claim->id}/summary")->assertOk()->assertJsonPath('data.allocations.totals.deductible_fiscal_pending', false);
         $insurerClientId = Insurer::findOrFail($claim->insurer_id)->client_id;
         $ownerClientId = Reception::findOrFail($workOrder['reception_id'])->client_id;
 

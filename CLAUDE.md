@@ -850,7 +850,7 @@ Entrega M8 de `docs/especificacion-aseguradoras.html` (§4.5, §5.7, §6.2–6.3
   (`ALLOCATION_NOT_EDITABLE`, 422; también para `DELETE`).
 * **Vista previa:** el borrador trae `checks` (cada regla con `ok`, mensaje y `error_code`) y todas las versiones
   `summary` (por responsable: `insurer|owner|workshop`; total; deducible y `deductible_fiscal_pending`, calculado =
-  deducible > 0; advertencias de autorización faltante o cambiada). También `concepts`: lo vendido por concepto
+  deducible > 0 que no se factura: sin la modalidad neta o sin su IVA, 6.31; advertencias de autorización faltante o cambiada). También `concepts`: lo vendido por concepto
   (`source_type`/`source_id`, descripción, `is_extra`, `responsibility` del ítem, `coverable` = puede ir a la
   aseguradora por R4, cantidad, precio y `base_total`, lo que debe sumar por R1) y `authorized_total` de su ítem en la
   autorización vigente (por ítem: varios conceptos lo comparten; `null` en extras o sin autorización). Lo usa el editor
@@ -1009,7 +1009,8 @@ Entrega M10 de `docs/especificacion-aseguradoras.html` (§6.6, Ejemplo 7; decisi
 * **Siniestro:** con una factura vigente a la aseguradora, la modalidad y el IVA del deducible no cambian, como el importe
   (`CLAIM_DEDUCTIBLE_LOCKED`, 422).
 * **Entrega:** con la modalidad neta y el IVA indicado, `DELIVERY_CLAIM_DEDUCTIBLE_PENDING` deja de bloquear el deducible
-  mayor a 0 y rigen las facturas (6.29). Desconocido sigue bloqueando. El resumen del siniestro (6.30) ajusta sus alertas.
+  mayor a 0 y rigen las facturas (6.29). Desconocido sigue bloqueando. El resumen del siniestro (6.30) ajusta sus alertas,
+  y `deductible_fiscal_pending` (reparto y resumen) es `false` con el deducible que se factura (corrección del 2026-10-30).
 * **Fuera de alcance:** otras modalidades, el documento que respalda la modalidad (V20; se puede subir como documento del
   siniestro) y los datos de ejemplo (el interruptor viene apagado).
 

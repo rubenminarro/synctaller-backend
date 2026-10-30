@@ -1839,6 +1839,7 @@ vigentes en `CLAUDE.md` 6.31.
 | Datos de ejemplo | Sin escenario: el interruptor viene apagado y `DatabaseSeederTest` no cambia |
 | Migración | `000071` (columnas nulas), probada en MySQL con su `down` |
 | Pruebas | `tests/Feature/Claims/DeductibleNetModeTest` (5): Ejemplo 7 (propuesta, reglas, facturas de 1.760.000 y 1.287.000 con la línea del deducible, bloqueo del siniestro y entrega), interruptor apagado (validación, regla A en factura y entrega), IVA sin indicar y sin IVA, R11 al confirmar y al facturar, deducible mayor que lo cubierto y modalidad copiada de la aseguradora. Los tests de M8 y M9 no cambiaron |
+| Corrección | La revisión del frontend (2026-10-30) mostró que `deductible_fiscal_pending` seguía en `true` con la modalidad neta (el reparto y el resumen decían "no se factura"). Ahora es deducible mayor a 0 **que no se factura** (`AllocationBillingService::deductibleInvoiced`: modalidad neta en vigor y su IVA indicado). Rama `fix/deducible-fiscal-pendiente`, con su verificación en el test del Ejemplo 7 |
 | Pendiente | V16 (respuesta), V20 (documento de la modalidad), V21 (encender) y el frontend (modalidad e IVA en el siniestro y la aseguradora, columna del deducible y reglas nuevas en el editor del reparto) |
 
 

@@ -228,7 +228,7 @@ class ClaimSummaryService
                 'owner_amount' => $this->sum($rows->pluck('owner_amount')),
                 'workshop_amount' => $this->sum($rows->pluck('workshop_amount')),
                 'deductible_amount' => $deductible,
-                'deductible_fiscal_pending' => bccomp($deductible, '0', 2) > 0,
+                'deductible_fiscal_pending' => bccomp($deductible, '0', 2) > 0 && !$this->allocationBilling->deductibleInvoiced($claim),
             ],
             'work_orders' => $rows->values(),
         ];
