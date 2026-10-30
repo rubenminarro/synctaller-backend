@@ -166,6 +166,23 @@ class ClientKindTest extends PartsTestCase
         $this->getJson('/api/receptions?search=Seguros')->assertOk()->assertJsonPath('data.0.id', $reception->id);
     }
 
+    public function test_clients_are_filtered_by_kind(): void
+    {
+        $company = $this->postJson('/api/clients', $this->companyPayload())->json('data.id');
+        $person = $this->postJson('/api/clients', $this->personPayload())->json('data.id');
+
+        $companies = collect($this->getJson('/api/clients?kind=company&per_page=100')->assertOk()->json('data'));
+        $this->assertContains($company, $companies->pluck('id'));
+        $this->assertNotContains($person, $companies->pluck('id'));
+        $this->assertSame(['company'], $companies->pluck('kind.value')->unique()->values()->all());
+
+        $people = collect($this->getJson('/api/clients?kind=person&per_page=100')->assertOk()->json('data'));
+        $this->assertContains($person, $people->pluck('id'));
+        $this->assertNotContains($company, $people->pluck('id'));
+
+        $this->getJson('/api/clients?kind=nadie')->assertStatus(422)->assertJsonValidationErrors('kind');
+    }
+
     public function test_the_greeting_keeps_the_first_name_of_a_person(): void
     {
         $person = Client::create($this->personPayload());

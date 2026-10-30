@@ -1784,6 +1784,17 @@ Reglas vigentes en `CLAUDE.md`, 6.30.
 | Pruebas | `tests/Feature/Claims/InsurerReportsTest` (4): cuentas por cobrar por destinatario con antigüedad, pagos y filtros (aseguradora dada de baja incluida) y exportación; resumen del siniestro de lo presupuestado a lo cobrado con complementario en borrador y alertas; bloques según permiso y permisos de los reportes; reporte de siniestros con filtros, período y exportación. Los reportes existentes no cambiaron sus tests |
 | Fuera de alcance | Avisos a la aseguradora (V7), M10 (deducible mayor a 0, espera G1) y M12 (retenciones, espera V17) |
 
+# 2.72 Filtro por tipo de cliente (2026-10-30)
+
+Pedido por la fase FA1 del frontend (aseguradoras y siniestros): el alta de una aseguradora puede vincular un cliente
+empresa existente, y el buscador necesita listar solo empresas.
+
+| Tema | Decisión |
+|---|---|
+| Filtro | `GET clients?kind=person|company` (decisión del usuario del 2026-10-30: en el backend, no filtrando en el frontend, porque el listado es paginado). Aditivo; un valor fuera del enum responde `422 VALIDATION_ERROR` en `kind` |
+| Empresas en producción | El frontend admite clientes empresa desde FA0 (`../synctaller-frontend`, 2026-10-30): se levanta la advertencia de M1 |
+| Pruebas | `ClientKindTest::test_clients_are_filtered_by_kind` |
+
 ---
 
 ---
@@ -4295,6 +4306,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Notas de crédito emitidas fuera del sistema (2.69)
 [✓] Facturas por responsable (2.70)
 [✓] Reportes del módulo de aseguradoras (2.71)
+[✓] Filtro por tipo de cliente (2.72)
 ```
 
 ## Próximo
