@@ -49,6 +49,8 @@ class WorkOrderAllocationResource extends JsonResource
                 'amount' => $line->amount,
                 'description' => $line->description,
             ])->all(),
+            // Lo vendido por concepto: lo que suma cada uno, si va a la aseguradora y lo autorizado (editor).
+            'concepts' => $service->concepts($this->resource),
             'summary' => $service->summary($this->resource),
             // Vista previa de la confirmación: solo en el borrador.
             'checks' => $this->resource->isDraft() ? $service->checks($this->resource) : null,

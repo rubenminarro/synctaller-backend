@@ -468,7 +468,7 @@ deducible).
 
 | Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
 |---|---|---|---|---|
-| Generar el borrador | `POST {{base_url}}/work-orders/{{work_order_id}}/allocations` | — | 201 | `version` 1, `status` `draft`, `lines` propuestas (cubierto hasta lo autorizado, resto `owner_uncovered`, dueño y extras `owner_responsibility`), `summary` por responsable y `checks` → `allocation_id` |
+| Generar el borrador | `POST {{base_url}}/work-orders/{{work_order_id}}/allocations` | — | 201 | `version` 1, `status` `draft`, `lines` propuestas (cubierto hasta lo autorizado, resto `owner_uncovered`, dueño y extras `owner_responsibility`), `summary` por responsable, `checks` y `concepts` (lo vendido por concepto: `base_total`, `coverable`, `authorized_total`) → `allocation_id` |
 | Otro borrador | ídem | — | 409 | `ALLOCATION_DRAFT_EXISTS` |
 | OT sin completar / particular | ídem | — | 422 | `WORK_ORDER_NOT_ALLOCATABLE` / `ALLOCATION_NOT_REQUIRED` |
 | Editar | `PATCH {{base_url}}/work-orders/{{work_order_id}}/allocations/{{allocation_id}}` | `{ "lines": [{ "source_type": "work_order_item", "source_id": 1, "portion_type": "owner_uncovered", "amount": 200000 }, …], "deductible_amount": 0, "notes": "…" }` | 200 | `lines` reemplaza todas las porciones; `checks` se recalcula |

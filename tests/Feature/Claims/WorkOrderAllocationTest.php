@@ -93,6 +93,27 @@ class WorkOrderAllocationTest extends ClaimTestCase
             ->assertStatus(422)->assertJsonPath('error_code', 'CLAIM_HAS_INSURER_ALLOCATIONS');
     }
 
+    public function test_the_allocation_lists_the_sold_concepts(): void
+    {
+        $this->actingAsAdmin();
+        [$workOrder] = $this->completedClaimWorkOrder();
+
+        $this->actingAsRole('cajero');
+        $concepts = collect($this->postJson($this->url($workOrder))->assertCreated()->json('data.concepts'))->keyBy('description');
+
+        // Lo que suma cada concepto es la venta del cierre (R1/R2).
+        $this->assertSame('2770000.00', $concepts->reduce(fn (string $sum, array $c) => bcadd($sum, $c['base_total'], 2), '0.00'));
+        $this->assertSame(
+            ['Alineación' => false, 'Chapería de puerta' => true, 'Clips de moldura' => false, 'Paragolpes' => true, 'Pintura' => true],
+            $concepts->map(fn (array $c) => $c['coverable'])->sortKeys()->all()
+        );
+        $this->assertSame('insurer', $concepts['Chapería de puerta']['responsibility']['value']);
+        $this->assertSame('800000.00', $concepts['Chapería de puerta']['authorized_total']);
+        $this->assertSame('1000000.00', $concepts['Chapería de puerta']['base_total']);
+        $this->assertTrue($concepts['Clips de moldura']['is_extra']);
+        $this->assertNull($concepts['Clips de moldura']['authorized_total']);
+    }
+
     public function test_example_2_owner_excess_is_absorbed_or_re_accepted(): void
     {
         $this->actingAsAdmin();

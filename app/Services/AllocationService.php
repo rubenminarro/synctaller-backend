@@ -308,6 +308,45 @@ class AllocationService
     }
 
     /**
+     * Conceptos vendidos de la OT (WorkOrderSaleBreakdown) con lo que cada uno debe sumar en el reparto (R1), si puede
+     * ir a la aseguradora (R4) y lo autorizado para su ítem del presupuesto en la versión vigente (R3, por ítem: varios
+     * conceptos pueden compartirlo). Lo usa el editor del borrador.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function concepts(WorkOrderAllocation $allocation): array
+    {
+        $allocation->loadMissing(['claim', 'workOrder.budget']);
+        $workOrder = $allocation->workOrder;
+        $claim = $allocation->claim;
+        $concepts = $this->saleBreakdown->concepts($workOrder);
+        $budgetItems = BudgetItem::whereIn('id', $concepts->pluck('budget_item_id')->filter())->get()->keyBy('id');
+        $authorized = $this->ownerShare->currentAuthorization($workOrder->budget, $claim->status === ClaimStatus::OPEN ? $claim : null)?->items->keyBy('budget_item_id');
+
+        return $concepts->map(function (array $concept) use ($budgetItems, $authorized) {
+            $budgetItem = $budgetItems[$concept['budget_item_id']] ?? null;
+            $responsibility = $budgetItem?->responsibility ?? BudgetItemResponsibility::OWNER;
+
+            return [
+                'source_type' => $concept['source_type'],
+                'source_id' => $concept['source_id'],
+                'budget_item_id' => $concept['budget_item_id'],
+                'description' => $concept['description'],
+                'is_extra' => $concept['is_extra'],
+                'responsibility' => [
+                    'value' => $responsibility->value,
+                    'label' => $responsibility->label(),
+                ],
+                'coverable' => !$concept['is_extra'] && $responsibility === BudgetItemResponsibility::INSURER,
+                'quantity' => Decimal::of($concept['quantity'], 2),
+                'base_unit_price' => Decimal::of($concept['base_unit_price'], 2),
+                'base_total' => Decimal::of($concept['base_total'], 2),
+                'authorized_total' => $concept['is_extra'] ? null : $authorized?->get($concept['budget_item_id'])?->authorized_total,
+            ];
+        })->values()->all();
+    }
+
+    /**
      * Propuesta desde el cierre: la aseguradora recibe hasta lo autorizado por ítem del presupuesto, sumando sus
      * conceptos en orden, y el resto va al dueño como no cubierto; los extras y las líneas del dueño, al dueño.
      *

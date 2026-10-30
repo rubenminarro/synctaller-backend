@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M9, P10 y M11, 6.22–6.30). 282 rutas API, 465 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M9, P10 y M11, 6.22–6.30). 282 rutas API, 466 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -846,7 +846,11 @@ Entrega M8 de `docs/especificacion-aseguradoras.html` (§4.5, §5.7, §6.2–6.3
   (`ALLOCATION_NOT_EDITABLE`, 422; también para `DELETE`).
 * **Vista previa:** el borrador trae `checks` (cada regla con `ok`, mensaje y `error_code`) y todas las versiones
   `summary` (por responsable: `insurer|owner|workshop`; total; deducible y `deductible_fiscal_pending`, calculado =
-  deducible > 0; advertencias de autorización faltante o cambiada).
+  deducible > 0; advertencias de autorización faltante o cambiada). También `concepts`: lo vendido por concepto
+  (`source_type`/`source_id`, descripción, `is_extra`, `responsibility` del ítem, `coverable` = puede ir a la
+  aseguradora por R4, cantidad, precio y `base_total`, lo que debe sumar por R1) y `authorized_total` de su ítem en la
+  autorización vigente (por ítem: varios conceptos lo comparten; `null` en extras o sin autorización). Lo usa el editor
+  del frontend (FA3).
 * **Confirmación** (`POST …/{allocation}/confirm`; bloqueo siniestro → OT → reparto → excepción), en este orden:
   deducible desconocido (`CLAIM_DEDUCTIBLE_UNKNOWN`); deducible mayor que el aceptado por el dueño
   (`CLAIM_DEDUCTIBLE_NOT_ACCEPTED`); R1 `ALLOCATION_INCOMPLETE`; R2 `ALLOCATION_TOTAL_MISMATCH` (409); R4
