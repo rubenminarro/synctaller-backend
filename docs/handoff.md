@@ -1765,6 +1765,25 @@ decisiones A y F). Reglas vigentes en `CLAUDE.md`, 6.29.
 | Pruebas | `tests/Feature/Claims/AllocationInvoiceTest` (5): Ejemplo 1 facturado a cada responsable (importes de la especificación: 1.980.000 y 1.067.000 con IVA), duplicado y cliente sin porciones, `invoices[]` y su ausencia para el mecánico; entrega por factura e historial por destinatario; deducible en la generación, la emisión y la entrega, y `CLAIM_DEDUCTIBLE_LOCKED`; corrección con `ALLOCATION_HAS_INVOICES` resuelta con una nota de crédito; permisos. Los helpers del Ejemplo 1 pasaron a `ClaimTestCase` |
 | Fuera de alcance | M10 (deducible mayor a 0, espera G1), M11 (avisos a aseguradoras) y M12 (retenciones, espera V17) |
 
+# 2.71 Reportes del módulo de aseguradoras (2026-10-30)
+
+Entrega M11 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §9; decisión D y V7).
+Reglas vigentes en `CLAUDE.md`, 6.30.
+
+| Tema | Decisión |
+|---|---|
+| Alcance | Decisión del usuario del 2026-10-30: M11 son los reportes. Los avisos a la aseguradora (plantillas, contacto de facturación, preferencias) esperan V7; mientras tanto rige D (cliente de la aseguradora sin avisos) |
+| Cuentas por cobrar | Decisión del usuario: reporte nuevo `reports/receivables` con permiso `reports.receivables` (cajero), en lugar de ampliar el reporte de clientes. Misma regla de vencimiento que las cuentas por pagar. Agrega antigüedad por días de atraso |
+| Tipo de destinatario | Enum `InvoiceRecipientType` (`insurer|customer`). Una aseguradora dada de baja sigue clasificando como aseguradora |
+| Resumen del siniestro | Decisión del usuario: por siniestro (`claims/{claim}/summary`) y además un reporte (`reports/claims`, permiso `reports.claims`, cajero; período por fecha del siniestro) |
+| Visibilidad | Decisión del usuario: por bloque según permiso. Presupuestado, autorizado y aceptado con `claims.show`; el reparto con `work-order-allocations.show`; facturado y cobrado con `invoices.show` (el jefe de taller no ve facturas, como hoy). Las alertas siguen la misma visibilidad |
+| Unidades | Presupuesto, autorización, aceptación y reparto sin IVA; facturación con IVA. Van en bloques separados y no se suman entre sí |
+| Totales | Presupuestos: solo los aprobados (los que pasan a OT); se listan todos los no cancelados. Facturas: solo las emitidas; los borradores se cuentan aparte |
+| Contrato | Aditivo: `recipient_type` y `recipient_label` en `reports/clients` (`receivables.clients`). Tres rutas nuevas; sin migración |
+| Verificación en MySQL | Resúmenes, cuentas por cobrar, reporte de siniestros y CSV corridos de solo lectura sobre la base local sembrada (4 siniestros) |
+| Pruebas | `tests/Feature/Claims/InsurerReportsTest` (4): cuentas por cobrar por destinatario con antigüedad, pagos y filtros (aseguradora dada de baja incluida) y exportación; resumen del siniestro de lo presupuestado a lo cobrado con complementario en borrador y alertas; bloques según permiso y permisos de los reportes; reporte de siniestros con filtros, período y exportación. Los reportes existentes no cambiaron sus tests |
+| Fuera de alcance | Avisos a la aseguradora (V7), M10 (deducible mayor a 0, espera G1) y M12 (retenciones, espera V17) |
+
 ---
 
 ---
@@ -4139,8 +4158,8 @@ MÓDULO DE ASEGURADORAS — M1 a M9 Y P10 IMPLEMENTADAS (2026-10-29, ver 2.59–
 Con la FASE 20 se completó el roadmap original (FASES 10–20); después se implementaron compras (FASE 21), pagos a
 proveedores (FASE 22), notificaciones por email y bandeja interna (FASE 23), exportación de reportes y comprobantes
 imprimibles (FASE 24) y auditoría avanzada (FASE 25). Desde el 2026-10-24 se trabaja en el módulo de aseguradoras
-(deuda #13), según el plan de `docs/especificacion-aseguradoras.html` (§9): M1–M9 y P10 están hechas; quedan
-M10 (deducible mayor a 0, espera G1), M11 (avisos) y M12 (retenciones, espera V17). El frontend React 19 está en
+(deuda #13), según el plan de `docs/especificacion-aseguradoras.html` (§9): M1–M9, P10 y M11 (sin los avisos) están
+hechas; quedan M10 (deducible mayor a 0, espera G1), M12 (retenciones, espera V17) y los avisos a la aseguradora (V7). El frontend React 19 está en
 `../synctaller-frontend` y se adapta en su propio repositorio. Sigue sin fase asignada:
 
 ```text
@@ -4275,12 +4294,13 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Reparto económico de la OT de un siniestro (2.68)
 [✓] Notas de crédito emitidas fuera del sistema (2.69)
 [✓] Facturas por responsable (2.70)
+[✓] Reportes del módulo de aseguradoras (2.71)
 ```
 
 ## Próximo
 
 ```text
-[ ] Aseguradoras: deducible mayor a 0 (M10, espera G1), avisos (M11) y retenciones (M12, espera V17)
+[ ] Aseguradoras: deducible mayor a 0 (M10, espera G1), retenciones (M12, espera V17) y avisos a la aseguradora (V7)
 [ ] Notificaciones por WhatsApp
 ```
 

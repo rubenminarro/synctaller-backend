@@ -311,6 +311,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.productivity',
             'reports.inventory',
             'reports.clients',
+            'reports.receivables',
+            'reports.claims',
 
             /* inventory permissions */
             'inventory.index',
@@ -559,7 +561,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'internal-exceptions.index', 'internal-exceptions.show',
                     'work-order-allocations.index', 'work-order-allocations.store', 'work-order-allocations.show',
                     'work-order-allocations.update', 'work-order-allocations.confirm', 'work-order-allocations.destroy',
-                    'dashboard.view', 'reports.sales', 'reports.clients',
+                    'dashboard.view', 'reports.sales', 'reports.clients', 'reports.receivables', 'reports.claims',
                 ],
             ],
             'deposito' => [

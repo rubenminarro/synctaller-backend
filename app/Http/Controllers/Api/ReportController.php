@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ClaimsReportRequest;
+use App\Http\Requests\ReceivablesReportRequest;
 use App\Http\Requests\ReportRequest;
+use App\Services\ClaimSummaryService;
 use App\Services\ReportExportService;
 use App\Services\ReportService;
 use App\Traits\ApiResponse;
@@ -35,7 +38,8 @@ class ReportController extends Controller implements HasMiddleware
 
     public function __construct(
         protected ReportService $reportService,
-        protected ReportExportService $reportExportService
+        protected ReportExportService $reportExportService,
+        protected ClaimSummaryService $claimSummaryService
     ) {
     }
 
@@ -49,6 +53,8 @@ class ReportController extends Controller implements HasMiddleware
             new Middleware('permission:reports.productivity', only: ['productivity']),
             new Middleware('permission:reports.inventory', only: ['inventory']),
             new Middleware('permission:reports.clients', only: ['clients']),
+            new Middleware('permission:reports.receivables', only: ['receivables']),
+            new Middleware('permission:reports.claims', only: ['claims']),
         ];
     }
 
@@ -98,6 +104,30 @@ class ReportController extends Controller implements HasMiddleware
     public function clients(ReportRequest $request)
     {
         return $this->report($request, 'clientes', 'Reporte de clientes', $this->reportService->clients($request->from(), $request->to()));
+    }
+
+    /**
+     * Cuentas por cobrar a hoy, por tipo de destinatario (M11).
+     */
+    public function receivables(ReceivablesReportRequest $request)
+    {
+        return $this->report($request, 'cuentas-por-cobrar', 'Cuentas por cobrar', $this->reportService->receivables(
+            $request->recipientType(),
+            $request->filled('client_id') ? (int) $request->client_id : null
+        ));
+    }
+
+    /**
+     * Siniestros del período, de lo presupuestado a lo cobrado (M11).
+     */
+    public function claims(ClaimsReportRequest $request)
+    {
+        return $this->report($request, 'siniestros', 'Reporte de siniestros', $this->claimSummaryService->report(
+            $request->from(),
+            $request->to(),
+            $request->filled('insurer_id') ? (int) $request->insurer_id : null,
+            $request->status()
+        ));
     }
 
     private function report(ReportRequest $request, string $name, string $title, array $data)

@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M9 y P10, 6.22–6.29). 279 rutas API, 460 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M9, P10 y M11, 6.22–6.30). 282 rutas API, 464 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -199,7 +199,7 @@ de los permisos, ordenados; el administrador recibe todos los del guard `api` po
 | `mechanic` | Ejecuta la OT | Diagnóstico (consulta y usa el catálogo de ítems), iniciar/pausar/completar OT e ítems, consumir/devolver repuestos, sus horas y comisiones, historial, estado de mantenimiento, dashboard (bloque taller) |
 | `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos), siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar), autorizaciones de la aseguradora (registrar y consultar) y re-aceptaciones del dueño y consulta del reparto de la OT |
 | `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras y siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar), autorizaciones de la aseguradora (registrar y consultar) y excepciones internas (otorgar y consultar) y consulta del reparto de la OT |
-| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras, siniestros (con la descarga de sus documentos), autorizaciones de la aseguradora y excepciones internas, y el reparto de la OT completo (generar, editar, confirmar y descartar el borrador), y notas de crédito externas (registrar y anular) |
+| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas, clientes, cuentas por cobrar y siniestros, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras, siniestros (con la descarga de sus documentos), autorizaciones de la aseguradora y excepciones internas, y el reparto de la OT completo (generar, editar, confirmar y descartar el borrador), y notas de crédito externas (registrar y anular) |
 | `deposito` | Stock | Repuestos, proveedores, inventario, compras completas, repuestos en OT, reporte de inventario, consulta de pagos a proveedores y cuentas por pagar |
 
 El rol del mecánico se llama `mechanic` (no `mecanico`). El seeder crea usuarios de cada rol (README, "Datos de prueba").
@@ -495,8 +495,8 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 
 * Solo lectura, JSON. Período por defecto: mes en curso. Ventas y clientes por fecha de emisión (con IVA);
   rentabilidad y productividad por cierre de la OT (sin IVA).
-* Permiso por reporte (`reports.sales|budgets|profitability|productivity|inventory|clients`); el dashboard
-  (`dashboard.view`) muestra solo los bloques permitidos.
+* Permiso por reporte (`reports.sales|budgets|profitability|productivity|inventory|clients|receivables|claims`); el
+  dashboard (`dashboard.view`) muestra solo los bloques permitidos. Cuentas por cobrar y siniestros: 6.30.
 
 ### 6.15 Compras
 
@@ -932,6 +932,43 @@ Entrega M9 de `docs/especificacion-aseguradoras.html` (§4.6, §7.1; decisiones 
   `summary.by_recipient` (`owner`/`others`). Las facturas agregan `allocation_id` y `items[].allocation_line_id`; el
   listado filtra por `work_order_id`.
 
+### 6.30 Reportes del módulo de aseguradoras
+
+Entrega M11 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-10-30; `ReportService::receivables`,
+`ClaimSummaryService`). Solo lectura, sin tablas nuevas. **Los avisos a la aseguradora quedaron fuera** (decisión del
+usuario: esperan V7; mientras tanto rige D).
+
+* **Tipo de destinatario** (`InvoiceRecipientType`: `insurer|customer`): `insurer` si el cliente de la factura es el de
+  una aseguradora, también dada de baja; si no, `customer`. Las filas traen `recipient_type` y `recipient_label`.
+* **Cuentas por cobrar** (`GET reports/receivables`, permiso `reports.receivables`, cajero): a hoy (`as_of`), sin
+  período. Facturas `issued` con saldo (`Invoice::balance()`: descuenta pagos y notas de crédito), con IVA. Vence en
+  `due_date` (crédito) o en la emisión (contado), como las cuentas por pagar; vencida si es anterior a hoy.
+  * `totals` y `by_recipient`: facturas, saldo, `overdue`, `not_overdue` y antigüedad por días de atraso
+    (`days_1_30`, `days_31_60`, `days_61_90`, `days_over_90`);
+  * `clients`: una fila por cliente con su tipo, saldo, vencido, vencimiento más antiguo y máximo de días;
+  * filtros `recipient_type` y `client_id` (con el cliente, también `invoices`: número, OT, siniestro, días, cobrado,
+    acreditado y saldo).
+
+  El bloque `receivables.clients` del reporte de clientes agrega `recipient_type` y `recipient_label` (aditivo).
+* **Resumen del siniestro** (`GET claims/{claim}/summary`, permiso `claims.show`): sobre todos los presupuestos y OT de
+  su recepción (también complementarios). Bloques según permiso (decisión del usuario):
+  * `budgets` (con `claims.show`, sin IVA): presupuestos no cancelados con lo de la aseguradora y del dueño, la
+    autorización vigente de este siniestro y lo aceptado por el dueño. **Los totales suman solo los aprobados**;
+  * `allocations` (con `work-order-allocations.show`, sin IVA): por OT no cancelada, el reparto confirmado de este
+    siniestro por responsable (aseguradora, dueño, taller) y el deducible asignado (`deductible_fiscal_pending`);
+  * `billing` (con `invoices.show`, con IVA): facturas vigentes de las OT de la recepción por destinatario (la
+    aseguradora del siniestro o los demás). Los totales (`net_invoiced` = emitido − acreditado, `collected`, `balance`)
+    suman solo las emitidas; los borradores se listan y se cuentan aparte;
+  * `alerts`: deducible desconocido o mayor a 0 (siniestro abierto, A), OT completada que requiere reparto sin uno
+    confirmado (si ve el reparto) y reparto con porciones sin facturar o emitir (si ve la facturación).
+
+  Los bloques sin IVA y el de IVA no se mezclan.
+* **Reporte de siniestros** (`GET reports/claims`, permiso `reports.claims`, cajero): una fila por siniestro con la fecha
+  del siniestro en el período (por defecto, el mes en curso), filtros `insurer_id` y `status`; presupuestado a la
+  aseguradora, autorizado, aceptado, repartido, facturado neto, cobrado y saldo por destinatario, y cantidad de alertas.
+  Muestra todos los bloques: el permiso del reporte alcanza.
+* Los dos reportes se exportan con `?format=csv|pdf` (etiquetas en `ReportExportService::LABELS`).
+
 ---
 
 ## 7. Deuda técnica conocida
@@ -940,7 +977,8 @@ Entrega M9 de `docs/especificacion-aseguradoras.html` (§4.6, §7.1; decisiones 
 Abiertas (reverificado el 2026-10-29):
 
 * **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M9 y P10
-  hechas (6.1, 6.4, 6.5 y 6.22–6.29); faltan M10 (deducible mayor a 0, espera G1), M11 (avisos) y M12 (retenciones).
+  hechas (6.1, 6.4, 6.5 y 6.22–6.29) y M11 sin los avisos (6.30); faltan M10 (deducible mayor a 0, espera G1), M12
+  (retenciones, espera V17) y los avisos a la aseguradora (esperan V7).
 * **#14:** disco `local` con `serve` activo y sin uso. No se usa para documentos nuevos: los de siniestros van al disco
   `claim_documents`, sin `serve` (6.24).
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes

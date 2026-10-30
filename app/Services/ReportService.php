@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\BudgetStatus;
 use App\Enums\InventoryMovementType;
+use App\Enums\InvoiceCondition;
+use App\Enums\InvoiceRecipientType;
 use App\Enums\InvoiceStatus;
 use App\Enums\MaintenanceStatus;
 use App\Enums\ReceptionStatus;
@@ -11,6 +13,7 @@ use App\Enums\WorkOrderStatus;
 use App\Models\Budget;
 use App\Models\Client;
 use App\Models\InventoryMovement;
+use App\Models\Insurer;
 use App\Models\Invoice;
 use App\Models\InvoiceCreditNote;
 use App\Models\Mechanic;
@@ -390,6 +393,8 @@ class ReportService
             ->with('client')
             ->get();
 
+        $insurerClients = $this->insurerClientIds();
+
         $receivables = Invoice::where('status', InvoiceStatus::ISSUED)->with(['client', 'payments', 'creditNotes'])->get()
             ->map(fn (Invoice $i) => ['invoice' => $i, 'balance' => $i->balance()])
             ->filter(fn ($row) => bccomp($row['balance'], '0', 2) > 0)
@@ -398,6 +403,7 @@ class ReportService
                 'client_id' => $rows->first()['invoice']->client_id,
                 'full_name' => $this->clientName($rows->first()['invoice']->client),
                 'phone' => $rows->first()['invoice']->client?->phone,
+                ...$this->recipient($this->recipientType($rows->first()['invoice']->client_id, $insurerClients)),
                 'invoices_count' => $rows->count(),
                 'balance' => $this->sum($rows->pluck('balance')),
                 'oldest_due_date' => $rows->map(fn ($row) => $row['invoice']->due_date ?? $row['invoice']->issue_date)->min()?->toDateString(),
@@ -440,6 +446,123 @@ class ReportService
                 'visits' => (int) $row->visits,
             ])->values(),
         ];
+    }
+
+    /**
+     * Cuentas por cobrar a hoy (M11), por tipo de destinatario: facturas emitidas con saldo (descontados pagos y notas
+     * de crédito), con IVA. Vence en due_date (crédito) o en la fecha de emisión (contado), como las cuentas por pagar;
+     * vencida si es anterior a hoy. Con client_id, además el detalle de sus facturas.
+     */
+    public function receivables(?InvoiceRecipientType $recipientType = null, ?int $clientId = null): array
+    {
+        $today = now()->startOfDay();
+        $insurerClients = $this->insurerClientIds();
+
+        $rows = Invoice::where('status', InvoiceStatus::ISSUED)
+            ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+            ->with(['client', 'payments', 'creditNotes', 'workOrder', 'allocation.claim'])
+            ->orderBy('id')
+            ->get()
+            ->map(function (Invoice $invoice) use ($today, $insurerClients) {
+                $due = $invoice->condition === InvoiceCondition::CREDIT && $invoice->due_date ? $invoice->due_date : $invoice->issue_date;
+
+                return [
+                    'invoice' => $invoice,
+                    'balance' => $invoice->balance(),
+                    'type' => $this->recipientType($invoice->client_id, $insurerClients),
+                    'due_date' => $due,
+                    'days_overdue' => $due->lt($today) ? (int) $due->diffInDays($today) : 0,
+                ];
+            })
+            ->filter(fn (array $row) => bccomp($row['balance'], '0', 2) > 0)
+            ->filter(fn (array $row) => !$recipientType || $row['type'] === $recipientType)
+            ->values();
+
+        $types = $recipientType ? [$recipientType] : InvoiceRecipientType::cases();
+
+        $report = [
+            'as_of' => $today->toDateString(),
+            'totals' => $this->receivableTotals($rows),
+            'by_recipient' => collect($types)->map(fn (InvoiceRecipientType $type) => [
+                ...$this->recipient($type),
+                ...$this->receivableTotals($rows->filter(fn (array $row) => $row['type'] === $type)),
+            ])->values(),
+            'clients' => $rows
+                ->groupBy(fn (array $row) => $row['invoice']->client_id)
+                ->map(fn (Collection $group) => [
+                    'client_id' => $group->first()['invoice']->client_id,
+                    'full_name' => $this->clientName($group->first()['invoice']->client),
+                    'document_number' => $group->first()['invoice']->client?->document_number,
+                    ...$this->recipient($group->first()['type']),
+                    'invoices_count' => $group->count(),
+                    'balance' => $this->sum($group->pluck('balance')),
+                    'overdue' => $this->sum($group->where('days_overdue', '>', 0)->pluck('balance')),
+                    'oldest_due_date' => $group->pluck('due_date')->min()->toDateString(),
+                    'max_days_overdue' => $group->max('days_overdue'),
+                ])
+                ->sortByDesc(fn (array $row) => (float) $row['balance'])
+                ->values(),
+        ];
+
+        if ($clientId) {
+            $report['invoices'] = $rows->map(fn (array $row) => [
+                'invoice_id' => $row['invoice']->id,
+                'number' => $row['invoice']->number,
+                'issue_date' => $row['invoice']->issue_date->toDateString(),
+                'condition' => $row['invoice']->condition->label(),
+                'due_date' => $row['due_date']->toDateString(),
+                'days_overdue' => $row['days_overdue'],
+                'work_order_code' => $row['invoice']->workOrder?->code,
+                'claim_code' => $row['invoice']->allocation?->claim?->code,
+                'total' => Decimal::of($row['invoice']->total, 2),
+                'paid_total' => $row['invoice']->paidTotal(),
+                'credited_total' => $row['invoice']->creditedTotal(),
+                'balance' => $row['balance'],
+            ])->values();
+        }
+
+        return $report;
+    }
+
+    /**
+     * Saldo, vencido y antigüedad (días de atraso) de un grupo de facturas por cobrar.
+     */
+    private function receivableTotals(Collection $rows): array
+    {
+        $bucket = fn (int $from, ?int $to) => $this->sum($rows
+            ->filter(fn (array $row) => $row['days_overdue'] >= $from && ($to === null || $row['days_overdue'] <= $to))
+            ->pluck('balance'));
+
+        return [
+            'invoices_count' => $rows->count(),
+            'balance' => $this->sum($rows->pluck('balance')),
+            'overdue' => $bucket(1, null),
+            'not_overdue' => $bucket(0, 0),
+            'days_1_30' => $bucket(1, 30),
+            'days_31_60' => $bucket(31, 60),
+            'days_61_90' => $bucket(61, 90),
+            'days_over_90' => $bucket(91, null),
+        ];
+    }
+
+    /**
+     * Clientes de aseguradoras, también de las dadas de baja: sus facturas siguen siendo de una aseguradora.
+     *
+     * @return Collection<int, int>
+     */
+    private function insurerClientIds(): Collection
+    {
+        return Insurer::withTrashed()->pluck('client_id');
+    }
+
+    private function recipientType(?int $clientId, Collection $insurerClients): InvoiceRecipientType
+    {
+        return $insurerClients->contains($clientId) ? InvoiceRecipientType::INSURER : InvoiceRecipientType::CUSTOMER;
+    }
+
+    private function recipient(InvoiceRecipientType $type): array
+    {
+        return ['recipient_type' => $type->value, 'recipient_label' => $type->label()];
     }
 
     private function receivablesTotal(): string
