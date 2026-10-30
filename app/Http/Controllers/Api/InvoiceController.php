@@ -52,6 +52,7 @@ class InvoiceController extends Controller implements HasMiddleware
             ->withSum(['creditNotes as credited_total' => fn ($q) => $q->registered()], 'total')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->when($request->filled('client_id'), fn ($q) => $q->where('client_id', $request->client_id))
+            ->when($request->filled('work_order_id'), fn ($q) => $q->where('work_order_id', $request->work_order_id))
             ->when($request->filled('search'), function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('number', 'like', "%{$search}%")

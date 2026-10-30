@@ -12,6 +12,7 @@ use App\Models\Reception;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleDelivery;
+use App\Models\WorkOrder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -31,7 +32,9 @@ class VehicleDeliveryService
     ];
 
     public function __construct(
-        protected ClaimStatusService $claimStatusService
+        protected ClaimStatusService $claimStatusService,
+        protected OwnerShareService $ownerShare,
+        protected AllocationBillingService $allocationBilling
     ) {
     }
 
@@ -198,7 +201,23 @@ class VehicleDeliveryService
             );
         }
 
+        // Siniestro con deducible mayor a 0 o desconocido (A): no se entrega por el flujo habitual (M9).
+        if ($claim = $this->allocationBilling->claimWithPendingDeductible($reception->id)) {
+            throw new VehicleDeliveryException(
+                $claim->deductible_amount === null
+                    ? "El deducible del siniestro {$claim->code} es desconocido: la recepción no se entrega hasta informarlo."
+                    : "El siniestro {$claim->code} tiene deducible: la recepción no se entrega por el flujo habitual hasta definir su facturación.",
+                422,
+                'DELIVERY_CLAIM_DEDUCTIBLE_PENDING'
+            );
+        }
+
         foreach ($completed as $workOrder) {
+            if ($this->ownerShare->requiresAllocation($workOrder)) {
+                $this->ensureAllocationInvoiced($workOrder);
+                continue;
+            }
+
             $invoice = $workOrder->currentInvoice;
 
             if ($invoice === null || $invoice->status !== InvoiceStatus::ISSUED) {
@@ -209,6 +228,31 @@ class VehicleDeliveryService
                 );
             }
 
+            if ($invoice->condition === InvoiceCondition::CASH && bccomp($invoice->balance(), '0', 2) > 0) {
+                throw new VehicleDeliveryException(
+                    "La factura {$invoice->number} es al contado y tiene saldo pendiente ({$invoice->balance()}).",
+                    422,
+                    'DELIVERY_INVOICE_NOT_PAID'
+                );
+            }
+        }
+    }
+
+    /**
+     * OT con reparto (M9): todas sus porciones facturadas y emitidas; contado y crédito se controlan por factura (la
+     * del dueño al contado, pagada; la de la aseguradora a crédito puede estar impaga).
+     */
+    private function ensureAllocationInvoiced(WorkOrder $workOrder): void
+    {
+        if (!$this->allocationBilling->isFullyInvoiced($workOrder->confirmedAllocation()->first())) {
+            throw new VehicleDeliveryException(
+                "La orden de trabajo {$workOrder->code} no tiene facturadas y emitidas todas las partes de su reparto.",
+                422,
+                'DELIVERY_WORK_ORDER_NOT_FULLY_INVOICED'
+            );
+        }
+
+        foreach ($workOrder->currentInvoices()->where('status', InvoiceStatus::ISSUED)->get() as $invoice) {
             if ($invoice->condition === InvoiceCondition::CASH && bccomp($invoice->balance(), '0', 2) > 0) {
                 throw new VehicleDeliveryException(
                     "La factura {$invoice->number} es al contado y tiene saldo pendiente ({$invoice->balance()}).",

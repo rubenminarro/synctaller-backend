@@ -10,6 +10,7 @@ use App\Enums\VehicleDeliveryStatus;
 use App\Enums\WorkOrderStatus;
 use App\Exceptions\PaymentException;
 use App\Models\Budget;
+use App\Models\Claim;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -90,6 +91,8 @@ class DocumentPdfService
             'ivaTotal' => bcadd((string) $invoice->iva_5, (string) $invoice->iva_10, 2),
             // Notas de crédito emitidas fuera del sistema y registradas (P10), con el saldo.
             'creditNotes' => $invoice->creditNotes()->registered()->get(),
+            // Factura a la aseguradora desde un reparto (M9): con la referencia del siniestro y la póliza.
+            'claim' => $this->insurerClaim($invoice),
         ]);
     }
 
@@ -176,6 +179,16 @@ class DocumentPdfService
             'phone' => $client->phone,
             'email' => $client->email,
         ] : null;
+    }
+
+    /**
+     * El siniestro de una factura a la aseguradora (la del cliente de la aseguradora desde un reparto); null si no es.
+     */
+    private function insurerClaim(Invoice $invoice): ?Claim
+    {
+        $claim = $invoice->allocation_id ? $invoice->allocation?->claim : null;
+
+        return $claim && $claim->insurer()->withTrashed()->value('client_id') === $invoice->client_id ? $claim : null;
     }
 
     private function vehicle(?Vehicle $vehicle): ?array

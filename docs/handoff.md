@@ -7,7 +7,7 @@
 **Estado:** Backend/API funcional — roadmap original completo (FASES 10 a 20: repuestos, inventario, servicios,
 cierre económico, facturación, pagos, entrega, historial, mantenimiento preventivo, reportes), FASE 21 (compras) y
 FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría) y
-módulo de aseguradoras en curso (M1–M8 y P10, 2.59–2.69); 6 roles; 455 tests en verde (2026-10-29)
+módulo de aseguradoras en curso (M1–M9 y P10, 2.59–2.70); 6 roles; 460 tests en verde (2026-10-29)
 **Stack principal:** Laravel 13.38 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend en React 19, en el repositorio aparte
 `../synctaller-frontend` (ver 1.2)
 **Entorno local:** Laragon / Windows
@@ -1740,6 +1740,30 @@ Implementación de la decisión P10 (2.66). Reglas vigentes en `CLAUDE.md`, 6.28
 | Seeder | `CreditNoteSeeder` (después de `PaymentSeeder`, con el cajero): H13 acreditada entera (estado `credited`) y H07 con una nota parcial y otra anulada. `DatabaseSeederTest` ajusta los estados de cobro y verifica las notas |
 | Pruebas | `tests/Feature/Invoices/CreditNoteTest` (6): registro por línea con base proporcional y exacta, línea ajena y scope; tope del saldo, `paid` y `credited` (también en el listado); anulación de la nota y de la factura e inmutabilidad; validaciones y PDF; reporte de ventas y CSV; permisos. Los tests existentes de facturas, pagos, reportes, entregas y avisos pasaron sin cambios |
 | Pendiente externo | V18 (procedimiento autorizado y plazo de un año) y V19 (anulación de una factura no recibida) |
+
+---
+
+# 2.70 Facturas por responsable (2026-10-29)
+
+Entrega M9 de la especificación de aseguradoras (`docs/especificacion-aseguradoras.html`, §4.6, §5.7, §7.1 y §9;
+decisiones A y F). Reglas vigentes en `CLAUDE.md`, 6.29.
+
+| Tema | Decisión |
+|---|---|
+| Tablas | Migración `000069`: `invoices.allocation_id` e `invoice_items.allocation_line_id`, nulos. Probada en una base MySQL temporal (todas las migraciones y el rollback de esta) |
+| Facturado neto | `AllocationBillingService` (sin dependencias): base de las líneas en facturas vigentes menos la acreditada por notas (P10). Lo usan la generación, la emisión (R8), la corrección del reparto (P6) y la entrega |
+| Condición | Decisión del usuario del 2026-10-29: aseguradora a crédito con vencimiento hoy + `payment_term_days` (30 si no tiene); dueño al contado. Editables en borrador |
+| Líneas | Una por porción (decisión del usuario), aunque un concepto tenga dos porciones del mismo cliente. Concepto entero: su cantidad y precio; una parte: cantidad 1 y la cantidad real en la descripción (Ejemplo 5) |
+| Una por cliente y versión | Decisión del usuario del 2026-10-29: lo acreditado se vuelve a facturar desde una versión nueva del reparto, no con otra factura en la misma versión |
+| PDF | Decisión del usuario: la factura a la aseguradora trae el número de siniestro y la póliza |
+| Entrega | Decisión del usuario: el control del deducible (A) se aplica a toda la recepción con siniestro abierto, también a las OT sin reparto. Las OT con reparto se controlan por porción y por factura; las particulares, como siempre |
+| Cambio de comportamiento | Con un siniestro abierto de deducible desconocido (nulo) la recepción ya no se entrega. `ClaimTest` (M3) entregaba con deducible nulo: ahora usa deducible 0 |
+| Excepciones | Los errores de entrega salen de `VehicleDeliveryException` (como los demás `DELIVERY_*`); `AllocationBillingService` solo responde si falta algo |
+| Contrato (F) | `invoices[]` e `invoices_count` en el detalle de la OT con `invoices.show`; `invoice` queda como clave heredada. El historial (`vehicle-history.view`) agrega `invoices[]` sin permiso propio, como ya mostraba `invoice`, y `summary.by_recipient` |
+| Bloqueo | Generar: siniestro → OT → reparto → factura. Emitir bloquea la factura y después el reparto (la generación no bloquea facturas existentes, así que no se cruzan) |
+| Seeder | La OT de C05 suma un extra aprobado (a cargo del dueño) y `AllocationInvoiceSeeder` (después de `InvoiceSeeder`, con el cajero) emite las dos facturas: la de la aseguradora a crédito, impaga, y la del dueño al contado, cobrada. Es el escenario obligatorio de §7.1; el opcional (deducible mayor a 0) no se sembró. `DatabaseSeederTest` ajusta los conteos de facturación y verifica las dos facturas |
+| Pruebas | `tests/Feature/Claims/AllocationInvoiceTest` (5): Ejemplo 1 facturado a cada responsable (importes de la especificación: 1.980.000 y 1.067.000 con IVA), duplicado y cliente sin porciones, `invoices[]` y su ausencia para el mecánico; entrega por factura e historial por destinatario; deducible en la generación, la emisión y la entrega, y `CLAIM_DEDUCTIBLE_LOCKED`; corrección con `ALLOCATION_HAS_INVOICES` resuelta con una nota de crédito; permisos. Los helpers del Ejemplo 1 pasaron a `ClaimTestCase` |
+| Fuera de alcance | M10 (deducible mayor a 0, espera G1), M11 (avisos a aseguradoras) y M12 (retenciones, espera V17) |
 
 ---
 
@@ -4109,14 +4133,14 @@ La arquitectura objetivo es:
 El proyecto actualmente se encuentra en:
 
 ```text
-MÓDULO DE ASEGURADORAS — M1 a M8 Y P10 IMPLEMENTADAS (2026-10-29, ver 2.59–2.69); SIGUE M9 (FACTURAS POR RESPONSABLE)
+MÓDULO DE ASEGURADORAS — M1 a M9 Y P10 IMPLEMENTADAS (2026-10-29, ver 2.59–2.70); SIGUEN M10–M12
 ```
 
 Con la FASE 20 se completó el roadmap original (FASES 10–20); después se implementaron compras (FASE 21), pagos a
 proveedores (FASE 22), notificaciones por email y bandeja interna (FASE 23), exportación de reportes y comprobantes
 imprimibles (FASE 24) y auditoría avanzada (FASE 25). Desde el 2026-10-24 se trabaja en el módulo de aseguradoras
-(deuda #13), según el plan de `docs/especificacion-aseguradoras.html` (§9): M9 (facturas por
-responsable), M10 (deducible, espera G1), M11 (avisos) y M12 (retenciones). El frontend React 19 está en
+(deuda #13), según el plan de `docs/especificacion-aseguradoras.html` (§9): M1–M9 y P10 están hechas; quedan
+M10 (deducible mayor a 0, espera G1), M11 (avisos) y M12 (retenciones, espera V17). El frontend React 19 está en
 `../synctaller-frontend` y se adapta en su propio repositorio. Sigue sin fase asignada:
 
 ```text
@@ -4250,12 +4274,13 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Bloqueo de la OT, re-aceptación y excepciones internas (2.65)
 [✓] Reparto económico de la OT de un siniestro (2.68)
 [✓] Notas de crédito emitidas fuera del sistema (2.69)
+[✓] Facturas por responsable (2.70)
 ```
 
 ## Próximo
 
 ```text
-[ ] Aseguradoras: facturación por responsable (M9–M12)
+[ ] Aseguradoras: deducible mayor a 0 (M10, espera G1), avisos (M11) y retenciones (M12, espera V17)
 [ ] Notificaciones por WhatsApp
 ```
 
@@ -4342,7 +4367,7 @@ aprobadas (E y P8, §10.2 de la especificación), que solo faltaba registrar.
 | 10 | ~~Alta de mecánico con costo o comisión `null` → `500`~~ **Resuelto el 2026-10-21** | `StoreMechanicRequest` declaraba `hour_cost` y `commission_percentage` como `nullable`, pero las columnas son `NOT NULL DEFAULT 0` (migración `000001`). `POST /api/mechanics` con `"hour_cost": null` respondía `500 INTERNAL_SERVER_ERROR` | Decisión del usuario: rechazar con `422`. Alta y edición validan `sometimes\|required`: sin enviarlos quedan en `0`; vacíos → `422 VALIDATION_ERROR`. Test: `MechanicTest::test_cost_and_commission_cannot_be_null` |
 | 11 | ~~Repuestos extra sin aprobación del cliente~~ **Resuelto el 2026-10-23 (opción 3, ver 2.49)** | `POST work-orders/{id}/parts` agrega repuestos fuera del presupuesto aprobado (`work_order_item_id` `null`, `is_budgeted` `false`, precio de venta del repuesto o el informado) con la OT `pending\|in_progress\|paused`. El cierre (6.9) y la factura (6.10) suman lo realmente usado, extras incluidos | El cliente paga más que el presupuesto que aprobó, sin registro de su conformidad ni aviso. La diferencia solo se ve en el cierre (`variance`, con `work-orders.view-economics`). Hoy se puede formalizar con un presupuesto complementario en la misma recepción y otra OT. Opciones a decidir con los clientes del taller: (1) mantener y mostrar en OT y factura lo no presupuestado y la diferencia; (2) prohibir extras y usar siempre el presupuesto complementario; (3) extras con aprobación registrada del cliente antes de consumir o facturar (diseño nuevo, con migración). **Se eligió la 3:** el extra nace `awaiting_approval` y se registra la respuesta del cliente (medio, contacto, quién la cargó) antes de reservar, consumir o completar la OT |
 | 12 | ~~Requests ocasionales sin el `.env` (entorno local)~~ **Resuelto el 2026-10-22** | En la revisión visual de F9, un request concurrente del frontend falló y el navegador lo informó como CORS; `laravel.log`: `production.ERROR: Database connection [framework_base] not configured` (sin `APP_ENV` ni `DB_CONNECTION`: corrió sin las variables del `.env`). Reproducido: 13 de 300 requests concurrentes con 500 | Causa: Apache multihilo de Laragon (`mpm_winnt` + PHP como módulo ZTS), `putenv` no es seguro entre hilos. Laragon pasó a **Nginx** (puerto 80, `php-cgi` con procesos hijos, `client_max_body_size 2000M`): 900 de 900 requests concurrentes en 200, sin errores nuevos. Además `database.default` pasó de `framework_base` (resto del scaffold) a `mysql`; el 2026-10-24 la conexión del proyecto, que se llamaba `synctaller` y no se usaba (Laravel completaba `mysql` con su configuración interna), se renombró a `mysql`. No usar `config:cache` en desarrollo: con la config cacheada `php artisan test` usaría MySQL y `RefreshDatabase` borraría la base |
-| 13 | **Abierta (2026-10-24), en diseño desde el 2026-10-27: clientes aseguradoras.** Especificación de trabajo en `docs/especificacion-aseguradoras.html` (versión 3): decisiones A–G y P1–P9 aprobadas; primeras respuestas externas a G1–G5 (2026-10-28); correcciones previas E2–E5 implementadas (2.54–2.57). **M1–M8 y P10 implementadas (2.59–2.69, 2026-10-29)**; faltan M9–M12 (facturación por responsable, deducible, avisos y retenciones) | No hay concepto de aseguradora, siniestro, póliza ni deducible. La factura toma el `client_id` del dueño de la recepción (`InvoiceService::generate`); en borrador se pueden cambiar `customer_name`, `customer_tax_id`, `customer_address` y la condición (`UpdateInvoiceRequest`), así que hoy se puede facturar a nombre de la aseguradora y a crédito. Una sola factura vigente por OT (`WORK_ORDER_ALREADY_INVOICED`); el presupuesto lo aprueba el cliente, sin aprobación parcial por ítem | Reportes de ventas, clientes y cobros muestran al dueño, no a la aseguradora; no se puede dividir la factura (deducible al dueño y el resto a la aseguradora); no se registra el número de siniestro ni el perito. Preguntas abiertas: ¿quién paga el deducible y con qué factura?, ¿quién aprueba el presupuesto (perito, dueño o ambos) y si puede ser parcial?, ¿siniestro o póliza en presupuesto y factura?, ¿cuentas por cobrar por aseguradora? Para entregar con pago diferido hay que facturar a crédito (la entrega exige la factura de contado pagada) |
+| 13 | **Abierta (2026-10-24), en diseño desde el 2026-10-27: clientes aseguradoras.** Especificación de trabajo en `docs/especificacion-aseguradoras.html` (versión 3): decisiones A–G y P1–P9 aprobadas; primeras respuestas externas a G1–G5 (2026-10-28); correcciones previas E2–E5 implementadas (2.54–2.57). **M1–M9 y P10 implementadas (2.59–2.70, 2026-10-29)**; faltan M10–M12 (deducible mayor a 0, avisos y retenciones) | No hay concepto de aseguradora, siniestro, póliza ni deducible. La factura toma el `client_id` del dueño de la recepción (`InvoiceService::generate`); en borrador se pueden cambiar `customer_name`, `customer_tax_id`, `customer_address` y la condición (`UpdateInvoiceRequest`), así que hoy se puede facturar a nombre de la aseguradora y a crédito. Una sola factura vigente por OT (`WORK_ORDER_ALREADY_INVOICED`); el presupuesto lo aprueba el cliente, sin aprobación parcial por ítem | Reportes de ventas, clientes y cobros muestran al dueño, no a la aseguradora; no se puede dividir la factura (deducible al dueño y el resto a la aseguradora); no se registra el número de siniestro ni el perito. Preguntas abiertas: ¿quién paga el deducible y con qué factura?, ¿quién aprueba el presupuesto (perito, dueño o ambos) y si puede ser parcial?, ¿siniestro o póliza en presupuesto y factura?, ¿cuentas por cobrar por aseguradora? Para entregar con pago diferido hay que facturar a crédito (la entrega exige la factura de contado pagada) |
 | 14 | **Abierta (2026-10-28): disco `local` con `serve` activo y sin uso** | `config/filesystems.php`: el disco `local` (`storage/app/private`) tiene `'serve' => true`. Laravel registra `GET` y `PUT storage/{path}` con URL firmada: la firma usa la `APP_KEY` y no conoce permisos, taller ni auditoría. Ninguna parte de `app/` usa ese disco | Hoy no expone nada (la carpeta solo tiene `.gitignore`), pero cualquier archivo que se guarde ahí quedaría descargable por URL firmada. Decisión aprobada (E): no se usa para el módulo, que tendrá su propio disco privado sin `serve`; su revisión queda como deuda, **sin desactivarlo en esta etapa** |
 | 15 | **Abierta (2026-10-28): fotos y firmas con URL pública (deuda de seguridad, P8)** | Fotos de recepción (`ReceptionPhotoController`), fotos de ítems de diagnóstico (`DiagnosticItemPhotoController`) y firmas de entrega (`VehicleDeliveryService`) en el disco `public`, con URL permanente y nombre aleatorio. El frontend las muestra con `<img src>`, que no envía el token | Una URL filtrada no se puede revocar hasta mover el archivo; no hay permiso ni auditoría de acceso. Decisión aprobada (P8): tarea independiente **después de T4** (storage por taller), primero la firma y después las fotos, coordinada con el frontend (descarga con token). **Requisito antes del primer taller comercial.** Hasta entonces no se agregan tipos de archivo nuevos al disco `public`, salvo branding |
 | 16 | **Abierta (2026-10-28): sin análisis antivirus de archivos subidos (riesgo técnico)** | Las subidas solo validan tipo, extensión y tamaño (fotos, firma, logo, favicon; y los documentos de siniestros previstos en M4) | La validación no sustituye un antivirus. Decisión aprobada (E): queda fuera del alcance actual y se documenta como riesgo pendiente; decidir antes de recibir documentos de terceros en producción |

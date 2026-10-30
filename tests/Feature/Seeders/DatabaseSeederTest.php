@@ -121,11 +121,15 @@ class DatabaseSeederTest extends TestCase
         $this->assertSame(0, bccomp((string) $c05[1]->owner_amount, '0', 2));
         $this->assertSame(['start_without_authorization'], DB::table('internal_exceptions')->whereNull('consumed_at')->pluck('type')->all());
         // Reparto (M8): la OT de C05 con las tres versiones (sustituida, confirmada y borrador). La aseguradora autorizó
-        // todo: la venta entera le corresponde y el dueño no paga nada.
+        // todo el presupuesto; el extra aprobado queda a cargo del dueño.
         $this->assertSame(['confirmed' => 1, 'draft' => 1, 'superseded' => 1], $this->statusCounts('work_order_allocations'));
         $confirmed = DB::table('work_order_allocations')->where('status', 'confirmed')->sole();
-        $this->assertSame(['insurer_covered'], DB::table('work_order_allocation_lines')->where('work_order_allocation_id', $confirmed->id)->distinct()->pluck('portion_type')->all());
+        $this->assertEqualsCanonicalizing(['insurer_covered', 'owner_responsibility'], DB::table('work_order_allocation_lines')->where('work_order_allocation_id', $confirmed->id)->distinct()->pluck('portion_type')->all());
         $this->assertSame(0, bccomp((string) $confirmed->sale_total, (string) DB::table('work_order_allocation_lines')->where('work_order_allocation_id', $confirmed->id)->sum('amount'), 2));
+        // Facturas por responsable (M9): una a la aseguradora (a crédito, impaga) y otra al dueño (al contado, cobrada).
+        $byAllocation = Invoice::where('allocation_id', $confirmed->id)->where('status', 'issued')->get();
+        $this->assertSame(['cash', 'credit'], $byAllocation->map(fn (Invoice $invoice) => $invoice->condition->value)->sort()->values()->all());
+        $this->assertSame(['paid', 'unpaid'], $byAllocation->map(fn (Invoice $invoice) => $invoice->paymentStatus()->value)->sort()->values()->all());
         DB::table('claim_documents')->pluck('path')->each(fn (string $path) => Storage::disk('claim_documents')->assertExists($path));
         $this->assertTrue((bool) Vehicle::where('chassis', VehiclesSeeder::WITHOUT_PLATE_CHASSIS)->value('no_plate'));
         $this->assertGreaterThanOrEqual(30, Client::count());
@@ -188,19 +192,19 @@ class DatabaseSeederTest extends TestCase
 
     private function assertBilling(): void
     {
-        // Facturación, cobros y entregas (ExampleScenarios::BILLING).
-        $this->assertSame(['cancelled' => 1, 'draft' => 1, 'issued' => 15], $this->statusCounts('invoices'));
-        $this->assertSame(['credit' => 5, 'cash' => 12], DB::table('invoices')->selectRaw('`condition`, count(*) as total')
+        // Facturación, cobros y entregas (ExampleScenarios::BILLING), más las dos facturas por responsable de C05 (M9).
+        $this->assertSame(['cancelled' => 1, 'draft' => 1, 'issued' => 17], $this->statusCounts('invoices'));
+        $this->assertSame(['credit' => 6, 'cash' => 13], DB::table('invoices')->selectRaw('`condition`, count(*) as total')
             ->groupBy('condition')->orderByDesc('condition')->pluck('total', 'condition')->map(fn ($total) => (int) $total)->all());
         $this->assertSame(
-            ['credited' => 1, 'paid' => 10, 'partial' => 2, 'unpaid' => 2],
+            ['credited' => 1, 'paid' => 11, 'partial' => 2, 'unpaid' => 3],
             Invoice::where('status', 'issued')->get()->countBy(fn (Invoice $invoice) => $invoice->paymentStatus()->value)->sortKeys()->all()
         );
         // Notas de crédito externas (P10): H13 acreditada entera; H07 con una parcial y otra anulada.
         $this->assertSame(['cancelled' => 1, 'registered' => 2], $this->statusCounts('invoice_credit_notes'));
         $this->assertSame(2, Invoice::where('status', 'issued')->where('condition', 'credit')->whereDate('due_date', '<', today())
             ->get()->filter(fn (Invoice $invoice) => bccomp($invoice->balance(), '0', 2) > 0)->count());
-        $this->assertSame(['cancelled' => 1, 'registered' => 13], $this->statusCounts('payments'));
+        $this->assertSame(['cancelled' => 1, 'registered' => 14], $this->statusCounts('payments'));
         $this->assertEqualsCanonicalizing(['cash', 'card', 'transfer', 'check'], DB::table('payments')->distinct()->pluck('method')->all());
         $this->assertTrue(DB::table('payments')->where('change_amount', '>', 0)->exists());
         $this->assertTrue(DB::table('payments')->whereNotNull('receipt_number')->exists());

@@ -21,6 +21,7 @@ class InvoiceItem extends Model
         'invoice_id',
         'source_type',
         'source_id',
+        'allocation_line_id',
         'description',
         'quantity',
         'base_unit_price',

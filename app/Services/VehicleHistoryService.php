@@ -32,7 +32,7 @@ class VehicleHistoryService
         $invoices = Invoice::query()
             ->whereIn('work_order_id', $workOrderIds)
             ->where('status', InvoiceStatus::ISSUED)
-            ->with('payments')
+            ->with(['payments', 'creditNotes'])
             ->get();
 
         $summary = [
@@ -44,6 +44,15 @@ class VehicleHistoryService
             'last_service_at' => WorkOrder::whereIn('id', $workOrderIds)->where('status', WorkOrderStatus::COMPLETED)->max('completed_at'),
             'invoiced_total' => $invoices->reduce(fn (string $sum, Invoice $i) => bcadd($sum, $i->total, 2), '0.00'),
             'balance_due' => $invoices->reduce(fn (string $sum, Invoice $i) => bcadd($sum, $i->balance(), 2), '0.00'),
+            // Facturado y saldo por destinatario (M9): el dueño del vehículo y los demás (por ejemplo, una aseguradora).
+            'by_recipient' => collect(['owner' => true, 'others' => false])->map(function (bool $owner) use ($invoices, $vehicle) {
+                $group = $invoices->filter(fn (Invoice $i) => ($i->client_id === $vehicle->client_id) === $owner);
+
+                return [
+                    'invoiced_total' => $group->reduce(fn (string $sum, Invoice $i) => bcadd($sum, $i->total, 2), '0.00'),
+                    'balance_due' => $group->reduce(fn (string $sum, Invoice $i) => bcadd($sum, $i->balance(), 2), '0.00'),
+                ];
+            })->all(),
         ];
 
         if ($withEconomics) {

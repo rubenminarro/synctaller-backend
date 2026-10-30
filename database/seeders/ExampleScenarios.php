@@ -196,10 +196,11 @@ final class ExampleScenarios
                 'key' => 'C05', 'plate' => 'CCC333', 'days' => 7, 'receptionist' => $r2, 'categories' => ['mechanical'],
                 'fuel' => FuelLevel::FULL, 'problem' => 'Golpes al pasar lomadas.',
                 'diagnostics' => [['MEC-002', 'completed', 'high', 'Golpes en lomadas.', 'Amortiguadores delanteros agotados.', 'Cambio de amortiguadores.', ['shock_absorber']]],
-                // Siniestro (M3–M8): autorización en dos versiones, aprobado con la primera y re-aceptado con la segunda;
-                // OT completada (después de la re-aceptación) con su reparto en tres versiones (AllocationSeeder).
+                // Siniestro (M3–M9): autorización en dos versiones, aprobado con la primera y re-aceptado con la segunda;
+                // OT completada (después de la re-aceptación) con un extra del dueño, su reparto en tres versiones
+                // (AllocationSeeder) y una factura por responsable (AllocationInvoiceSeeder).
                 'budget' => ['status' => 'approved', 'items' => [['part', 'SUS-AMO-001', 2], ['service', 'Instalación de amortiguadores']]],
-                'work_order' => ['status' => 'completed', 'mechanic' => 'MEC-002', 'done' => 1, 'day' => 2],
+                'work_order' => ['status' => 'completed', 'mechanic' => 'MEC-002', 'done' => 1, 'day' => 2, 'extras' => [['ELE-LAM-001', 2, 'approve']]],
             ],
             [
                 'key' => 'C06', 'plate' => 'QAB104', 'days' => 12, 'receptionist' => $r3, 'categories' => ['general', 'tires'],

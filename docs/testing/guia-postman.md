@@ -485,6 +485,28 @@ deducible).
 | Bajar el deducible por debajo de lo asignado | `PATCH {{base_url}}/claims/{{claim_id}}` | `{ "deductible_amount": 0 }` | 422 | `CLAIM_DEDUCTIBLE_BELOW_ALLOCATED` |
 | Sin permiso | recepcionista o jefe de taller: generar, editar, confirmar o eliminar; depósito o mecánico: listar | — | 403 | `FORBIDDEN` |
 
+Facturas por responsable (M9, ver `CLAUDE.md` 6.29). Con el reparto **confirmado** de arriba (`{{allocation_id}}`), el
+deducible del siniestro informado e igual a 0 y el token del cajero.
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Factura a la aseguradora | `POST {{base_url}}/work-orders/{{work_order_id}}/allocations/{{allocation_id}}/invoices` | `{ "client_id": {{insurer_client_id}} }` | 201 | Borrador a crédito (vencimiento hoy + plazo de la aseguradora), `allocation_id`, una línea por porción con `allocation_line_id`; lo parcial va con cantidad 1 y la cantidad real en la descripción |
+| Factura al dueño | ídem | `{ "client_id": {{client_id}} }` | 201 | Borrador al contado |
+| Otra al mismo cliente | ídem | ídem | 409 | `WORK_ORDER_ALREADY_INVOICED` |
+| Cliente sin porciones | ídem | otro `client_id` | 422 | `ALLOCATION_CLIENT_NOT_RESPONSIBLE` |
+| Reparto en borrador o sustituido | `POST …/allocations/{id}/invoices` | — | 422 | `ALLOCATION_NOT_CONFIRMED` |
+| Deducible mayor a 0 / desconocido | ídem, después de `PATCH claims/{{claim_id}}` | — | 422 | `ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED` / `CLAIM_DEDUCTIBLE_UNKNOWN`; también al emitir |
+| Emitir | `POST {{base_url}}/invoices/{id}/issue` | — | 200 | Revalida reparto confirmado (`ALLOCATION_SUPERSEDED`, 409), deducible y R8 (`INVOICE_EXCEEDS_ALLOCATION`, 409). El PDF de la de la aseguradora trae siniestro y póliza |
+| Cambiar el deducible con factura a la aseguradora | `PATCH {{base_url}}/claims/{{claim_id}}` | `{ "deductible_amount": 100000 }` | 422 | `CLAIM_DEDUCTIBLE_LOCKED` |
+| Corregir el reparto con facturas | `POST …/allocations/{nueva}/confirm` | — | 409 | `ALLOCATION_HAS_INVOICES` con `errors.invoices[]` (número, destinatario, estado, pagos y acreditado). Se resuelve eliminando los borradores y acreditando (16.5.1) o anulando las emitidas |
+| Detalle de la OT | `GET {{base_url}}/work-orders/{{work_order_id}}` | — | 200 | `invoices[]` e `invoices_count` (con `invoices.show`); `invoice` es la clave heredada (la última) |
+| Listado por OT | `GET {{base_url}}/invoices?work_order_id={{work_order_id}}` | — | 200 | Las dos facturas |
+| Entregar sin la factura de la aseguradora | `POST {{base_url}}/receptions/{{reception_id}}/delivery` | el de 17.3 | 422 | `DELIVERY_WORK_ORDER_NOT_FULLY_INVOICED` |
+| Entregar con la del dueño al contado impaga | ídem | — | 422 | `DELIVERY_INVOICE_NOT_PAID`; cobrada, se entrega aunque la de la aseguradora (a crédito) esté impaga |
+| Entregar con deducible mayor a 0 o desconocido | ídem | — | 422 | `DELIVERY_CLAIM_DEDUCTIBLE_PENDING` (toda la recepción) |
+| Historial del vehículo | `GET {{base_url}}/vehicles/{{vehicle_id}}/history` | — | 200 | `invoices[]` en cada OT y `summary.by_recipient` (`owner`/`others`) |
+| Sin permiso | recepcionista: generar | — | 403 | `FORBIDDEN` |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.

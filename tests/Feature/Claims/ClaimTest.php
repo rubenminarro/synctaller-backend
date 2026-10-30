@@ -115,8 +115,9 @@ class ClaimTest extends ClaimTestCase
         $this->actingAsAdmin();
         $this->createStamp()->assertCreated();
 
+        // Deducible informado e igual a 0: con uno desconocido o mayor a 0 no se entrega por el flujo habitual (A, M9).
         $workOrder = $this->completedWorkOrder();
-        $id = $this->postJson('/api/claims', $this->claimBody($workOrder['reception_id'], $this->insurer()))->json('data.id');
+        $id = $this->postJson('/api/claims', $this->claimBody($workOrder['reception_id'], $this->insurer(), ['deductible_amount' => 0]))->json('data.id');
 
         $draft = $this->generateInvoice($workOrder);
         $this->patchJson("/api/invoices/{$draft['id']}", ['customer_tax_id' => '1234567'])->assertOk();

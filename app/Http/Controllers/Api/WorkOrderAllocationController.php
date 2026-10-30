@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreAllocationInvoiceRequest;
 use App\Http\Requests\UpdateWorkOrderAllocationRequest;
+use App\Http\Resources\ShowInvoiceResource;
 use App\Http\Resources\WorkOrderAllocationResource;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderAllocation;
 use App\Services\AllocationService;
+use App\Services\InvoiceService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -36,7 +39,22 @@ class WorkOrderAllocationController extends Controller implements HasMiddleware
             new Middleware('permission:work-order-allocations.update', only: ['update']),
             new Middleware('permission:work-order-allocations.confirm', only: ['confirm']),
             new Middleware('permission:work-order-allocations.destroy', only: ['destroy']),
+            new Middleware('permission:invoices.store', only: ['invoice']),
         ];
+    }
+
+    /**
+     * Factura de un responsable desde el reparto confirmado (M9).
+     */
+    public function invoice(StoreAllocationInvoiceRequest $request, WorkOrder $workOrder, WorkOrderAllocation $allocation, InvoiceService $invoiceService)
+    {
+        $invoice = $invoiceService->generateForAllocation($allocation, (int) $request->validated()['client_id'], $request->user());
+
+        return $this->successResponse(
+            'Factura generada en borrador correctamente.',
+            new ShowInvoiceResource($invoice->load(['items', 'workOrder', 'payments', 'creditNotes'])),
+            201
+        );
     }
 
     public function index(WorkOrder $workOrder)

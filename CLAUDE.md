@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M8 y P10, 6.22–6.28). 278 rutas API, 455 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M9 y P10, 6.22–6.29). 279 rutas API, 460 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -80,7 +80,7 @@ resultados esperados y casos de error).
 * Operaciones sobre varios registros en `DB::transaction`; concurrencia con `lockForUpdate`.
   Orden de bloqueo: OT → línea → `part_stocks`; OT → recepción (recálculo de estado); factura → pago;
   recepción → entregas; compra → `part_stocks`; compra → pago a proveedor; recepción → siniestro; presupuesto → autorización de la
-  aseguradora → documentos del siniestro; presupuesto u OT → excepción interna; siniestro → OT → reparto → excepción; factura → nota de crédito;
+  aseguradora → documentos del siniestro; presupuesto u OT → excepción interna; siniestro → OT → reparto → excepción; siniestro → OT → reparto → factura; factura → nota de crédito;
   documento → serie de códigos (siempre última).
 * **Códigos internos** (`BUD-`, `OT-`, `COM-`, `REP-`, `SRV-`, `DIA-`, `ASE-`, `SIN-`): salen de `DocumentSequenceService::create()`
   (serie en `App\Enums\DocumentSeries`, contador en `document_sequences`), nunca de `max(id) + 1`. El contador de la
@@ -148,7 +148,7 @@ Controller (HasMiddleware) → Form Request → Service → Model/Eloquent → A
 |---|---|
 | `app/Http/Controllers/Api` | 58 controllers |
 | `app/Http/Requests` | Validación (mensajes en español) |
-| `app/Services` | Reglas de negocio (44 services, incluido `AuditLogger`) |
+| `app/Services` | Reglas de negocio (45 services, incluido `AuditLogger`) |
 | `app/Jobs`, `app/Mail`, `app/Notifications`, `app/Console/Commands` | Envío de avisos (FASE 23) |
 | `app/Models` | Modelos Eloquent (muchos con `SoftDeletes`) |
 | `app/Http/Resources` | Contrato JSON |
@@ -452,7 +452,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   (`INVOICE_NOT_EDITABLE`). Con pagos vigentes no se anula (`INVOICE_HAS_PAYMENTS`), ni con notas de crédito
   vigentes (`INVOICE_HAS_CREDIT_NOTES`, 6.28).
 * La OT de un siniestro que requiere reparto no se factura por `POST work-orders/{id}/invoice`
-  (`WORK_ORDER_REQUIRES_ALLOCATION_INVOICING`, 422; 6.27).
+  (`WORK_ORDER_REQUIRES_ALLOCATION_INVOICING`, 422; 6.27): se factura por responsable desde su reparto (6.29).
 * Fuera de alcance hoy: SIFEN y la emisión de notas de crédito (las emitidas fuera se registran, 6.28). El PDF de la
   factura (6.18) es una representación sin valor fiscal.
 
@@ -477,6 +477,8 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   la recepción a su estado anterior; si eso la reabre y el vehículo ya tiene otra recepción abierta, se rechaza
   (`DELIVERY_VEHICLE_HAS_OPEN_RECEPTION`, 409).
 * Contrato: el listado de entregas trae `plate` y `client_name`.
+* Con siniestro (6.29): deducible pendiente (`DELIVERY_CLAIM_DEDUCTIBLE_PENDING`) y OT con reparto controlada por
+  porción y por factura (`DELIVERY_WORK_ORDER_NOT_FULLY_INVOICED`).
 
 ### 6.13 Historial y mantenimiento preventivo
 
@@ -695,7 +697,8 @@ Entrega M3 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-10-29
     asegurado es obligatorio.
 * **Edición** (`PATCH`): solo `open` (`CLAIM_NOT_EDITABLE`) y con la recepción editable. Recepción, aseguradora y tipo no
   cambian (`prohibited`: se cancela y se registra otro). El deducible no baja de lo asignado en los
-  repartos confirmados (`CLAIM_DEDUCTIBLE_BELOW_ALLOCATED`, 422; 6.27); su bloqueo con facturas llega con M9.
+  repartos confirmados (`CLAIM_DEDUCTIBLE_BELOW_ALLOCATED`, 422; 6.27) ni cambia con una factura vigente
+  a la aseguradora (`CLAIM_DEDUCTIBLE_LOCKED`, 422; 6.29).
 * **Cancelación** (`POST claims/{id}/cancel`, motivo obligatorio): solo `open` (`CLAIM_NOT_CANCELLABLE`) y sin lo cubierto en un
   reparto confirmado (`CLAIM_HAS_INSURER_ALLOCATIONS`, 422; 6.27). Las líneas `insurer` de los presupuestos en borrador
   de la recepción vuelven a `owner` (6.4).
@@ -859,8 +862,8 @@ Entrega M8 de `docs/especificacion-aseguradoras.html` (§4.5, §5.7, §6.2–6.3
   El detalle de la OT trae `allocation` (resumen de la confirmada) con `work-order-allocations.show`.
 * **Permisos:** `work-order-allocations.index|show` (recepcionista, jefe de taller y cajero) y
   `store|update|confirm|destroy` (cajero).
-* **Pendiente:** facturas por responsable y el control de facturas vigentes al sustituir una versión
-  (`ALLOCATION_HAS_INVOICES`, con el facturado neto de P10) llegan con M9.
+* **Facturación:** por responsable desde el reparto confirmado, y la corrección de un reparto facturado
+  (`ALLOCATION_HAS_INVOICES`) en 6.29.
 
 ### 6.28 Notas de crédito emitidas fuera del sistema
 
@@ -892,6 +895,43 @@ talonario u otro sistema sobre la factura que corrige.
 * **Consulta:** `GET invoices/{invoice}/credit-notes` y `GET …/{creditNote}` (scoped) con `invoices.show`.
 * **M9:** el facturado neto de una porción del reparto es la base de sus líneas de factura menos la acreditada.
 
+### 6.29 Facturas por responsable
+
+Entrega M9 de `docs/especificacion-aseguradoras.html` (§4.6, §7.1; decisiones A y F y decisiones del 2026-10-29;
+`InvoiceService::generateForAllocation`, `AllocationBillingService`).
+
+* **Datos:** `invoices.allocation_id` (versión del reparto que factura) e `invoice_items.allocation_line_id` (porción),
+  nulos en el flujo particular. El **facturado neto** de una porción es la base de sus líneas en facturas vigentes menos
+  la base acreditada por notas de crédito (6.28).
+* **Generar** (`POST work-orders/{id}/allocations/{allocation}/invoices`, body `client_id`, permiso `invoices.store`):
+  * reparto confirmado (`ALLOCATION_NOT_CONFIRMED`, 422); deducible del siniestro informado e igual a 0 (A: mayor a 0
+    → `ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED`, nulo → `CLAIM_DEDUCTIBLE_UNKNOWN`, 422);
+  * el cliente con porciones en ese reparto (`ALLOCATION_CLIENT_NOT_RESPONSIBLE`, 422) y algo pendiente
+    (`ALLOCATION_NOTHING_TO_INVOICE`, 422); **una vigente por cliente y versión** (`WORK_ORDER_ALREADY_INVOICED`, 409):
+    lo acreditado se vuelve a facturar desde una versión nueva del reparto;
+  * una línea por porción con algo pendiente: el concepto entero con su cantidad y precio; una parte, con cantidad 1,
+    base igual al importe y la cantidad real en la descripción (Ejemplo 5);
+  * cabecera con los datos del cliente; la de la aseguradora **a crédito** con vencimiento hoy + `payment_term_days`
+    (30 si no tiene), la del dueño **al contado** (editables en borrador como siempre). El taller y el deducible no se
+    facturan.
+* **Emitir:** con reparto, revalida que siga confirmado (`ALLOCATION_SUPERSEDED`, 409), el deducible (A) y R8 (lo
+  facturado por porción ≤ la porción, `INVOICE_EXCEEDS_ALLOCATION`, 409). El PDF de la factura a la aseguradora trae el
+  número de siniestro y la póliza.
+* **Corregir el reparto** (P6 con P10): la versión confirmada anterior no puede tener facturas vigentes con facturado
+  neto (los borradores cuentan): `ALLOCATION_HAS_INVOICES` (409) con `errors.invoices[]` (`invoice_id`, `number`,
+  `customer_name`, `status`, `has_payments`, `credited_total`).
+* **Entrega** (`VehicleDeliveryService`): con un siniestro abierto de deducible mayor a 0 o nulo, la recepción no se
+  entrega (`DELIVERY_CLAIM_DEDUCTIBLE_PENDING`, 422; toda la recepción, también las OT sin reparto). Una OT con reparto
+  necesita el confirmado con todas sus porciones (salvo las del taller) facturadas y emitidas
+  (`DELIVERY_WORK_ORDER_NOT_FULLY_INVOICED`, 422); contado y crédito por factura (`DELIVERY_INVOICE_NOT_PAID` para la
+  del dueño al contado; la de la aseguradora a crédito puede estar impaga). Las OT particulares, como siempre.
+* **Siniestro:** con una factura vigente a la aseguradora el deducible no cambia (`CLAIM_DEDUCTIBLE_LOCKED`, 422).
+* **Contrato (F):** el detalle de la OT agrega `invoices[]` (vigentes, con destinatario, condición, saldo y estado de
+  cobro) e `invoices_count`, solo con `invoices.show`. **`invoice` es una clave heredada:** sigue siendo la última
+  factura vigente, y el frontend nuevo usa `invoices[]`. El historial del vehículo agrega `invoices[]` en cada OT y
+  `summary.by_recipient` (`owner`/`others`). Las facturas agregan `allocation_id` y `items[].allocation_line_id`; el
+  listado filtra por `work_order_id`.
+
 ---
 
 ## 7. Deuda técnica conocida
@@ -899,8 +939,8 @@ talonario u otro sistema sobre la factura que corrige.
 `docs/handoff.md`, sección 14. Las deudas nuevas se registran ahí y no se corrigen sin decisión previa del usuario.
 Abiertas (reverificado el 2026-10-29):
 
-* **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M8 y P10
-  hechas (6.1, 6.4, 6.5 y 6.22–6.28); falta la facturación por responsable (M9–M12).
+* **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M9 y P10
+  hechas (6.1, 6.4, 6.5 y 6.22–6.29); faltan M10 (deducible mayor a 0, espera G1), M11 (avisos) y M12 (retenciones).
 * **#14:** disco `local` con `serve` activo y sin uso. No se usa para documentos nuevos: los de siniestros van al disco
   `claim_documents`, sin `serve` (6.24).
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes

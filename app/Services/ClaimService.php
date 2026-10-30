@@ -10,10 +10,12 @@ use App\Enums\ClaimStatus;
 use App\Enums\ClaimType;
 use App\Enums\DocumentSeries;
 use App\Enums\InsurerStatus;
+use App\Enums\InvoiceStatus;
 use App\Exceptions\ClaimException;
 use App\Models\BudgetItem;
 use App\Models\Claim;
 use App\Models\Insurer;
+use App\Models\Invoice;
 use App\Models\Reception;
 use App\Models\User;
 use App\Models\WorkOrderAllocation;
@@ -89,7 +91,8 @@ class ClaimService
                 $this->ensureUniqueClaimNumber($claim->insurer_id, $data['claim_number'], $claim->id);
             }
 
-            if (array_key_exists('deductible_amount', $data)) {
+            if (array_key_exists('deductible_amount', $data) && !$this->sameAmount($claim->deductible_amount, $data['deductible_amount'])) {
+                $this->ensureDeductibleNotInvoiced($claim);
                 $this->ensureDeductibleCoversAllocations($claim, $data['deductible_amount']);
             }
 
@@ -160,6 +163,34 @@ class ClaimService
                 'CLAIM_DEDUCTIBLE_BELOW_ALLOCATED'
             );
         }
+    }
+
+    /**
+     * Con una factura vigente a la aseguradora el deducible no cambia (M9, §5.2): antes se elimina el borrador o se
+     * acredita la factura emitida.
+     */
+    private function ensureDeductibleNotInvoiced(Claim $claim): void
+    {
+        $insurerClientId = $claim->insurer()->withTrashed()->value('client_id');
+        $invoiced = Invoice::whereIn('status', InvoiceStatus::currentStatuses())
+            ->where('client_id', $insurerClientId)
+            ->whereHas('allocation', fn ($q) => $q->where('claim_id', $claim->id))
+            ->exists();
+
+        if ($invoiced) {
+            throw new ClaimException(
+                'El siniestro tiene una factura vigente a la aseguradora: elimine el borrador o acredite la factura antes de cambiar el deducible.',
+                422,
+                'CLAIM_DEDUCTIBLE_LOCKED'
+            );
+        }
+    }
+
+    private function sameAmount(int|float|string|null $current, int|float|string|null $new): bool
+    {
+        return $current === null || $new === null
+            ? $current === $new
+            : bccomp((string) $current, (string) $new, 2) === 0;
     }
 
     public function load(Claim $claim): Claim

@@ -18,6 +18,8 @@ class InvoiceResource extends JsonResource
             ],
             'work_order_id' => $this->work_order_id,
             'work_order_code' => $this->whenLoaded('workOrder', fn () => $this->workOrder?->code),
+            // Versión del reparto que factura (M9); null en el flujo particular.
+            'allocation_id' => $this->allocation_id,
             'client_id' => $this->client_id,
             'customer_name' => $this->customer_name,
             'customer_tax_id' => $this->customer_tax_id,

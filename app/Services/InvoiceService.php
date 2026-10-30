@@ -2,17 +2,25 @@
 
 namespace App\Services;
 
+use App\Enums\AllocationStatus;
 use App\Enums\InvoiceCondition;
 use App\Enums\InvoiceStatus;
 use App\Enums\TaxRate;
 use App\Enums\WorkOrderStatus;
+use App\Exceptions\AllocationException;
 use App\Exceptions\InvoiceException;
+use App\Models\Claim;
+use App\Models\Client;
+use App\Models\Insurer;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\InvoiceStamp;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Models\WorkOrderAllocation;
+use App\Models\WorkOrderAllocationLine;
 use App\Support\Decimal;
+use App\Support\Format;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,8 +32,83 @@ class InvoiceService
 {
     public function __construct(
         protected WorkOrderSaleBreakdown $saleBreakdown,
-        protected OwnerShareService $ownerShare
+        protected OwnerShareService $ownerShare,
+        protected AllocationBillingService $allocationBilling
     ) {
+    }
+
+    /**
+     * Factura de un responsable desde el reparto confirmado (M9): una línea por porción suya con algo pendiente (porción
+     * menos lo facturado neto). Si se factura el concepto entero va con su cantidad y precio; si es una parte, con
+     * cantidad 1 y la cantidad real en la descripción (Ejemplo 5: la base queda exacta). La de la aseguradora sale a
+     * crédito con su plazo de pago; la del dueño, al contado. Una vigente por cliente y versión del reparto. Orden de
+     * bloqueo: siniestro → OT → reparto → factura.
+     */
+    public function generateForAllocation(WorkOrderAllocation $allocation, int $clientId, User $user): Invoice
+    {
+        return DB::transaction(function () use ($allocation, $clientId, $user) {
+            $claim = Claim::whereKey($allocation->claim_id)->lockForUpdate()->firstOrFail();
+            $workOrder = WorkOrder::whereKey($allocation->work_order_id)->lockForUpdate()->firstOrFail();
+            $allocation = WorkOrderAllocation::whereKey($allocation->id)->lockForUpdate()->firstOrFail();
+
+            if ($allocation->status !== AllocationStatus::CONFIRMED) {
+                throw new AllocationException('Solo se factura desde el reparto confirmado.', 422, 'ALLOCATION_NOT_CONFIRMED');
+            }
+
+            $this->allocationBilling->ensureDeductibleAllowsInvoicing($claim);
+
+            $portions = $allocation->lines()->where('client_id', $clientId)->get();
+
+            if ($portions->isEmpty()) {
+                throw new AllocationException('El cliente no tiene porciones en este reparto.', 422, 'ALLOCATION_CLIENT_NOT_RESPONSIBLE');
+            }
+
+            $exists = Invoice::where('allocation_id', $allocation->id)->where('client_id', $clientId)
+                ->whereIn('status', InvoiceStatus::currentStatuses())->exists();
+
+            if ($exists) {
+                throw new InvoiceException('El cliente ya tiene una factura vigente de este reparto.', 409, 'WORK_ORDER_ALREADY_INVOICED');
+            }
+
+            $billed = $this->allocationBilling->billedByLine($allocation);
+            $concepts = $this->saleBreakdown->concepts($workOrder)->keyBy(fn (array $c) => $c['source_type'] . ':' . $c['source_id']);
+            $lines = $portions
+                ->map(fn ($portion) => ['portion' => $portion, 'pending' => bcsub(Decimal::of($portion->amount, 2), $billed[$portion->id] ?? '0.00', 2)])
+                ->filter(fn (array $row) => bccomp($row['pending'], '0', 2) > 0)
+                ->map(fn (array $row) => $this->lineFromPortion($row['portion'], $row['pending'], $concepts[$row['portion']->source_type . ':' . $row['portion']->source_id] ?? null));
+
+            if ($lines->isEmpty()) {
+                throw new AllocationException('El cliente no tiene nada pendiente de facturar en este reparto.', 422, 'ALLOCATION_NOTHING_TO_INVOICE');
+            }
+
+            $client = Client::withTrashed()->findOrFail($clientId);
+            $insurer = Insurer::where('client_id', $clientId)->first();
+
+            $invoice = Invoice::create([
+                'work_order_id' => $workOrder->id,
+                'allocation_id' => $allocation->id,
+                'client_id' => $client->id,
+                'status' => InvoiceStatus::DRAFT,
+                'customer_name' => $client->display_name,
+                'customer_tax_id' => $client->document_number,
+                'customer_address' => $client->address,
+                'condition' => $insurer ? InvoiceCondition::CREDIT : InvoiceCondition::CASH,
+                'due_date' => $insurer ? now()->addDays($insurer->payment_term_days ?? 30)->toDateString() : null,
+                'created_by' => $user->id,
+            ]);
+
+            $defaultRate = TaxRate::from((int) config('invoice.default_tax_rate', 10));
+
+            foreach ($lines as $line) {
+                $item = new InvoiceItem([...$line, 'tax_rate' => $defaultRate, 'discount' => '0']);
+                $item->recalculate();
+                $invoice->items()->save($item);
+            }
+
+            $this->recalculateTotals($invoice);
+
+            return $this->load($invoice);
+        });
     }
 
     public function generate(WorkOrder $workOrder, User $user): Invoice
@@ -158,6 +241,11 @@ class InvoiceService
                 );
             }
 
+            // Factura de un reparto (M9): la versión sigue confirmada, el deducible lo permite (A) y R8.
+            if ($invoice->allocation_id !== null) {
+                $this->allocationBilling->ensureIssuable($invoice);
+            }
+
             if (blank($invoice->customer_tax_id)) {
                 throw new InvoiceException(
                     'Debe informar el RUC o CI del cliente para emitir la factura.',
@@ -261,6 +349,27 @@ class InvoiceService
      * Mano de obra y servicios no cancelados, repuestos fuera de catálogo no
      * cancelados (lo presupuestado) y repuestos de catálogo usados (cantidad neta).
      */
+    /**
+     * Línea de factura de una porción del reparto: el concepto entero con su cantidad y precio, o una parte con
+     * cantidad 1 (la base es el importe exacto y la cantidad real va en la descripción).
+     */
+    private function lineFromPortion(WorkOrderAllocationLine $portion, string $amount, ?array $concept): array
+    {
+        $whole = $concept && bccomp($amount, Decimal::of($concept['base_total'], 2), 2) === 0;
+
+        return [
+            'source_type' => $portion->source_type,
+            'source_id' => $portion->source_id,
+            'allocation_line_id' => $portion->id,
+            'description' => $whole
+                ? $portion->description
+                : mb_substr($portion->description . ' (parte; cantidad real ' . Format::quantity($concept['quantity'] ?? '1') . ')', 0, 255),
+            'quantity' => $whole ? $concept['quantity'] : '1',
+            'base_unit_price' => $whole ? $concept['base_unit_price'] : $amount,
+            'base_total' => $amount,
+        ];
+    }
+
     /**
      * Una línea por concepto vendido (WorkOrderSaleBreakdown, compartido con el reparto).
      */

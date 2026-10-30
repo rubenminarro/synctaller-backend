@@ -83,6 +83,8 @@ class VehicleHistoryReceptionResource extends JsonResource
                 'balance' => $workOrder->currentInvoice->balance(),
                 'payment_status' => $workOrder->currentInvoice->paymentStatus()?->value,
             ] : null,
+            // Todas las facturas vigentes, con su destinatario (M9, F); `invoice` queda como clave heredada.
+            'invoices' => ShowWorkOrderResource::invoices($workOrder->currentInvoices()->get()),
         ];
 
         if ($withEconomics && $workOrder->closing) {

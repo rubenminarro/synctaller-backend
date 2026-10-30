@@ -49,6 +49,7 @@ class DatabaseSeeder extends Seeder
             // Facturación, cobro y entrega de los trabajos terminados.
             InvoiceStampSeeder::class,
             InvoiceSeeder::class,
+            AllocationInvoiceSeeder::class,
             PaymentSeeder::class,
             CreditNoteSeeder::class,
             VehicleDeliverySeeder::class,
