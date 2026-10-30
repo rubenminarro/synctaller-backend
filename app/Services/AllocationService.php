@@ -314,7 +314,9 @@ class AllocationService
             'responsibles' => $responsibles->all(),
             'total' => $sum($allocation->lines),
             'deductible_amount' => $allocation->deductible_amount,
-            'deductible_fiscal_pending' => $allocation->deductible_amount !== null && bccomp((string) $allocation->deductible_amount, '0', 2) > 0,
+            // Pendiente: deducible mayor a 0 que no se factura (sin la modalidad neta o sin su IVA, M10).
+            'deductible_fiscal_pending' => $allocation->deductible_amount !== null && bccomp((string) $allocation->deductible_amount, '0', 2) > 0
+                && !$this->allocationBilling->deductibleInvoiced($allocation->claim),
             'warnings' => $warnings,
         ];
     }
