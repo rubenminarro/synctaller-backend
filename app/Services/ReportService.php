@@ -12,6 +12,7 @@ use App\Models\Budget;
 use App\Models\Client;
 use App\Models\InventoryMovement;
 use App\Models\Invoice;
+use App\Models\InvoiceCreditNote;
 use App\Models\Mechanic;
 use App\Models\Part;
 use App\Models\PartStock;
@@ -135,6 +136,11 @@ class ReportService
             ->whereDate('issue_date', '<=', $to->toDateString())
             ->get();
 
+        $creditNotes = InvoiceCreditNote::registered()
+            ->whereDate('issue_date', '>=', $from->toDateString())
+            ->whereDate('issue_date', '<=', $to->toDateString())
+            ->get();
+
         $format = $groupBy === 'day' ? 'Y-m-d' : 'Y-m';
         $total = $this->sum($invoices->pluck('total'));
         $collected = $this->paymentService->summary($from, $to);
@@ -178,6 +184,14 @@ class ReportService
                 'invoices_count' => $cancelled->count(),
                 'total' => $this->sum($cancelled->pluck('total')),
             ],
+            // Notas de crédito registradas en el período, por su fecha (P10). `total` sigue siendo lo emitido.
+            'credit_notes' => [
+                'credit_notes_count' => $creditNotes->count(),
+                'total' => $this->sum($creditNotes->pluck('total')),
+                'iva_5' => $this->sum($creditNotes->pluck('iva_5')),
+                'iva_10' => $this->sum($creditNotes->pluck('iva_10')),
+            ],
+            'net_total' => bcsub($total, $this->sum($creditNotes->pluck('total')), 2),
         ];
     }
 
@@ -376,7 +390,7 @@ class ReportService
             ->with('client')
             ->get();
 
-        $receivables = Invoice::where('status', InvoiceStatus::ISSUED)->with(['client', 'payments'])->get()
+        $receivables = Invoice::where('status', InvoiceStatus::ISSUED)->with(['client', 'payments', 'creditNotes'])->get()
             ->map(fn (Invoice $i) => ['invoice' => $i, 'balance' => $i->balance()])
             ->filter(fn ($row) => bccomp($row['balance'], '0', 2) > 0)
             ->groupBy(fn ($row) => $row['invoice']->client_id)
@@ -430,7 +444,7 @@ class ReportService
 
     private function receivablesTotal(): string
     {
-        return Invoice::where('status', InvoiceStatus::ISSUED)->with('payments')->get()
+        return Invoice::where('status', InvoiceStatus::ISSUED)->with(['payments', 'creditNotes'])->get()
             ->reduce(fn (string $sum, Invoice $i) => bcadd($sum, $i->balance(), 2), '0.00');
     }
 

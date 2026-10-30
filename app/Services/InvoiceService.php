@@ -230,6 +230,15 @@ class InvoiceService
                 );
             }
 
+            // Una factura acreditada se corrige con sus notas de crédito (P10): no se anula encima.
+            if ($invoice->creditNotes()->registered()->exists()) {
+                throw new InvoiceException(
+                    'La factura tiene notas de crédito registradas: anúlelas antes de anular la factura.',
+                    422,
+                    'INVOICE_HAS_CREDIT_NOTES'
+                );
+            }
+
             $invoice->update([
                 'status' => InvoiceStatus::CANCELLED,
                 'cancelled_at' => now(),

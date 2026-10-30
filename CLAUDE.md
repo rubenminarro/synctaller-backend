@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M8, 6.22–6.27). 274 rutas API, 449 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M8 y P10, 6.22–6.28). 278 rutas API, 455 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -80,7 +80,7 @@ resultados esperados y casos de error).
 * Operaciones sobre varios registros en `DB::transaction`; concurrencia con `lockForUpdate`.
   Orden de bloqueo: OT → línea → `part_stocks`; OT → recepción (recálculo de estado); factura → pago;
   recepción → entregas; compra → `part_stocks`; compra → pago a proveedor; recepción → siniestro; presupuesto → autorización de la
-  aseguradora → documentos del siniestro; presupuesto u OT → excepción interna; siniestro → OT → reparto → excepción;
+  aseguradora → documentos del siniestro; presupuesto u OT → excepción interna; siniestro → OT → reparto → excepción; factura → nota de crédito;
   documento → serie de códigos (siempre última).
 * **Códigos internos** (`BUD-`, `OT-`, `COM-`, `REP-`, `SRV-`, `DIA-`, `ASE-`, `SIN-`): salen de `DocumentSequenceService::create()`
   (serie en `App\Enums\DocumentSeries`, contador en `document_sequences`), nunca de `max(id) + 1`. El contador de la
@@ -146,9 +146,9 @@ Controller (HasMiddleware) → Form Request → Service → Model/Eloquent → A
 
 | Carpeta | Contenido |
 |---|---|
-| `app/Http/Controllers/Api` | 57 controllers |
+| `app/Http/Controllers/Api` | 58 controllers |
 | `app/Http/Requests` | Validación (mensajes en español) |
-| `app/Services` | Reglas de negocio (43 services, incluido `AuditLogger`) |
+| `app/Services` | Reglas de negocio (44 services, incluido `AuditLogger`) |
 | `app/Jobs`, `app/Mail`, `app/Notifications`, `app/Console/Commands` | Envío de avisos (FASE 23) |
 | `app/Models` | Modelos Eloquent (muchos con `SoftDeletes`) |
 | `app/Http/Resources` | Contrato JSON |
@@ -199,7 +199,7 @@ de los permisos, ordenados; el administrador recibe todos los del guard `api` po
 | `mechanic` | Ejecuta la OT | Diagnóstico (consulta y usa el catálogo de ítems), iniciar/pausar/completar OT e ítems, consumir/devolver repuestos, sus horas y comisiones, historial, estado de mantenimiento, dashboard (bloque taller) |
 | `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos), siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar), autorizaciones de la aseguradora (registrar y consultar) y re-aceptaciones del dueño y consulta del reparto de la OT |
 | `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras y siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar), autorizaciones de la aseguradora (registrar y consultar) y excepciones internas (otorgar y consultar) y consulta del reparto de la OT |
-| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras, siniestros (con la descarga de sus documentos), autorizaciones de la aseguradora y excepciones internas, y el reparto de la OT completo (generar, editar, confirmar y descartar el borrador) |
+| `cajero` | Cobra y paga | Facturas, pagos, resumen de caja, reportes de ventas y clientes, consulta de compras, pagos a proveedores completos (registrar, anular, resumen de egresos), cuentas por pagar, avisos a clientes (consultar y reenviar) y consulta de aseguradoras, siniestros (con la descarga de sus documentos), autorizaciones de la aseguradora y excepciones internas, y el reparto de la OT completo (generar, editar, confirmar y descartar el borrador), y notas de crédito externas (registrar y anular) |
 | `deposito` | Stock | Repuestos, proveedores, inventario, compras completas, repuestos en OT, reporte de inventario, consulta de pagos a proveedores y cuentas por pagar |
 
 El rol del mecánico se llama `mechanic` (no `mecanico`). El seeder crea usuarios de cada rol (README, "Datos de prueba").
@@ -449,10 +449,12 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   IVA 10% = total ÷ 11; 5% = total ÷ 21. Descuento solo por línea.
 * `draft → issued → cancelled`. Emitir exige RUC/CI y, a crédito, vencimiento ≥ hoy; toma el número del timbrado
   activo y vigente con `lockForUpdate` (`001-001-0000001`); números no se reutilizan. Emitida es inmutable
-  (`INVOICE_NOT_EDITABLE`). Con pagos vigentes no se anula (`INVOICE_HAS_PAYMENTS`).
+  (`INVOICE_NOT_EDITABLE`). Con pagos vigentes no se anula (`INVOICE_HAS_PAYMENTS`), ni con notas de crédito
+  vigentes (`INVOICE_HAS_CREDIT_NOTES`, 6.28).
 * La OT de un siniestro que requiere reparto no se factura por `POST work-orders/{id}/invoice`
   (`WORK_ORDER_REQUIRES_ALLOCATION_INVOICING`, 422; 6.27).
-* Fuera de alcance hoy: SIFEN y notas de crédito. El PDF de la factura (6.18) es una representación sin valor fiscal.
+* Fuera de alcance hoy: SIFEN y la emisión de notas de crédito (las emitidas fuera se registran, 6.28). El PDF de la
+  factura (6.18) es una representación sin valor fiscal.
 
 ### 6.11 Pagos
 
@@ -461,7 +463,8 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 * Medios `cash|card|transfer|check`; referencia obligatoria salvo efectivo; banco en cheque. Vuelto solo en efectivo
   (`amount_received` ≥ `amount`; se guarda `change_amount`).
 * Recibo `REC-000001` solo para facturas a crédito. El pago no se edita: se anula con motivo.
-* Saldo y estado de cobro (`unpaid|partial|paid`) se calculan; resumen de caja por medio de pago.
+* Saldo (total − pagos − notas de crédito vigentes, 6.28) y estado de cobro (`unpaid|partial|paid|credited`) se
+  calculan; resumen de caja por medio de pago.
 * Contrato: el listado de pagos trae `invoice_number` y `customer_name` de la factura (no en los pagos del detalle de
   la factura).
 
@@ -577,7 +580,8 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 
   Permisos: el `show` de cada documento. Borradores y anulados se imprimen con marca de agua (`BORRADOR`,
   `RECHAZADO`, `CANCELADO`, `ANULADA`/`ANULADO`).
-* **Factura en PDF:** es una representación con la leyenda "no válido como documento fiscal".
+* **Factura en PDF:** es una representación con la leyenda "no válido como documento fiscal". Con notas de crédito
+  registradas, las lista con el saldo (6.28).
 * **Datos del taller:** se leen de `config/company.php` (variables `COMPANY_*` del `.env`).
 * **Reportes:** el mismo endpoint con `?format=csv|pdf` (mismo permiso `reports.*`). Sin `format` responde el JSON de
   siempre. `ReportExportService` no recalcula: convierte el array del reporte en secciones (resumen + tablas).
@@ -594,7 +598,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   * Modelos auditados: `Part`, `Service`, `Budget`, `BudgetItem`, `BudgetClientAcceptance`, `PartSupplier`, `Invoice`, `InvoiceItem`, `Payment`,
     `SupplierPayment`, `Purchase`, `PurchaseItem`, `User`, `Role`, `Permission`, `Client`, `Vehicle`, `Mechanic`,
     `InvoiceStamp`, `MaintenancePlan`, `DiagnosticItemTemplate`, `Insurer`, `InsurerContact`, `Claim`, `ClaimDocument` (sin su ruta interna),
-    `InsurerAuthorization`, `InsurerAuthorizationItem`, `InternalException`, `WorkOrderAllocation` y `WorkOrderAllocationLine`.
+    `InsurerAuthorization`, `InsurerAuthorizationItem`, `InternalException`, `WorkOrderAllocation`, `WorkOrderAllocationLine`, `InvoiceCreditNote` e `InvoiceCreditNoteItem`.
   * **Un modelo nuevo con precios, dinero, seguridad o datos maestros debe usar el trait.**
   * El stock ya se audita en `inventory_movements`.
 * **Exclusiones:** `password`, `remember_token` y `token` se guardan como `********`. Los timestamps no se registran.
@@ -858,6 +862,36 @@ Entrega M8 de `docs/especificacion-aseguradoras.html` (§4.5, §5.7, §6.2–6.3
 * **Pendiente:** facturas por responsable y el control de facturas vigentes al sustituir una versión
   (`ALLOCATION_HAS_INVOICES`, con el facturado neto de P10) llegan con M9.
 
+### 6.28 Notas de crédito emitidas fuera del sistema
+
+Decisión P10 (handoff 2.66 y 2.69; `CreditNoteService`). SyncTaller no emite notas de crédito: registra la emitida en
+talonario u otro sistema sobre la factura que corrige.
+
+* **Modelo:** `InvoiceCreditNote` (`number` y `stamp_number` de la nota externa, `issue_date`, `reason`, `status`
+  `CreditNoteStatus`: `registered|cancelled`, totales e IVA por tasa como la factura) con una línea
+  `InvoiceCreditNoteItem` por línea de factura acreditada: `amount` con IVA (guaraníes enteros) y `base_amount` sin IVA,
+  proporcional a la línea (respeta el descuento) o exacta si se acredita todo lo que le queda. Los dos `Auditable`.
+* **Registro** (`POST invoices/{invoice}/credit-notes`, permiso `invoice-credit-notes.store`, cajero):
+  * solo factura `issued`, también particular (`INVOICE_NOT_CREDITABLE`, 422);
+  * por línea y parcial: ninguna línea más de lo que le queda (`CREDIT_NOTE_EXCEEDS_LINE`); línea ajena
+    (`CREDIT_NOTE_ITEM_MISMATCH`), todos 422;
+  * **hasta el saldo** (`CREDIT_NOTE_EXCEEDS_BALANCE`, 422): para acreditar lo cobrado, primero se anula el pago. Sin
+    saldos a favor ni devoluciones;
+  * fecha no futura ni anterior a la emisión (`CREDIT_NOTE_DATE_BEFORE_INVOICE`, 422); el plazo de un año no se valida
+    (V18 pendiente);
+  * número (letras, números, guiones, barras y puntos, ≤ 30) único entre las vigentes (`CREDIT_NOTE_DUPLICATE_NUMBER`, 409).
+* **Inmutable** (`CREDIT_NOTE_IMMUTABLE`, 409). Un registro mal cargado se anula con motivo
+  (`POST …/{creditNote}/cancel`, `invoice-credit-notes.cancel`; repetir → `CREDIT_NOTE_NOT_CANCELLABLE`, 422).
+* **Efectos:** el saldo de la factura descuenta lo acreditado (pagos, entrega al contado, recordatorios, cuentas por
+  cobrar e historial lo toman solos; donde se precarga `paid_total` se precarga `credited_total`). Estado de cobro
+  `credited` ("Acreditada") si la factura queda saldada solo con notas, sin pagos; con pagos sigue `paid`. Con notas
+  vigentes la factura no se anula (`INVOICE_HAS_CREDIT_NOTES`, 422); la anulación de siempre sigue igual (V19). El
+  detalle de la factura agrega `payment_summary.credited_total` y `credit_notes[]`; el PDF, la lista de notas y el
+  saldo; el reporte de ventas, el bloque `credit_notes` (por fecha de la nota) y `net_total` (`total` sigue siendo lo
+  emitido). No hay aviso al cliente por una nota de crédito.
+* **Consulta:** `GET invoices/{invoice}/credit-notes` y `GET …/{creditNote}` (scoped) con `invoices.show`.
+* **M9:** el facturado neto de una porción del reparto es la base de sus líneas de factura menos la acreditada.
+
 ---
 
 ## 7. Deuda técnica conocida
@@ -865,8 +899,8 @@ Entrega M8 de `docs/especificacion-aseguradoras.html` (§4.5, §5.7, §6.2–6.3
 `docs/handoff.md`, sección 14. Las deudas nuevas se registran ahí y no se corrigen sin decisión previa del usuario.
 Abiertas (reverificado el 2026-10-29):
 
-* **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M8 hechas
-  (6.1, 6.4, 6.5 y 6.22–6.27); faltan las notas de crédito registradas (P10) y la facturación por responsable (M9–M12).
+* **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M8 y P10
+  hechas (6.1, 6.4, 6.5 y 6.22–6.28); falta la facturación por responsable (M9–M12).
 * **#14:** disco `local` con `serve` activo y sin uso. No se usa para documentos nuevos: los de siniestros van al disco
   `claim_documents`, sin `serve` (6.24).
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes

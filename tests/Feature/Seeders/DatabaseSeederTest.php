@@ -36,7 +36,7 @@ class DatabaseSeederTest extends TestCase
         'reception_check_list_items', 'diagnostics', 'diagnostic_items', 'diagnostic_item_photos', 'budgets',
         'budget_items', 'budget_client_acceptances', 'insurers', 'insurer_contacts', 'claims', 'claim_documents', 'insurer_authorizations', 'insurer_authorization_items', 'internal_exceptions', 'work_order_allocations', 'work_order_allocation_lines', 'part_categories', 'suppliers', 'parts', 'part_stocks', 'inventory_movements', 'invoice_stamps',
         'work_orders', 'work_order_items', 'work_order_parts', 'work_order_closings', 'notifications',
-        'invoices', 'invoice_items', 'payments', 'vehicle_deliveries', 'client_notifications',
+        'invoices', 'invoice_items', 'invoice_credit_notes', 'invoice_credit_note_items', 'payments', 'vehicle_deliveries', 'client_notifications',
         'purchases', 'purchase_items', 'supplier_payments', 'vehicle_maintenances', 'work_order_commissions',
     ];
 
@@ -193,9 +193,11 @@ class DatabaseSeederTest extends TestCase
         $this->assertSame(['credit' => 5, 'cash' => 12], DB::table('invoices')->selectRaw('`condition`, count(*) as total')
             ->groupBy('condition')->orderByDesc('condition')->pluck('total', 'condition')->map(fn ($total) => (int) $total)->all());
         $this->assertSame(
-            ['paid' => 10, 'partial' => 2, 'unpaid' => 3],
+            ['credited' => 1, 'paid' => 10, 'partial' => 2, 'unpaid' => 2],
             Invoice::where('status', 'issued')->get()->countBy(fn (Invoice $invoice) => $invoice->paymentStatus()->value)->sortKeys()->all()
         );
+        // Notas de crédito externas (P10): H13 acreditada entera; H07 con una parcial y otra anulada.
+        $this->assertSame(['cancelled' => 1, 'registered' => 2], $this->statusCounts('invoice_credit_notes'));
         $this->assertSame(2, Invoice::where('status', 'issued')->where('condition', 'credit')->whereDate('due_date', '<', today())
             ->get()->filter(fn (Invoice $invoice) => bccomp($invoice->balance(), '0', 2) > 0)->count());
         $this->assertSame(['cancelled' => 1, 'registered' => 13], $this->statusCounts('payments'));

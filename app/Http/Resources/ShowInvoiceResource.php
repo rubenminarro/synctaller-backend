@@ -48,10 +48,13 @@ class ShowInvoiceResource extends JsonResource
             ],
             'payment_summary' => [
                 'paid_total' => $this->paidTotal(),
+                'credited_total' => $this->creditedTotal(),
                 'balance' => $this->balance(),
                 'status' => $this->paymentStatus()?->value,
             ],
             'payments' => PaymentResource::collection($this->whenLoaded('payments')),
+            // Notas de crédito emitidas fuera del sistema (P10), también las anuladas.
+            'credit_notes' => InvoiceCreditNoteResource::collection($this->whenLoaded('creditNotes')),
             'issued_at' => $this->issued_at,
             'issued_by' => $this->issued_by,
             'cancelled_at' => $this->cancelled_at,

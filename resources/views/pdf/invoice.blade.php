@@ -74,6 +74,34 @@
         </tr>
     </table>
 
+    @if ($creditNotes->isNotEmpty())
+        <h2>Notas de crédito registradas</h2>
+        <table class="grid" style="margin-top: 4px;">
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Fecha</th>
+                    <th>Motivo</th>
+                    <th class="num">Importe</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($creditNotes as $creditNote)
+                    <tr>
+                        <td>{{ $creditNote->number }}</td>
+                        <td>{{ $creditNote->issue_date->format('d/m/Y') }}</td>
+                        <td>{{ $creditNote->reason }}</td>
+                        <td class="num">{{ \App\Support\Format::money($creditNote->total) }}</td>
+                    </tr>
+                @endforeach
+                <tr class="strong">
+                    <td colspan="3" class="num">Saldo</td>
+                    <td class="num">{{ \App\Support\Format::money($invoice->balance()) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    @endif
+
     @if ($invoice->cancellation_reason)
         <h2>Anulación</h2>
         <div>{{ $invoice->cancelled_at?->format('d/m/Y H:i') }} — {{ $invoice->cancellation_reason }}</div>

@@ -6,8 +6,8 @@ decisiones tomadas, los documentos producidos y el siguiente paso acordado.
 > **Alcance de este documento.** No reemplaza a [`CLAUDE.md`](../CLAUDE.md) (reglas vigentes) ni a
 > [`handoff.md`](handoff.md) (historia y decisiones por fase). Las reglas de lo ya implementado del módulo de
 > aseguradoras (M1–M7) están en `CLAUDE.md` 6.22–6.26 y sus decisiones en el handoff (2.59–2.65). El diseño de lo que
-> falta sigue en [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 3; sus propuestas M10,
-> M12 y P10 esperan revisión; sección 6). Las páginas publicadas de la sección 6 quedan como antecedente.
+> falta sigue en [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 3; sus propuestas M10
+> y M12 esperan revisión; P10 se aprobó el 2026-10-29; sección 6). Las páginas publicadas de la sección 6 quedan como antecedente.
 
 Convención: **[verificado]** = comprobado en el código o el entorno en la fecha indicada (el 2026-10-27, salvo que se
 diga otra); **[pendiente]** = sin verificar o sin decidir.
@@ -23,9 +23,9 @@ diga otra); **[pendiente]** = sin verificar o sin decidir.
 | Base de datos | MySQL en Laragon, base `synctaller`, conexión `mysql`. Tests en SQLite (`database/testing.sqlite`) | `CLAUDE.md` §1 y §3 |
 | Servidor local | Nginx de Laragon con `php-cgi` (no Apache) | `CLAUDE.md` §3 |
 | Frontend | Repositorio aparte `../synctaller-frontend` (React 19 + TypeScript + Vite + Tabler) | `CLAUDE.md` §1 |
-| Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico. Módulo de aseguradoras: M1–M8 en `main` (2026-10-29) | `CLAUDE.md` §1 |
-| Tests | **449 tests (7390 aserciones) en verde, en 264 s** [verificado el 2026-10-29: `php artisan test` en la rama de M8]. Antes: 440 con M7 y 374 el 2026-10-27 | `CLAUDE.md` §1 |
-| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (faltan P10 y M9–M12). Abiertas también #14–#16 y las discrepancias D3, D7 y D8 (14.1) | `docs/handoff.md`, §14 |
+| Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico. Módulo de aseguradoras: M1–M8 y P10 en `main` (2026-10-29) | `CLAUDE.md` §1 |
+| Tests | **455 tests (7638 aserciones) en verde, en 301 s** [verificado el 2026-10-29: `php artisan test` en la rama de P10]. Antes: 449 con M8, 440 con M7 y 374 el 2026-10-27 | `CLAUDE.md` §1 |
+| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (faltan M9–M12). Abiertas también #14–#16 y las discrepancias D3, D7 y D8 (14.1) | `docs/handoff.md`, §14 |
 
 Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 desde el 2026-10-24 (handoff 2.51).
 
@@ -273,7 +273,11 @@ M10 (modalidad neta del deducible) y M12 (retenciones).
 
 **Actualización (2026-10-29, M8):** el reparto económico está implementado
 (handoff 2.68; migración `000067`, aplicada en la base local) y mergeado en `main`. Incluye una corrección de M7: la re-aceptación ya no
-se bloquea con la OT completada. **Siguiente: P10 (notas de crédito registradas) y después M9.**
+se bloquea con la OT completada.
+
+**Actualización (2026-10-29, P10):** el registro de las notas de crédito emitidas fuera del sistema está implementado
+y mergeado en `main` (handoff 2.69; migración `000068`, probada en una base MySQL temporal). Agrega el estado de cobro `credited`, que el frontend tiene que reconocer. **Siguiente: M9
+(facturas por responsable).**
 
 **Siguiente paso recomendado, en orden:**
 
@@ -310,7 +314,8 @@ se bloquea con la OT completada. **Siguiente: P10 (notas de crédito registradas
        revisada por el usuario y mergeada en `main` el 2026-10-29 (`4f1ea1a`). Migraciones aplicadas en la base local.
      * **M8** (reparto económico, handoff 2.68; migración `000067`, aplicada en la base local) mergeada en `main` el
        2026-10-29.
-     * **Siguen P10** (notas de crédito registradas, handoff 2.66) **y M9**. El frontend todavía no consume
+     * **P10** (notas de crédito registradas, handoff 2.69; migración `000068`) mergeada en `main` el 2026-10-29.
+     * **Sigue M9** (facturas por responsable). El frontend todavía no consume
        nada del módulo: su adaptación (empresas, aseguradoras, siniestros, autorizaciones, excepciones y advertencias)
        se coordina en `../synctaller-frontend`.
 
@@ -327,7 +332,7 @@ se bloquea con la OT completada. **Siguiente: P10 (notas de crédito registradas
    * no usar `config:cache` en desarrollo.
 3. **Verificar el entorno:** `php artisan test` (o `php -d extension=pdo_sqlite -d extension=sqlite3
    vendor/bin/phpunit` si falta `pdo_sqlite`) y anotar el resultado. La última ejecución verificada es la de la
-   sección 1 (449 tests en verde, 2026-10-29); repetirla en el equipo donde se retome.
+   sección 1 (455 tests en verde, 2026-10-29); repetirla en el equipo donde se retome.
 4. **Abrir las páginas de la sección 6** con la cuenta de claude.ai del usuario.
 5. **Abrir Claude Code** en `synctaller-backend` y pedirle que lea `CLAUDE.md`, `docs/handoff.md`, este documento y
    `docs/especificacion-aseguradoras.html` (en especial §9 y §10), verifique el estado de Git y retome desde la

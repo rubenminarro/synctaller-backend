@@ -2240,6 +2240,44 @@ Volver a pagar el saldo: `POST {{base_url}}/invoices/{{invoice4_id}}/payments` c
 
 > Para anularla primero hay que anular sus pagos (16.4) y después la factura (15.7).
 
+### 16.5.1 Notas de crédito emitidas fuera del sistema (P10)
+
+Ver `CLAUDE.md` 6.28. Sobre una factura **emitida** (`{{invoice_id}}`), con el token del cajero. Importes con IVA, en
+guaraníes enteros.
+
+`POST {{base_url}}/invoices/{{invoice_id}}/credit-notes`
+
+```json
+{
+  "number": "001-002-0000123",
+  "stamp_number": "12345678",
+  "issue_date": "2026-10-29",
+  "reason": "El cliente reclamó la mano de obra.",
+  "items": [{ "invoice_item_id": {{invoice_item_id}}, "amount": 110000 }]
+}
+```
+
+Esperado: `201`, `status.value` `registered`, `items[0].base_amount` proporcional a la línea →
+`credit_note_id`. `GET invoices/{{invoice_id}}` trae `payment_summary.credited_total` y `credit_notes[]`, y el saldo
+baja.
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Factura en borrador o anulada | `POST …/invoices/{id}/credit-notes` | el de arriba | 422 | `INVOICE_NOT_CREDITABLE` |
+| Más de lo que le queda a la línea | ídem | `amount` mayor | 422 | `CREDIT_NOTE_EXCEEDS_LINE` |
+| Línea de otra factura | ídem | `invoice_item_id` ajeno | 422 | `CREDIT_NOTE_ITEM_MISMATCH` |
+| Más que el saldo (factura con pagos) | ídem | — | 422 | `CREDIT_NOTE_EXCEEDS_BALANCE` (anular antes el pago) |
+| Fecha anterior a la factura / futura | ídem | `issue_date` | 422 | `CREDIT_NOTE_DATE_BEFORE_INVOICE` / `VALIDATION_ERROR` |
+| Número repetido entre las vigentes | ídem | mismo `number` | 409 | `CREDIT_NOTE_DUPLICATE_NUMBER` |
+| Importe con decimales | ídem | `"amount": 10.5` | 422 | `VALIDATION_ERROR` |
+| Saldada solo con notas, sin pagos | `GET {{base_url}}/invoices/{{invoice_id}}` | — | 200 | `payment_summary.status` `credited`; con pagos y notas, `paid` |
+| Anular la factura con notas vigentes | `POST …/invoices/{{invoice_id}}/cancel` | `{ "reason": "…" }` | 422 | `INVOICE_HAS_CREDIT_NOTES` |
+| Anular la nota (mal cargada) | `POST …/invoices/{{invoice_id}}/credit-notes/{{credit_note_id}}/cancel` | `{ "reason": "Se cargó dos veces." }` | 200 | `status` `cancelled`; el saldo vuelve. Otra vez → `CREDIT_NOTE_NOT_CANCELLABLE` |
+| Listar y ver | `GET …/credit-notes`, `GET …/credit-notes/{{credit_note_id}}` | — | 200 | Con otra factura en la URL → 404 |
+| PDF de la factura | `GET {{base_url}}/invoices/{{invoice_id}}/pdf` | — | 200 | Lista las notas registradas y el saldo |
+| Reporte de ventas | `GET {{base_url}}/reports/sales` | — | 200 | `credit_notes` (cantidad, total e IVA, por fecha de la nota) y `net_total`; `totals.total` sin cambios |
+| Sin permiso | recepcionista: registrar o anular; mecánico: listar | — | 403 | `FORBIDDEN` |
+
 ### 16.6 Listado y resumen de caja
 
 | Caso | Método / Endpoint | HTTP | Resultado / error_code |
