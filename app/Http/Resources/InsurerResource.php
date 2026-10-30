@@ -24,6 +24,10 @@ class InsurerResource extends JsonResource
                 'phone' => $this->client->phone,
             ]),
             'payment_term_days' => $this->payment_term_days,
+            'deductible_billing_mode' => $this->deductible_billing_mode === null ? null : [
+                'value' => $this->deductible_billing_mode->value,
+                'label' => $this->deductible_billing_mode->label(),
+            ],
             'contacts_count' => $this->whenCounted('contacts'),
             'created_at' => $this->created_at,
         ];

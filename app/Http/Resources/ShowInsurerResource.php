@@ -18,6 +18,12 @@ class ShowInsurerResource extends JsonResource
             ],
             'client' => new ShowClientResource($this->whenLoaded('client')),
             'payment_term_days' => $this->payment_term_days,
+            'deductible_billing_mode' => $this->deductible_billing_mode === null ? null : [
+                'value' => $this->deductible_billing_mode->value,
+                'label' => $this->deductible_billing_mode->label(),
+            ],
+            // M10: si se puede elegir la modalidad neta (insurer.deductible_net_mode).
+            'deductible_net_mode_available' => (bool) config('insurer.deductible_net_mode'),
             'notes' => $this->notes,
             'contacts' => InsurerContactResource::collection($this->whenLoaded('contacts')),
             'created_by' => $this->created_by,

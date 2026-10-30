@@ -311,7 +311,11 @@ class ClaimSummaryService
             if ($claim->deductible_amount === null) {
                 $alerts[] = 'El deducible del siniestro es desconocido: el reparto no se confirma y la recepción no se entrega hasta informarlo.';
             } elseif (bccomp((string) $claim->deductible_amount, '0', 2) > 0) {
-                $alerts[] = 'El deducible del siniestro es mayor a 0: no se factura ni se entrega por el flujo habitual (decisión A, hasta M10).';
+                if (!$this->allocationBilling->netMode($claim)) {
+                    $alerts[] = 'El deducible del siniestro es mayor a 0 y no tiene la modalidad neta: no se factura ni se entrega por el flujo habitual (decisión A).';
+                } elseif ($claim->deductible_includes_tax === null) {
+                    $alerts[] = 'Indique si el deducible del siniestro incluye el IVA: sin eso no se reparte ni se factura.';
+                }
             }
         }
 

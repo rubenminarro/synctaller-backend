@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M9, P10 y M11, 6.22–6.30). 282 rutas API, 467 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M11 y P10, 6.22–6.31; M10 detrás de un interruptor apagado). 282 rutas API, 472 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -159,7 +159,7 @@ Controller (HasMiddleware) → Form Request → Service → Model/Eloquent → A
 | `app/Traits/FileResponse.php` | Descarga de archivos generados (PDF, CSV) y de documentos subidos (`storedFileResponse`: adjunto y `nosniff`) |
 | `app/Traits/Auditable.php` | Registro automático de cambios en `audit_logs` |
 | `bootstrap/app.php` | Mapeo de excepciones a JSON |
-| `config/invoice.php`, `maintenance.php`, `notifications.php`, `company.php` | Parámetros de negocio (`invoice.default_tax_rate` es el IVA de presupuestos y facturas; `company` son los datos del taller para los PDF) |
+| `config/invoice.php`, `maintenance.php`, `notifications.php`, `company.php`, `insurer.php` | Parámetros de negocio (`invoice.default_tax_rate` es el IVA de presupuestos y facturas; `company` son los datos del taller para los PDF; `insurer.deductible_net_mode` habilita la modalidad neta del deducible, 6.31) |
 
 ### Contrato de respuesta
 
@@ -978,6 +978,41 @@ usuario: esperan V7; mientras tanto rige D).
   Muestra todos los bloques: el permiso del reporte alcanza.
 * Los dos reportes se exportan con `?format=csv|pdf` (etiquetas en `ReportExportService::LABELS`).
 
+### 6.31 Deducible facturado: modalidad neta
+
+Entrega M10 de `docs/especificacion-aseguradoras.html` (§6.6, Ejemplo 7; decisiones del 2026-10-30;
+`AllocationBillingService`, `AllocationService`, `InvoiceService`). Migración `000071`.
+
+* **Interruptor** (`config/insurer.php`, `INSURER_DEDUCTIBLE_NET_MODE`, **apagado por defecto**): la modalidad la
+  confirmó un dueño de taller que lleva la contabilidad; se enciende en producción con la confirmación escrita de un
+  contador (V21). Apagado, la modalidad no se puede elegir (422 `VALIDATION_ERROR` en `deductible_billing_mode`) y rige
+  la regla A aunque un siniestro la tenga cargada (`AllocationBillingService::netMode`).
+* **Modalidad** (`DeductibleBillingMode`: `net_of_deductible`; nula = regla A): en la aseguradora, por defecto
+  (`insurers.deductible_billing_mode`), y en el siniestro (`claims.deductible_billing_mode`), que la copia al abrirse si
+  no se envía. Las dos se editan; las respuestas traen `deductible_billing_mode` (`value`/`label` o `null`) y los detalles,
+  `deductible_net_mode_available` (el interruptor).
+* **IVA del deducible** (V15, decisión del usuario: se indica en cada siniestro): `claims.deductible_includes_tax`
+  (booleano, nulo = sin indicar). Si lo incluye, la base es importe × 100 / (100 + `invoice.default_tax_rate`) con BCMath
+  (`deductibleBase`). Con la modalidad neta y deducible mayor a 0, sin indicarlo no se confirma el reparto, no se factura
+  ni se entrega (`CLAIM_DEDUCTIBLE_TAX_UNDEFINED`, 422).
+* **Reparto:** porción nueva `owner_deductible` (del dueño, `isOwner()`). La propuesta descuenta la base del deducible
+  asignado a la OT de lo cubierto por la aseguradora, concepto por concepto en orden, y la pasa al dueño sobre el mismo
+  concepto (R1 y R2 no cambian; R3 queda con holgura). Reglas nuevas, en este orden al final de `checks`:
+  `deductible_tax`; `deductible_covered` (deducible mayor que lo cubierto, V16 sin respuesta: `ALLOCATION_DEDUCTIBLE_EXCEEDS_COVERED`,
+  422, decisión del usuario); **R11** (las porciones `owner_deductible` suman la base del deducible de la OT; sin la
+  modalidad, 0: `ALLOCATION_DEDUCTIBLE_MISMATCH`, 422). R5 no cuenta el deducible (lo controlan el deducible aceptado, R7
+  y R11).
+* **Facturas:** la de la aseguradora, solo lo cubierto ya neto; la del dueño (**la misma**, al contado, decisión del
+  usuario), una línea por porción `owner_deductible`, cantidad 1, «Deducible de siniestro N.º {número}» (o el código
+  `SIN-`), al 10 %. Generar y emitir revalidan R11 (`ALLOCATION_DEDUCTIBLE_MISMATCH`: el deducible o la modalidad
+  cambiaron después de confirmar → otra versión del reparto).
+* **Siniestro:** con una factura vigente a la aseguradora, la modalidad y el IVA del deducible no cambian, como el importe
+  (`CLAIM_DEDUCTIBLE_LOCKED`, 422).
+* **Entrega:** con la modalidad neta y el IVA indicado, `DELIVERY_CLAIM_DEDUCTIBLE_PENDING` deja de bloquear el deducible
+  mayor a 0 y rigen las facturas (6.29). Desconocido sigue bloqueando. El resumen del siniestro (6.30) ajusta sus alertas.
+* **Fuera de alcance:** otras modalidades, el documento que respalda la modalidad (V20; se puede subir como documento del
+  siniestro) y los datos de ejemplo (el interruptor viene apagado).
+
 ---
 
 ## 7. Deuda técnica conocida
@@ -986,8 +1021,9 @@ usuario: esperan V7; mientras tanto rige D).
 Abiertas (reverificado el 2026-10-29):
 
 * **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M9 y P10
-  hechas (6.1, 6.4, 6.5 y 6.22–6.29) y M11 sin los avisos (6.30); faltan M10 (deducible mayor a 0, espera G1), M12
-  (retenciones, espera V17) y los avisos a la aseguradora (esperan V7).
+  hechas (6.1, 6.4, 6.5 y 6.22–6.29), M11 sin los avisos (6.30) y M10 detrás de un interruptor apagado (6.31: se
+  enciende con la confirmación escrita del contador, V21, y espera V16); faltan M12 (retenciones, espera V17) y los avisos
+  a la aseguradora (esperan V7).
 * **#14:** disco `local` con `serve` activo y sin uso. No se usa para documentos nuevos: los de siniestros van al disco
   `claim_documents`, sin `serve` (6.24).
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes

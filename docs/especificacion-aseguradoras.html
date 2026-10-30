@@ -1449,7 +1449,7 @@ flowchart LR
   <div class="tablewrap"><table>
     <thead><tr><th>#</th><th>Propuesta</th><th>Recomendación</th><th>Depende de</th></tr></thead>
     <tbody>
-      <tr><td>M10</td><td>Modalidad neta del deducible (§6.6): modalidad en el siniestro, porciones <code>owner_deductible</code> descontadas de lo cubierto y línea propia en la factura del dueño</td><td>Aprobar el diseño. La implementación espera M9, V15, V16 y V21</td><td>G1 (respondida en parte)</td></tr>
+      <tr><td>M10</td><td>Modalidad neta del deducible (§6.6): modalidad en el siniestro, porciones <code>owner_deductible</code> descontadas de lo cubierto y línea propia en la factura del dueño</td><td>Implementada el 2026-10-30 detrás del interruptor <code>insurer.deductible_net_mode</code>, apagado (handoff 2.75): V15 se indica en cada siniestro, V16 se rechaza hasta tener respuesta y el deducible va en la misma factura del dueño. Encenderla espera V21</td><td>G1 (respondida en parte)</td></tr>
       <tr><td>M12</td><td>Retenciones de IVA como cancelación sin caja (§9)</td><td>Aprobar el diseño y hacerla antes de M9 si ya se facturan aseguradoras editando el borrador. La implementación espera V17</td><td>G3 (respondida)</td></tr>
     </tbody>
   </table></div>

@@ -3,9 +3,11 @@
 namespace App\Http\Requests;
 
 use App\Enums\ClientKind;
+use App\Enums\DeductibleBillingMode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\Validator as ValidatorInstance;
 
 /**
@@ -41,6 +43,8 @@ class StoreInsurerRequest extends FormRequest
                 'min:0',
                 'max:365',
             ],
+            // M10: la copian sus siniestros al abrirse.
+            'deductible_billing_mode' => ['nullable', Rule::prohibitedIf(fn () => !config('insurer.deductible_net_mode')), Rule::enum(DeductibleBillingMode::class)],
             'notes' => [
                 'nullable',
                 'string',
@@ -106,6 +110,10 @@ class StoreInsurerRequest extends FormRequest
             'client' => [
                 'required_without' => 'Indique el cliente empresa (client_id) o los datos del cliente nuevo (client).',
                 'array' => 'Los datos del cliente deben ser un objeto.',
+            ],
+            'deductible_billing_mode' => [
+                'prohibited' => 'La modalidad neta del deducible no está habilitada en este sistema.',
+                Enum::class => 'La modalidad del deducible debe ser net_of_deductible.',
             ],
             'payment_term_days' => [
                 'integer' => 'El plazo de pago debe ser un número entero de días.',

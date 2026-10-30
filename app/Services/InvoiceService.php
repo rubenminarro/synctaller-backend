@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AllocationPortionType;
 use App\Enums\AllocationStatus;
 use App\Enums\InvoiceCondition;
 use App\Enums\InvoiceStatus;
@@ -56,6 +57,7 @@ class InvoiceService
             }
 
             $this->allocationBilling->ensureDeductibleAllowsInvoicing($claim);
+            $this->allocationBilling->ensureDeductibleAllocated($allocation);
 
             $portions = $allocation->lines()->where('client_id', $clientId)->get();
 
@@ -75,7 +77,7 @@ class InvoiceService
             $lines = $portions
                 ->map(fn ($portion) => ['portion' => $portion, 'pending' => bcsub(Decimal::of($portion->amount, 2), $billed[$portion->id] ?? '0.00', 2)])
                 ->filter(fn (array $row) => bccomp($row['pending'], '0', 2) > 0)
-                ->map(fn (array $row) => $this->lineFromPortion($row['portion'], $row['pending'], $concepts[$row['portion']->source_type . ':' . $row['portion']->source_id] ?? null));
+                ->map(fn (array $row) => $this->lineFromPortion($row['portion'], $row['pending'], $concepts[$row['portion']->source_type . ':' . $row['portion']->source_id] ?? null, $claim));
 
             if ($lines->isEmpty()) {
                 throw new AllocationException('El cliente no tiene nada pendiente de facturar en este reparto.', 422, 'ALLOCATION_NOTHING_TO_INVOICE');
@@ -353,8 +355,21 @@ class InvoiceService
      * Línea de factura de una porción del reparto: el concepto entero con su cantidad y precio, o una parte con
      * cantidad 1 (la base es el importe exacto y la cantidad real va en la descripción).
      */
-    private function lineFromPortion(WorkOrderAllocationLine $portion, string $amount, ?array $concept): array
+    private function lineFromPortion(WorkOrderAllocationLine $portion, string $amount, ?array $concept, Claim $claim): array
     {
+        // El deducible (modalidad neta, M10) va con su concepto propio, cantidad 1, en la factura del dueño.
+        if ($portion->portion_type === AllocationPortionType::OWNER_DEDUCTIBLE) {
+            return [
+                'source_type' => $portion->source_type,
+                'source_id' => $portion->source_id,
+                'allocation_line_id' => $portion->id,
+                'description' => 'Deducible de siniestro N.º ' . ($claim->claim_number ?? $claim->code),
+                'quantity' => '1',
+                'base_unit_price' => $amount,
+                'base_total' => $amount,
+            ];
+        }
+
         $whole = $concept && bccomp($amount, Decimal::of($concept['base_total'], 2), 2) === 0;
 
         return [

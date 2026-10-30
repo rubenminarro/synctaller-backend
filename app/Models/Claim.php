@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ClaimStatus;
 use App\Enums\ClaimType;
+use App\Enums\DeductibleBillingMode;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,6 +38,8 @@ class Claim extends Model
         'inspection_scheduled_at',
         'inspected_at',
         'deductible_amount',
+        'deductible_billing_mode',
+        'deductible_includes_tax',
         'coverage_notes',
         'status',
         'closed_at',
@@ -59,6 +62,8 @@ class Claim extends Model
             'inspection_scheduled_at' => 'datetime',
             'inspected_at' => 'datetime',
             'deductible_amount' => 'decimal:2',
+            'deductible_billing_mode' => DeductibleBillingMode::class,
+            'deductible_includes_tax' => 'boolean',
             'closed_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];

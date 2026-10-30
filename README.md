@@ -71,7 +71,7 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 | Estado | Qué |
 |---|---|
 | Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema, catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 279 rutas API y 460 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
-| En curso | Aseguradoras y siniestros: M1–M9 y P10 de `docs/especificacion-aseguradoras.html` implementadas; siguen M10 (deducible mayor a 0, espera la validación fiscal), M11 (avisos) y M12 (retenciones) |
+| En curso | Aseguradoras y siniestros: M1–M11 y P10 de `docs/especificacion-aseguradoras.html` implementadas (M10, deducible mayor a 0, detrás de `INSURER_DEDUCTIBLE_NET_MODE`, apagado hasta la confirmación del contador); siguen los avisos a la aseguradora y M12 (retenciones) |
 | Pendiente, sin diseño | Notificaciones por WhatsApp |
 
 ---
@@ -132,6 +132,9 @@ MAIL_PASSWORD=<contraseña>
 MAIL_FROM_ADDRESS=<remitente del taller>
 MAIL_FROM_NAME="${APP_NAME}"
 QUEUE_CONNECTION=database
+
+# Modalidad neta del deducible de siniestros (M10, config/insurer.php): apagada hasta la confirmación del contador
+INSURER_DEDUCTIBLE_NET_MODE=false
 
 # Datos del taller en los comprobantes y reportes PDF (config/company.php)
 COMPANY_NAME="Taller Ejemplo"
