@@ -34,7 +34,8 @@ class AllocationInvoiceSeeder extends Seeder
                 continue;
             }
 
-            $clients = $allocation->lines()->whereNotNull('client_id')->distinct()->pluck('client_id');
+            // Sin DISTINCT en SQL: la relación ordena por id y MySQL no admite ordenar por una columna fuera del SELECT.
+            $clients = $allocation->lines()->whereNotNull('client_id')->pluck('client_id')->unique()->values();
 
             foreach ($clients as $number => $clientId) {
                 ExampleScenarios::travel(ExampleScenarios::afterCompletion($scenario, 2, 9 + $number), function () use ($invoiceService, $paymentService, $allocation, $clientId, $cashier) {
