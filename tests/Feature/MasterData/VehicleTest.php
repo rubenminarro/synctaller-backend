@@ -24,6 +24,7 @@ class VehicleTest extends PartsTestCase
             'first_name' => 'Ana',
             'last_name' => 'Gomez',
             'phone' => '+595981000333',
+            'email' => 'qa-3001@example.com',
         ]);
         $this->brand = Brand::create(['name' => 'Toyota']);
         $this->model = VehicleModel::create(['brand_id' => $this->brand->id, 'name' => 'Hilux']);

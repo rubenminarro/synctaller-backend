@@ -56,7 +56,9 @@ class ReceptionTest extends ReceptionTestCase
             ->assertJsonPath('data.vehicle.brand', $this->vehicle->brand->name)
             ->assertJsonPath('data.vehicle.model', $this->vehicle->vehicleModel->name)
             ->assertJsonPath('data.check_list.id', $this->checkList($reception)->id)
-            ->assertJsonPath('data.check_list.status', 'pending');
+            ->assertJsonPath('data.check_list.status', 'pending')
+            // D3: approved_by se eliminó (nunca se asignaba).
+            ->assertJsonMissingPath('data.approved_by');
 
         $this->getJson('/api/receptions')
             ->assertOk()

@@ -101,6 +101,8 @@ class NotificationReminderTest extends InvoiceTestCase
             'customer_tax_id' => '80012345-6',
         ]);
         Invoice::findOrFail($invoice['id'])->client->update(['document_number' => '1234567']);
+        // Desde D8 el cliente tiene email: los avisos previos (presupuesto, vehículo listo) se envían; acá solo cuenta el recordatorio.
+        Mail::fake();
 
         $this->assertSame(1, $this->reminders()->invoiceReminders());
         $this->assertSame(0, $this->reminders()->invoiceReminders());
@@ -159,7 +161,7 @@ class NotificationReminderTest extends InvoiceTestCase
 
         $brand = Brand::create(['name' => 'Marca ' . Str::random(6)]);
         $model = VehicleModel::create(['brand_id' => $brand->id, 'name' => 'Modelo ' . Str::random(6)]);
-        $client = Client::create(['first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '0981123456', 'email' => 'ana@example.com']);
+        $client = Client::create(['document_number' => 'QA-6001', 'first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '0981123456', 'email' => 'ana@example.com']);
         $vehicle = Vehicle::create([
             'client_id' => $client->id,
             'brand_id' => $brand->id,

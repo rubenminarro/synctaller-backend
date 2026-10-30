@@ -1805,6 +1805,21 @@ necesita saber cuánto debe sumar cada uno aunque el borrador guardado esté inc
 | Contrato | `WorkOrderAllocationResource.concepts` (decisión del usuario del 2026-10-30: en el backend, no deduciéndolo de las porciones en el frontend). Aditivo y de solo lectura (`AllocationService::concepts`, sobre `WorkOrderSaleBreakdown`): `base_total` (R1), `coverable` (R4: ni extra ni línea del dueño) y `authorized_total` del ítem en la autorización vigente (R3, por ítem). Sin migración ni cambios de reglas |
 | Pruebas | `WorkOrderAllocationTest::test_the_allocation_lists_the_sold_concepts` (suma igual a la venta, `coverable`, autorizado y extra) |
 
+# 2.74 Discrepancias D3, D7 y D8 (2026-10-30)
+
+Decisiones del usuario del 2026-10-30 sobre las discrepancias que quedaban abiertas (14.1). Migración `000070`, probada
+en MySQL (también su `down`).
+
+| Tema | Decisión |
+|---|---|
+| D3 | Se elimina `receptions.approved_by` (columna con su clave foránea, `fillable`, relación, búsqueda del listado y clave del detalle). Nunca se asignaba: siempre era `null`. Cambio de contrato: `ShowReceptionResource` ya no trae `approved_by`; el frontend solo la tenía en el tipo |
+| D7 | Índice único en `clients.email`. Los dados de baja ya liberan el email con el sufijo `//deleted_` |
+| D8 | `clients.document_number` y `clients.email`, `NOT NULL` (la API ya los exigía) |
+| Datos existentes | La migración no inventa datos: si hay clientes sin documento o sin email, o emails repetidos, se detiene con el conteo. En la base local había uno sin email (el cliente de ejemplo del escenario C15) y se completó con el email que ahora le da el seeder |
+| Ejemplos | `ClientsSeeder::WITHOUT_EMAIL` pasa a `C15_OWNER`, con email; C15 queda como un presupuesto enviado con su aviso. Los avisos omitidos de ejemplo bajan de 2 a 1 (C16, dado de baja) |
+| Avisos sin email | El control de `ClientNotificationService` (omitido al registrar, `CLIENT_WITHOUT_EMAIL` al reenviar) queda como defensa, sin cambios: solo se alcanza con un email vacío, y su test usa eso |
+| Pruebas | `ClientKindTest::test_the_database_requires_a_unique_email_and_the_document`, `ReceptionTest` (sin `approved_by`), `DatabaseSeederTest` y los helpers de tests que creaban clientes sin documento o sin email. Dos ajustes por el cambio: `ClaimTestCase` repetía `ana@example.com` entre los clientes de un mismo test (ahora solo el primero), y un test de recordatorios que esperaba avisos omitidos por falta de email reinicia el registro de emails antes de verificar |
+
 ---
 
 ---
@@ -4424,11 +4439,11 @@ corregir: las que siguen abiertas esperan decisión del usuario.
 |---|---|---|---|
 | D1 | Un pedido mencionaba Laravel 12; el código usa Laravel 13.38 | `composer.json`, `php artisan --version`, handoff 2.51 | **Sin acción**: no es un error del repositorio. `CLAUDE.md` §1 ya dice Laravel 13.38 |
 | D2 | `CLAUDE.md` §7 decía "Sin deudas pendientes" con la #13 abierta | `CLAUDE.md` §7; tabla de arriba, #13 | **Resuelta el 2026-10-28** (E1): §7 lista las deudas abiertas (#13–#16) |
-| D3 | `receptions.approved_by` existe en la tabla, el modelo, `ShowReceptionResource` y la búsqueda de `ReceptionController`, pero ningún Service ni Request la asigna: siempre es `null` | Migración `000009:28`; `Reception.php:32,59`; `ShowReceptionResource.php:46`; `ReceptionController.php:43,91` | **A decidir**: eliminarla (migración y contrato) o darle uso. El estudio la dejaba para la Fase 0 |
+| D3 | `receptions.approved_by` existe en la tabla, el modelo, `ShowReceptionResource` y la búsqueda de `ReceptionController`, pero ningún Service ni Request la asigna: siempre es `null` | Migración `000009:28`; `Reception.php:32,59`; `ShowReceptionResource.php:46`; `ReceptionController.php:43,91` | **Resuelta el 2026-10-30** (2.74): se eliminó |
 | D4 | El handoff (§11, "Siguen sin fase asignada", y §12, "Próximo") lista "Frontend React 19" como pendiente; existe en `../synctaller-frontend` (`CLAUDE.md` §1) | `docs/handoff.md`, §11 y §12 | **Resuelta el 2026-10-29** (pedido del usuario de corregir la documentación antes de M8): las dos listas lo indican como repositorio aparte; también el README (sección Frontend) y la cabecera de este documento |
 | D5 | `composer.lock` modificado sin commitear en `main` | `git status` del 2026-10-27 | **Resuelta el 2026-10-27** (E0, P1): se descartaron los cambios locales; `vendor/` alineado el 2026-10-28 |
 | D6 | La cabecera del handoff tiene fecha 2026-10-17 con contenido posterior, y en esta tabla la fila #9 está después de la #13 | `docs/handoff.md:6`; tabla de arriba | **Resuelta el 2026-10-29** (mismo pedido): la cabecera indica hasta cuándo está actualizado el contenido y la fila #9 va en su lugar |
-| D7 | `CLAUDE.md` 6.1 dice que el email del cliente es único, pero la unicidad existe solo en la validación: `clients.email` no tiene índice único | Migración `000005:20`; `StoreClientRequest` | **A decidir**: índice único en la base (con los datos existentes revisados) o corregir la regla en `CLAUDE.md` |
-| D8 | `document_number` y `email` del cliente son opcionales en la base pero obligatorios en la API | Migración `000005:16,20`; `StoreClientRequest` | **A decidir**. Relacionado con M1 (cliente empresa), que redefine qué es obligatorio por tipo |
+| D7 | `CLAUDE.md` 6.1 dice que el email del cliente es único, pero la unicidad existe solo en la validación: `clients.email` no tiene índice único | Migración `000005:20`; `StoreClientRequest` | **Resuelta el 2026-10-30** (2.74): índice único en la base |
+| D8 | `document_number` y `email` del cliente son opcionales en la base pero obligatorios en la API | Migración `000005:16,20`; `StoreClientRequest` | **Resuelta el 2026-10-30** (2.74): obligatorios en la base |
 | D9 | "Datos maestros en uso no se eliminan" (6.1) no incluye a los clientes: `ClientController::destroy` hace la baja con sufijo sin verificar si el cliente tiene vehículos, recepciones o facturas, y la lógica está en el controller, no en un Service | `ClientController.php:127-142` | **Resuelta el 2026-10-29** (M1, 2.59): la baja pasó a `ClientService::delete` y responde `409 CLIENT_IN_USE` con vehículos vigentes, recepciones o facturas. El bloqueo para el cliente de una aseguradora (`CLIENT_LINKED_TO_INSURER`) llega con M2 |
 | D10 | Un pedido citaba dos informes `.md` (`Aseguradoras y siniestros en SyncTaller.md`, `Decisiones del módulo de aseguradoras.md`) que no están en el repositorio | Búsqueda en el repositorio | **Sin acción**: el contenido está en las páginas publicadas (ver `docs/continuidad-cambio-notebook.md`, sección 6) |

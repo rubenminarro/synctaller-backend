@@ -45,7 +45,8 @@ abstract class ClaimTestCase extends InvoiceTestCase
             'first_name' => 'Ana',
             'last_name' => 'Gomez',
             'phone' => '0981' . random_int(100000, 999999),
-            'email' => 'ana@example.com',
+            // El email es único (D7): el primer cliente del test es "ana@example.com", los demás, otro.
+            'email' => Client::where('email', 'ana@example.com')->exists() ? Str::lower(Str::random(10)) . '@example.com' : 'ana@example.com',
         ]);
         $vehicle = Vehicle::create([
             'client_id' => $client->id,

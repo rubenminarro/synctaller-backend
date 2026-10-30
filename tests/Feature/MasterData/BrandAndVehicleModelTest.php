@@ -106,6 +106,7 @@ class BrandAndVehicleModelTest extends PartsTestCase
             'first_name' => 'Ana',
             'last_name' => 'Gomez',
             'phone' => '+595981000444',
+            'email' => 'qa-4001@example.com',
         ]);
 
         $vehicle = $this->postJson('/api/vehicles', [

@@ -273,12 +273,11 @@ final class ExampleScenarios
                 'work_order' => ['status' => 'pending', 'mechanic' => 'MEC-002'],
             ],
 
-            // Presupuestos enviados a clientes que no reciben avisos: el aviso queda omitido con el motivo.
+            // Presupuestos enviados: C15 con su aviso; C16 a un cliente dado de baja, con el aviso omitido y su motivo.
             [
                 'key' => 'C15', 'plate' => 'QAB127', 'days' => 11, 'receptionist' => $r1, 'categories' => ['mechanical'],
                 'fuel' => FuelLevel::HALF, 'problem' => 'Service de los 280.000 km.',
                 'diagnostics' => [['MEC-001', 'completed', 'low', 'Service programado.', 'Aceite vencido.', 'Cambio de aceite y filtro.', ['oil_due']]],
-                // Cliente sin email (ClientsSeeder::WITHOUT_EMAIL).
                 'budget' => ['status' => 'sent', 'items' => [['service', 'Cambio de aceite y filtro'], ['part', 'LUB-5W30-001', 6], ['part', 'FIL-ACE-001', 1]]],
             ],
             [

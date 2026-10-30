@@ -15,8 +15,8 @@ use App\Models\Client;
  */
 class ClientsSeeder extends Seeder
 {
-    /** Documento del cliente sin email. */
-    public const WITHOUT_EMAIL = '30111222';
+    /** Documento del cliente del escenario C15 (hasta D8, el cliente sin email). */
+    public const C15_OWNER = '30111222';
 
     /** Documento del cliente dado de baja de los avisos. */
     public const NOTIFICATIONS_DISABLED = '30222333';
@@ -57,7 +57,7 @@ class ClientsSeeder extends Seeder
             ['80012345-6', 'Transportes', 'del Sur', '59521600100', 'flota@transportesdelsur.example.com'],
             ['80023456-7', 'Logística', 'Guaraní', '59521600200', 'taller@logisticaguarani.example.com'],
             ['8456789', 'Celeste', 'Amarilla', '595996234521', 'celeste.amarilla@example.com'],
-            [self::WITHOUT_EMAIL, 'Bernardo', 'Galeano', '595997345622', null],
+            [self::C15_OWNER, 'Bernardo', 'Galeano', '595997345622', 'bernardo.galeano@example.com'],
             [self::NOTIFICATIONS_DISABLED, 'Estela', 'Florentín', '595998456723', 'estela.florentin@example.com'],
         ];
 

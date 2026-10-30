@@ -62,7 +62,7 @@ class VehiclesSeeder extends Seeder
             ['80023456-7', 'Ford', 'Transit', '7L3M43', 'QAB124', 'white', 2020, 145000],
             ['80023456-7', 'Fiat', 'Fiorino', '5N5P54', 'QAB125', 'white', 2021, 99000],
             ['8456789', 'Kia', 'Picanto', '3Q7R65', 'QAB126', 'yellow', 2018, 84000],
-            [ClientsSeeder::WITHOUT_EMAIL, 'Chevrolet', 'S10', '1S9T76', 'QAB127', 'black', 2014, 278000],
+            [ClientsSeeder::C15_OWNER, 'Chevrolet', 'S10', '1S9T76', 'QAB127', 'black', 2014, 278000],
             [ClientsSeeder::NOTIFICATIONS_DISABLED, 'Toyota', 'Yaris', '8U2V87', 'QAB128', 'red', 2020, 61000],
             ['7012345', 'Mazda', 'BT-50', '6W4X98', 'QAB129', 'gray', 2016, 198000],
             ['5012345', 'Volkswagen', 'Saveiro', self::WITHOUT_PLATE_CHASSIS, null, 'white', 2024, 300],

@@ -30,7 +30,6 @@ class Reception extends Model
         'cancelled_by',
         'cancellation_reason',
         'created_by',
-        'approved_by',
     ];
 
     protected $casts = [
@@ -53,11 +52,6 @@ class Reception extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function approvedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function checkList(): HasOne

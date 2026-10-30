@@ -88,7 +88,7 @@ class DatabaseSeederTest extends TestCase
             ->where('parts.sku', 'LUB-20W50-001')->where('part_stocks.quantity_on_hand', '>', 0)->exists());
 
         // Casos especiales de clientes y vehículos; cada vehículo usa un modelo de su propia marca.
-        $this->assertNull(Client::where('document_number', ClientsSeeder::WITHOUT_EMAIL)->value('email'));
+        $this->assertSame('bernardo.galeano@example.com', Client::where('document_number', ClientsSeeder::C15_OWNER)->value('email'));
         $this->assertFalse((bool) Client::where('document_number', ClientsSeeder::NOTIFICATIONS_DISABLED)->value('notifications_enabled'));
         $this->assertEqualsCanonicalizing(['person', 'company'], DB::table('clients')->distinct()->pluck('kind')->all());
         $company = Client::where('document_number', ClientsSeeder::COMPANY)->sole();
@@ -239,9 +239,9 @@ class DatabaseSeederTest extends TestCase
 
     private function assertNotificationsCommissionsAndMaintenance(): void
     {
-        // Avisos a clientes: cada estado y cada tipo; omitidos los de los clientes sin email o dados de baja (C15, C16).
+        // Avisos a clientes: cada estado y cada tipo; omitido el del cliente dado de baja (C16).
         $this->assertEqualsCanonicalizing(['sent', 'failed', 'skipped', 'pending'], array_keys($this->statusCounts('client_notifications')));
-        $this->assertSame(2, DB::table('client_notifications')->where('status', 'skipped')->count());
+        $this->assertSame(1, DB::table('client_notifications')->where('status', 'skipped')->count());
         $this->assertSame(1, DB::table('client_notifications')->whereNotNull('resent_from_id')->count());
         $this->assertEqualsCanonicalizing(
             ['budget_sent', 'vehicle_ready', 'invoice_overdue', 'maintenance_due_soon', 'maintenance_overdue'],

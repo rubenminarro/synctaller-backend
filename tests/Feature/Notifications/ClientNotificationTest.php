@@ -26,7 +26,8 @@ class ClientNotificationTest extends InvoiceTestCase
         return Budget::findOrFail($budgetId)->reception->client;
     }
 
-    private function draftBudget(?string $email = 'ana@example.com'): int
+    /** Email vacío (''): el cliente "sin email"; la base ya no admite null (D8) y el control queda como defensa. */
+    private function draftBudget(string $email = 'ana@example.com'): int
     {
         $budgetId = $this->createBudgetWithItems([
             ['type' => 'labor', 'description' => 'Cambio de embrague', 'quantity' => 1, 'unit_price' => 200000],
@@ -71,7 +72,7 @@ class ClientNotificationTest extends InvoiceTestCase
     {
         $this->actingAsAdmin();
 
-        $withoutEmail = $this->draftBudget(null);
+        $withoutEmail = $this->draftBudget('');
         $this->postJson("/api/budgets/{$withoutEmail}/send")->assertOk();
 
         $optedOut = $this->draftBudget('luis@example.com');
@@ -123,7 +124,7 @@ class ClientNotificationTest extends InvoiceTestCase
     {
         $user = $this->actingAsAdmin();
 
-        $budgetId = $this->draftBudget(null);
+        $budgetId = $this->draftBudget('');
         $this->postJson("/api/budgets/{$budgetId}/send")->assertOk();
         $skipped = ClientNotification::sole();
 
@@ -165,7 +166,7 @@ class ClientNotificationTest extends InvoiceTestCase
         $this->actingAsAdmin();
 
         $first = $this->draftBudget();
-        $second = $this->draftBudget(null);
+        $second = $this->draftBudget('');
         $this->postJson("/api/budgets/{$first}/send")->assertOk();
         $this->postJson("/api/budgets/{$second}/send")->assertOk();
 

@@ -31,7 +31,7 @@ class VehicleHistoryTest extends InvoiceTestCase
         $this->actingAsAdmin();
         $this->createStamp()->assertCreated();
 
-        $client = Client::create(['document_number' => 'QA-9001', 'first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '+595981000999']);
+        $client = Client::create(['document_number' => 'QA-9001', 'first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '+595981000999', 'email' => 'qa-9001@example.com']);
         $brand = Brand::create(['name' => 'Toyota']);
         $model = VehicleModel::create(['brand_id' => $brand->id, 'name' => 'Hilux']);
         $this->vehicle = Vehicle::create(['client_id' => $client->id, 'brand_id' => $brand->id, 'vehicle_model_id' => $model->id, 'plate' => 'QAH123']);

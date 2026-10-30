@@ -25,7 +25,7 @@ diga otra); **[pendiente]** = sin verificar o sin decidir.
 | Frontend | Repositorio aparte `../synctaller-frontend` (React 19 + TypeScript + Vite + Tabler) | `CLAUDE.md` §1 |
 | Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico. Módulo de aseguradoras: M1–M9 y P10 en `main` (2026-10-29) | `CLAUDE.md` §1 |
 | Tests | **460 tests (7872 aserciones) en verde, en 388 s** [verificado el 2026-10-29: `php artisan test` en la rama de M9, que después se mergeó sin cambios de código]. Antes: 455 con P10, 449 con M8, 440 con M7 y 374 el 2026-10-27 | `CLAUDE.md` §1 |
-| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (faltan M10–M12). Abiertas también #14–#16 y las discrepancias D3, D7 y D8 (14.1) | `docs/handoff.md`, §14 |
+| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (faltan M10–M12). Abiertas también #14–#16; las discrepancias D1–D10 (14.1) quedaron resueltas o sin acción (D3, D7 y D8 el 2026-10-30, handoff 2.74) | `docs/handoff.md`, §14 |
 
 Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 desde el 2026-10-24 (handoff 2.51).
 
@@ -302,7 +302,7 @@ G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
      repetidos). **E4** (handoff 2.56) mergeada en `main` el 2026-10-28 (migración `000057`, verificada en MySQL).
      **E5** (handoff 2.57) mergeada en `main` el 2026-10-28 (migración `000058`). **E1** (handoff §14: deudas
      #14–#16 y discrepancias D1–D10 en 14.1; `CLAUDE.md` §7) en la rama `docs/discrepancias-e1`. Con eso la línea E
-     está completa. Quedan para decidir D3, D7 y D8 (D9 se resolvió con M1; D4 y D6 el 2026-10-29);
+     está completa. D3, D7 y D8 se resolvieron el 2026-10-30 (handoff 2.74; D9 con M1; D4 y D6 el 2026-10-29);
    * ~~spike T0 en una rama descartable~~ Hecho el 2026-10-28/29 y descartado. Informe: `docs/spike-t0-informe.md`
      (handoff 2.58). Sin fallas críticas. No cumplen S8 (jobs), S10 y S13 (unos 30–45 ms por request), con
      mitigaciones previstas para T2. La dependencia no está aprobada;
