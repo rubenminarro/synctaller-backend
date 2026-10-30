@@ -1795,6 +1795,16 @@ empresa existente, y el buscador necesita listar solo empresas.
 | Empresas en producción | El frontend admite clientes empresa desde FA0 (`../synctaller-frontend`, 2026-10-30): se levanta la advertencia de M1 |
 | Pruebas | `ClientKindTest::test_clients_are_filtered_by_kind` |
 
+# 2.73 Conceptos vendidos en el reparto (2026-10-30)
+
+Pedido por la fase FA3 del frontend (reparto y facturación): el editor del borrador muestra una fila por concepto y
+necesita saber cuánto debe sumar cada uno aunque el borrador guardado esté incompleto.
+
+| Tema | Decisión |
+|---|---|
+| Contrato | `WorkOrderAllocationResource.concepts` (decisión del usuario del 2026-10-30: en el backend, no deduciéndolo de las porciones en el frontend). Aditivo y de solo lectura (`AllocationService::concepts`, sobre `WorkOrderSaleBreakdown`): `base_total` (R1), `coverable` (R4: ni extra ni línea del dueño) y `authorized_total` del ítem en la autorización vigente (R3, por ítem). Sin migración ni cambios de reglas |
+| Pruebas | `WorkOrderAllocationTest::test_the_allocation_lists_the_sold_concepts` (suma igual a la venta, `coverable`, autorizado y extra) |
+
 ---
 
 ---

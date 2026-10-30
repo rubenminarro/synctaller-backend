@@ -324,7 +324,8 @@ G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
      * **M11** (reportes: cuentas por cobrar por destinatario y resumen del siniestro, handoff 2.71; sin migración)
        mergeada en `main` el 2026-10-30 (`cbc1924`). Los avisos a la aseguradora quedaron fuera (V7).
      * **Frontend:** adaptación en cinco fases (`../synctaller-frontend/docs/plan-desarrollo.md`). FA0 (compatibilidad)
-       mergeada el 2026-10-30; FA1 (aseguradoras y siniestros) en curso, con el filtro `GET clients?kind=` (handoff 2.72).
+       FA0, FA1 (con el filtro `GET clients?kind=`, handoff 2.72) y FA2 mergeadas el 2026-10-30; FA3 (reparto y
+       facturación) en curso, con `concepts` en el reparto (handoff 2.73).
      * El 2026-10-30, en esta notebook, la base local tenía pendientes las migraciones `000065`–`000069`: se aplicaron
        y se resembraron los permisos. `AllocationInvoiceSeeder` fallaba en MySQL (DISTINCT con ORDER BY); corregido en
        `main` (`fab7c4e`).
