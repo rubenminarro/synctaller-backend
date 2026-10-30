@@ -108,6 +108,8 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
 
     Route::get('receptions/{reception}/claim', [ClaimController::class, 'forReception'])->name('receptions.claim');
 
+    Route::get('claims/{claim}/summary', [ClaimController::class, 'summary'])->name('claims.summary');
+
     // Documentos privados del siniestro (M4): solo se descargan por la API.
     Route::apiResource('claims.documents', ClaimDocumentController::class)->only(['index', 'store', 'destroy']);
 
@@ -291,6 +293,11 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
     Route::get('reports/inventory', [ReportController::class, 'inventory'])->name('reports.inventory');
 
     Route::get('reports/clients', [ReportController::class, 'clients'])->name('reports.clients');
+
+    // Reportes del módulo de aseguradoras (M11).
+    Route::get('reports/receivables', [ReportController::class, 'receivables'])->name('reports.receivables');
+
+    Route::get('reports/claims', [ReportController::class, 'claims'])->name('reports.claims');
 
     Route::get('service-categories', [ServiceCategoryController::class, 'index'])->name('service-categories.index');
 

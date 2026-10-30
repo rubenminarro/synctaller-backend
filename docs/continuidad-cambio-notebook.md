@@ -321,7 +321,12 @@ G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
        2026-10-29.
      * **P10** (notas de crédito registradas, handoff 2.69; migración `000068`) mergeada en `main` el 2026-10-29.
      * **M9** (facturas por responsable, handoff 2.70; migración `000069`) mergeada en `main` el 2026-10-29.
-     * **Siguen M10–M12.** El frontend todavía no consume
+     * **M11** (reportes: cuentas por cobrar por destinatario y resumen del siniestro, handoff 2.71; sin migración) en
+       `feature/reportes-aseguradoras`, pendiente de revisión y merge. Los avisos a la aseguradora quedaron fuera (V7).
+     * El 2026-10-30, en esta notebook, la base local tenía pendientes las migraciones `000065`–`000069`: se aplicaron
+       y se resembraron los permisos. `AllocationInvoiceSeeder` fallaba en MySQL (DISTINCT con ORDER BY); corregido en
+       `main` (`fab7c4e`).
+     * **Siguen M10 (espera G1/V21) y M12 (espera V17)**, y los avisos a la aseguradora (V7). El frontend todavía no consume
        nada del módulo: su adaptación (empresas, aseguradoras, siniestros, autorizaciones, excepciones y advertencias)
        se coordina en `../synctaller-frontend`.
 

@@ -507,6 +507,21 @@ deducible del siniestro informado e igual a 0 y el token del cajero.
 | Historial del vehículo | `GET {{base_url}}/vehicles/{{vehicle_id}}/history` | — | 200 | `invoices[]` en cada OT y `summary.by_recipient` (`owner`/`others`) |
 | Sin permiso | recepcionista: generar | — | 403 | `FORBIDDEN` |
 
+Reportes del módulo de aseguradoras (M11, ver `CLAUDE.md` 6.30). Con el siniestro y las facturas de arriba.
+
+| Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |
+|---|---|---|---|---|
+| Cuentas por cobrar | `GET {{base_url}}/reports/receivables` | — | 200 | `as_of`, `totals` (saldo, vencido, antigüedad), `by_recipient` (`insurer` y `customer`) y `clients` |
+| Solo aseguradoras | `GET {{base_url}}/reports/receivables?recipient_type=insurer` | — | 200 | Una fila en `by_recipient` |
+| Detalle de un cliente | `GET {{base_url}}/reports/receivables?client_id={{client_id}}` | — | 200 | Además `invoices` (vencimiento, días vencido, siniestro, cobrado, acreditado, saldo) |
+| Tipo inválido | `GET {{base_url}}/reports/receivables?recipient_type=x` | — | 422 | `VALIDATION_ERROR` |
+| Exportar | `GET {{base_url}}/reports/receivables?format=csv` (o `pdf`) | — | 200 | `reporte-cuentas-por-cobrar.csv` |
+| Resumen del siniestro | `GET {{base_url}}/claims/{{claim_id}}/summary` | — | 200 | `claim`, `budgets` (sin IVA, totales de los aprobados), `allocations` (sin IVA), `billing` (con IVA, por destinatario) y `alerts` |
+| Resumen como jefe de taller | ídem | — | 200 | Sin `billing` |
+| Reporte de siniestros | `GET {{base_url}}/reports/claims?date_from=...&date_to=...&insurer_id=...&status=open` | — | 200 | Una fila por siniestro (fecha del siniestro en el período) y `totals` |
+| Exportar | `GET {{base_url}}/reports/claims?format=csv` (o `pdf`) | — | 200 | Descarga |
+| Sin permiso | recepcionista o jefe de taller: `reports/receivables` o `reports/claims`; mecánico: `claims/{id}/summary` | — | 403 | `FORBIDDEN` |
+
 ### M.5 Vehículos por cliente (rutas anidadas)
 
 Complementan a `/vehicles`. El propietario se toma de la URL.

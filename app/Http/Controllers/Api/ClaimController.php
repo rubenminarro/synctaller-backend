@@ -11,6 +11,7 @@ use App\Http\Resources\ShowClaimResource;
 use App\Models\Claim;
 use App\Models\Reception;
 use App\Services\ClaimService;
+use App\Services\ClaimSummaryService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -30,7 +31,7 @@ class ClaimController extends Controller implements HasMiddleware
         return [
             new Middleware('permission:claims.index', only: ['index']),
             new Middleware('permission:claims.store', only: ['store']),
-            new Middleware('permission:claims.show', only: ['show', 'forReception']),
+            new Middleware('permission:claims.show', only: ['show', 'forReception', 'summary']),
             new Middleware('permission:claims.update', only: ['update']),
             new Middleware('permission:claims.cancel', only: ['cancel']),
         ];
@@ -99,6 +100,25 @@ class ClaimController extends Controller implements HasMiddleware
         return $this->successResponse(
             'Siniestro de la recepción obtenido correctamente.',
             new ShowClaimResource($this->claimService->load($claim)),
+            200
+        );
+    }
+
+    /**
+     * Resumen económico (M11). Presupuestado, autorizado y aceptado con claims.show; el reparto solo con
+     * work-order-allocations.show y lo facturado y cobrado solo con invoices.show.
+     */
+    public function summary(Request $request, Claim $claim, ClaimSummaryService $claimSummaryService)
+    {
+        $blocks = collect([
+            ClaimSummaryService::BUDGETS => 'claims.show',
+            ClaimSummaryService::ALLOCATIONS => 'work-order-allocations.show',
+            ClaimSummaryService::BILLING => 'invoices.show',
+        ])->filter(fn (string $permission) => $request->user()->can($permission))->keys()->all();
+
+        return $this->successResponse(
+            'Resumen del siniestro obtenido correctamente.',
+            $claimSummaryService->summary($claim, $blocks),
             200
         );
     }
