@@ -1843,6 +1843,18 @@ vigentes en `CLAUDE.md` 6.31.
 | Pendiente | V16 (respuesta), V20 (documento de la modalidad), V21 (encender) y el frontend (modalidad e IVA en el siniestro y la aseguradora, columna del deducible y reglas nuevas en el editor del reparto) |
 
 
+# 2.76 Emails de ejemplo en mail.com.py (2026-10-30)
+
+Los emails de ejemplo de clientes, aseguradoras (contactos), proveedores y siniestros usaban `example.com` (y `.test`), que publican un "null MX": no pasan `email:rfc,dns` con `EMAIL_DNS_CHECK=true`, y no se podía editar un siniestro de ejemplo (el email del asegurado se copia del cliente).
+
+| Tema | Decisión |
+|---|---|
+| Dominio | Decisión del usuario del 2026-10-30: `mail.com.py`, como los usuarios de ejemplo. `nombre@example.com` → `nombre@mail.com.py`; `nombre@empresa.example.com` y `nombre@empresa.test` → `nombre.empresa@mail.com.py` |
+| Riesgo | Es un dominio real con correo: con un SMTP configurado, un aviso reenviado de un cliente de ejemplo sale de verdad (hoy `MAIL_MAILER=log`). `NotificationSeeder` sigue usando el mailer `array` |
+| Base local | Los seeders no corrigen lo que ya existe: los datos de ejemplo de la base local se actualizaron con el mismo reemplazo (clientes, asegurados de siniestros, contactos de aseguradoras y proveedores) |
+| Pruebas | `DatabaseSeederTest` (email del cliente C15) |
+
+
 ---
 
 ---

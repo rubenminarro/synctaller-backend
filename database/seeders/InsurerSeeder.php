@@ -25,11 +25,11 @@ class InsurerSeeder extends Seeder
         $receptionist = ExampleScenarios::user('recepcion1@mail.com.py');
 
         $insurers = [
-            [self::ACTIVE, 'Seguros del Sur S.A.', 'siniestros@segurosdelsur.example.com', '595212001000', 30, [
-                ['name' => 'Laura Benítez', 'role' => 'claims', 'phone' => '595981700100', 'email' => 'lbenitez@segurosdelsur.example.com', 'is_primary' => true],
-                ['name' => 'Pedro Ortiz', 'role' => 'billing', 'phone' => '595981700200', 'email' => 'facturacion@segurosdelsur.example.com'],
+            [self::ACTIVE, 'Seguros del Sur S.A.', 'siniestros.segurosdelsur@mail.com.py', '595212001000', 30, [
+                ['name' => 'Laura Benítez', 'role' => 'claims', 'phone' => '595981700100', 'email' => 'lbenitez.segurosdelsur@mail.com.py', 'is_primary' => true],
+                ['name' => 'Pedro Ortiz', 'role' => 'billing', 'phone' => '595981700200', 'email' => 'facturacion.segurosdelsur@mail.com.py'],
             ], true],
-            [self::INACTIVE, 'Aseguradora Guaraní S.A.', 'contacto@aseguradoraguarani.example.com', '595212003000', 45, [
+            [self::INACTIVE, 'Aseguradora Guaraní S.A.', 'contacto.aseguradoraguarani@mail.com.py', '595212003000', 45, [
                 ['name' => 'Mirta Acosta', 'role' => 'claims', 'phone' => '595981700300', 'is_primary' => true],
             ], false],
         ];

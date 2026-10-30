@@ -88,7 +88,7 @@ class DatabaseSeederTest extends TestCase
             ->where('parts.sku', 'LUB-20W50-001')->where('part_stocks.quantity_on_hand', '>', 0)->exists());
 
         // Casos especiales de clientes y vehículos; cada vehículo usa un modelo de su propia marca.
-        $this->assertSame('bernardo.galeano@example.com', Client::where('document_number', ClientsSeeder::C15_OWNER)->value('email'));
+        $this->assertSame('bernardo.galeano@mail.com.py', Client::where('document_number', ClientsSeeder::C15_OWNER)->value('email'));
         $this->assertFalse((bool) Client::where('document_number', ClientsSeeder::NOTIFICATIONS_DISABLED)->value('notifications_enabled'));
         $this->assertEqualsCanonicalizing(['person', 'company'], DB::table('clients')->distinct()->pluck('kind')->all());
         $company = Client::where('document_number', ClientsSeeder::COMPANY)->sole();
