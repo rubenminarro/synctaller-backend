@@ -65,6 +65,13 @@ class ShowClaimResource extends JsonResource
                 'inspected_at' => $this->inspected_at,
             ],
             'deductible_amount' => $this->deductible_amount,
+            'deductible_billing_mode' => $this->deductible_billing_mode === null ? null : [
+                'value' => $this->deductible_billing_mode->value,
+                'label' => $this->deductible_billing_mode->label(),
+            ],
+            'deductible_includes_tax' => $this->deductible_includes_tax,
+            // M10: si se puede elegir la modalidad neta (insurer.deductible_net_mode).
+            'deductible_net_mode_available' => (bool) config('insurer.deductible_net_mode'),
             'coverage_notes' => $this->coverage_notes,
             'closed_at' => $this->closed_at,
             'cancelled_at' => $this->cancelled_at,

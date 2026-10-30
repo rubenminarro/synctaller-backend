@@ -508,6 +508,24 @@ deducible del siniestro informado e igual a 0 y el token del cajero.
 | Historial del vehículo | `GET {{base_url}}/vehicles/{{vehicle_id}}/history` | — | 200 | `invoices[]` en cada OT y `summary.by_recipient` (`owner`/`others`) |
 | Sin permiso | recepcionista: generar | — | 403 | `FORBIDDEN` |
 
+Deducible facturado, modalidad neta (M10, ver `CLAUDE.md` 6.31). Con `INSURER_DEDUCTIBLE_NET_MODE=true` en el `.env`
+(después `php artisan config:clear` si se usó caché). Un siniestro con deducible 220.000 que incluye el IVA, sobre el
+Ejemplo 1.
+
+| Caso | Request | Body | Esperado | Verificar |
+|---|---|---|---|---|
+| Interruptor apagado | `POST {{base_url}}/claims` | `{ …, "deductible_billing_mode": "net_of_deductible" }` | 422 | `VALIDATION_ERROR` en `deductible_billing_mode` |
+| Modalidad por defecto de la aseguradora | `PATCH {{base_url}}/insurers/{{insurer_id}}` | `{ "deductible_billing_mode": "net_of_deductible" }` | 200 | `deductible_billing_mode.value`; los siniestros nuevos la copian |
+| Siniestro con modalidad neta | `POST {{base_url}}/claims` | `{ …, "deductible_amount": 220000, "deductible_billing_mode": "net_of_deductible", "deductible_includes_tax": true }` | 201 | `deductible_includes_tax`, `deductible_net_mode_available` `true` |
+| Propuesta del reparto | `POST {{base_url}}/work-orders/{{work_order_id}}/allocations` | — | 201 | Chapería: `insurer_covered` 600.000 y `owner_deductible` 200.000; `summary` aseguradora 1.600.000 y dueño 1.170.000; `checks` con `deductible_tax`, `deductible_covered` y `R11` |
+| Sin indicar el IVA | confirmar con `deductible_includes_tax` nulo | — | 422 | `CLAIM_DEDUCTIBLE_TAX_UNDEFINED` (también la entrega: `DELIVERY_CLAIM_DEDUCTIBLE_PENDING`) |
+| Porciones del deducible que no suman | `PATCH …/allocations/{{allocation_id}}` y confirmar | `lines` con otro `owner_deductible` | 422 | `ALLOCATION_DEDUCTIBLE_MISMATCH` |
+| Deducible mayor que lo cubierto | confirmar con deducible 2.000.000 sin IVA | — | 422 | `ALLOCATION_DEDUCTIBLE_EXCEEDS_COVERED` |
+| Facturas | `POST …/allocations/{{allocation_id}}/invoices` | `{ "client_id": … }` | 201 | Aseguradora 1.760.000; dueño 1.287.000 con la línea «Deducible de siniestro N.º …» de 1 × 220.000 |
+| Cambiar la modalidad o el IVA con factura a la aseguradora | `PATCH {{base_url}}/claims/{{claim_id}}` | `{ "deductible_includes_tax": false }` | 422 | `CLAIM_DEDUCTIBLE_LOCKED` |
+| Cambiar el IVA antes de facturar, con el reparto confirmado | luego generar la factura | — | 422 | `ALLOCATION_DEDUCTIBLE_MISMATCH`: otra versión del reparto |
+| Entrega | `POST {{base_url}}/receptions/{{reception_id}}/delivery` | el de 17.3 | 201 | Con las dos emitidas y la del dueño cobrada |
+
 Reportes del módulo de aseguradoras (M11, ver `CLAUDE.md` 6.30). Con el siniestro y las facturas de arriba.
 
 | Caso | Método / Endpoint | Body | HTTP | Resultado / error_code |

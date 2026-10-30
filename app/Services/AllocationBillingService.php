@@ -6,6 +6,7 @@ use App\Enums\AllocationPortionType;
 use App\Enums\AllocationStatus;
 use App\Enums\ClaimStatus;
 use App\Enums\CreditNoteStatus;
+use App\Enums\DeductibleBillingMode;
 use App\Enums\InvoiceStatus;
 use App\Exceptions\AllocationException;
 use App\Exceptions\ClaimException;
@@ -78,7 +79,53 @@ class AllocationBillingService
     }
 
     /**
-     * Facturación del siniestro según el deducible (A): solo con el deducible informado e igual a 0.
+     * Modalidad neta del deducible (M10) en vigor para el siniestro: elegida en el siniestro y habilitada en la
+     * configuración (insurer.deductible_net_mode). Apagada, rige la regla A aunque el siniestro la tenga cargada.
+     */
+    public function netMode(Claim $claim): bool
+    {
+        return config('insurer.deductible_net_mode') && $claim->deductible_billing_mode === DeductibleBillingMode::NET_OF_DEDUCTIBLE;
+    }
+
+    /**
+     * Un importe de deducible tal como se informa, sin IVA (V15: el siniestro dice si lo incluye). Null si el importe
+     * es desconocido o no se indicó si incluye el IVA.
+     */
+    public function deductibleBase(Claim $claim, int|float|string|null $informed): ?string
+    {
+        if ($informed === null || $claim->deductible_includes_tax === null) {
+            return null;
+        }
+
+        $amount = Decimal::of($informed, 2);
+
+        if (!$claim->deductible_includes_tax) {
+            return $amount;
+        }
+
+        $rate = (string) config('invoice.default_tax_rate', 10);
+
+        return Decimal::round(bcdiv(bcmul($amount, '100', 6), bcadd('100', $rate, 6), 6), 2);
+    }
+
+    /**
+     * Lo que deben sumar las porciones owner_deductible del reparto (R11): con la modalidad neta, la base del deducible
+     * asignado a la OT; sin ella, 0. Null si falta saber si el deducible incluye el IVA.
+     */
+    public function expectedOwnerDeductible(WorkOrderAllocation $allocation): ?string
+    {
+        $claim = $allocation->claim;
+
+        if (!$this->netMode($claim) || $allocation->deductible_amount === null || bccomp((string) $allocation->deductible_amount, '0', 2) <= 0) {
+            return '0.00';
+        }
+
+        return $this->deductibleBase($claim, $allocation->deductible_amount);
+    }
+
+    /**
+     * Facturación del siniestro según el deducible: con el deducible informado e igual a 0 (A) o, mayor a 0, con la
+     * modalidad neta (M10) y sabiendo si incluye el IVA.
      */
     public function ensureDeductibleAllowsInvoicing(Claim $claim): void
     {
@@ -86,11 +133,42 @@ class AllocationBillingService
             throw new ClaimException('El deducible del siniestro es desconocido: no se factura hasta informarlo.', 422, 'CLAIM_DEDUCTIBLE_UNKNOWN');
         }
 
-        if (bccomp((string) $claim->deductible_amount, '0', 2) > 0) {
+        if (bccomp((string) $claim->deductible_amount, '0', 2) <= 0) {
+            return;
+        }
+
+        if (!$this->netMode($claim)) {
             throw new AllocationException(
                 'El siniestro tiene deducible: su facturación espera la definición de la modalidad del deducible.',
                 422,
                 'ALLOCATION_DEDUCTIBLE_MODE_UNDEFINED'
+            );
+        }
+
+        if ($claim->deductible_includes_tax === null) {
+            throw new ClaimException(
+                'Indique en el siniestro si el deducible incluye el IVA: sin eso no se factura.',
+                422,
+                'CLAIM_DEDUCTIBLE_TAX_UNDEFINED'
+            );
+        }
+    }
+
+    /**
+     * Antes de facturar un reparto: sus porciones del deducible siguen coincidiendo con el deducible y la modalidad del
+     * siniestro (R11). Cambiaron después de confirmarlo → se genera otra versión.
+     */
+    public function ensureDeductibleAllocated(WorkOrderAllocation $allocation): void
+    {
+        $expected = $this->expectedOwnerDeductible($allocation);
+        $allocated = $allocation->lines()->where('portion_type', AllocationPortionType::OWNER_DEDUCTIBLE)->get()
+            ->reduce(fn (string $sum, WorkOrderAllocationLine $line) => bcadd($sum, (string) $line->amount, 2), '0.00');
+
+        if ($expected === null || bccomp($allocated, $expected, 2) !== 0) {
+            throw new AllocationException(
+                'El deducible del reparto no coincide con el deducible o la modalidad actual del siniestro: genere una nueva versión del reparto.',
+                422,
+                'ALLOCATION_DEDUCTIBLE_MISMATCH'
             );
         }
     }
@@ -112,6 +190,7 @@ class AllocationBillingService
         }
 
         $this->ensureDeductibleAllowsInvoicing($allocation->claim);
+        $this->ensureDeductibleAllocated($allocation);
 
         $billed = $this->billedByLine($allocation);
         $exceeded = $allocation->lines()->get()->contains(
@@ -140,15 +219,24 @@ class AllocationBillingService
     }
 
     /**
-     * Para la entrega (A): el siniestro abierto de la recepción con deducible mayor a 0 o desconocido; null si no hay.
+     * Para la entrega (A): el siniestro abierto de la recepción con deducible desconocido, o mayor a 0 sin la modalidad
+     * neta (M10) o sin saber si incluye el IVA; null si no hay. Con la modalidad neta rigen las facturas.
      */
     public function claimWithPendingDeductible(int $receptionId): ?Claim
     {
         $claim = Claim::where('reception_id', $receptionId)->where('status', ClaimStatus::OPEN)->first();
 
-        return $claim && ($claim->deductible_amount === null || bccomp((string) $claim->deductible_amount, '0', 2) > 0)
-            ? $claim
-            : null;
+        if (!$claim) {
+            return null;
+        }
+
+        if ($claim->deductible_amount === null) {
+            return $claim;
+        }
+
+        $positive = bccomp((string) $claim->deductible_amount, '0', 2) > 0;
+
+        return $positive && (!$this->netMode($claim) || $claim->deductible_includes_tax === null) ? $claim : null;
     }
 
     /**

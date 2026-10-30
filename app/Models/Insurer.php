@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DeductibleBillingMode;
 use App\Enums\InsurerStatus;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,7 @@ class Insurer extends Model
         'code',
         'status',
         'payment_term_days',
+        'deductible_billing_mode',
         'notes',
         'created_by',
     ];
@@ -35,6 +37,7 @@ class Insurer extends Model
         return [
             'status' => InsurerStatus::class,
             'payment_term_days' => 'integer',
+            'deductible_billing_mode' => DeductibleBillingMode::class,
         ];
     }
 

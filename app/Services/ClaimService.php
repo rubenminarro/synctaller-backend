@@ -64,6 +64,10 @@ class ClaimService
             }
 
             $data = $this->withInsured($data, $reception);
+            // M10: la modalidad del deducible por defecto es la de la aseguradora (se cambia según la póliza).
+            $data['deductible_billing_mode'] = array_key_exists('deductible_billing_mode', $data)
+                ? $data['deductible_billing_mode']
+                : $insurer->deductible_billing_mode;
             $this->ensureUniqueClaimNumber($insurer->id, $data['claim_number'] ?? null);
 
             $claim = $this->documentSequences->create(DocumentSeries::CLAIM, fn (string $code) => Claim::create([
@@ -94,6 +98,16 @@ class ClaimService
             if (array_key_exists('deductible_amount', $data) && !$this->sameAmount($claim->deductible_amount, $data['deductible_amount'])) {
                 $this->ensureDeductibleNotInvoiced($claim);
                 $this->ensureDeductibleCoversAllocations($claim, $data['deductible_amount']);
+            }
+
+            // M10: la modalidad y si el deducible incluye el IVA cambian lo facturado, como el importe.
+            $modeChanged = array_key_exists('deductible_billing_mode', $data)
+                && $claim->deductible_billing_mode?->value !== $data['deductible_billing_mode'];
+            $taxChanged = array_key_exists('deductible_includes_tax', $data)
+                && $claim->deductible_includes_tax !== ($data['deductible_includes_tax'] === null ? null : (bool) $data['deductible_includes_tax']);
+
+            if ($modeChanged || $taxChanged) {
+                $this->ensureDeductibleNotInvoiced($claim);
             }
 
             $claim->update($data);

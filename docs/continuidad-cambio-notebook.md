@@ -25,7 +25,7 @@ diga otra); **[pendiente]** = sin verificar o sin decidir.
 | Frontend | Repositorio aparte `../synctaller-frontend` (React 19 + TypeScript + Vite + Tabler) | `CLAUDE.md` §1 |
 | Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico. Módulo de aseguradoras: M1–M9 y P10 en `main` (2026-10-29) | `CLAUDE.md` §1 |
 | Tests | **460 tests (7872 aserciones) en verde, en 388 s** [verificado el 2026-10-29: `php artisan test` en la rama de M9, que después se mergeó sin cambios de código]. Antes: 455 con P10, 449 con M8, 440 con M7 y 374 el 2026-10-27 | `CLAUDE.md` §1 |
-| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (faltan M10–M12). Abiertas también #14–#16; las discrepancias D1–D10 (14.1) quedaron resueltas o sin acción (D3, D7 y D8 el 2026-10-30, handoff 2.74) | `docs/handoff.md`, §14 |
+| Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (M10 hecho detrás de un interruptor; faltan M12 y los avisos). Abiertas también #14–#16; las discrepancias D1–D10 (14.1) quedaron resueltas o sin acción (D3, D7 y D8 el 2026-10-30, handoff 2.74) | `docs/handoff.md`, §14 |
 
 Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 desde el 2026-10-24 (handoff 2.51).
 
@@ -331,8 +331,10 @@ G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
      * El 2026-10-30, en esta notebook, la base local tenía pendientes las migraciones `000065`–`000069`: se aplicaron
        y se resembraron los permisos. `AllocationInvoiceSeeder` fallaba en MySQL (DISTINCT con ORDER BY); corregido en
        `main` (`fab7c4e`).
-     * **Siguen M10 (espera G1/V21) y M12 (espera V17)**, y los avisos a la aseguradora (V7). El frontend ya consume todo
-       lo construido del módulo; lo que llegue con M10, M12 y V7 necesitará su propia fase en `../synctaller-frontend`.
+     * **M10** (deducible facturado, modalidad neta, handoff 2.75; migración `000071`) el 2026-10-30, detrás de
+       `INSURER_DEDUCTIBLE_NET_MODE` (apagado hasta la confirmación escrita del contador, V21; V16 sin respuesta). Falta su
+       parte del frontend.
+     * **Sigue M12 (espera V17)** y los avisos a la aseguradora (V7).
 
 ---
 

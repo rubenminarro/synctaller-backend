@@ -86,7 +86,7 @@ class AllocationService
                     'portion_type', 'source_type', 'source_id', 'budget_item_id', 'client_id',
                     'insurer_authorization_item_id', 'internal_exception_id', 'amount', 'description',
                 ]))
-                : $this->proposedLines($workOrder, $claim);
+                : $this->withOwnerDeductible($this->proposedLines($workOrder, $claim), $allocation);
 
             $lines->each(fn (array $line) => $allocation->lines()->create($line));
 
@@ -254,7 +254,8 @@ class AllocationService
             'Lo absorbido por el taller necesita una excepción de absorción de esta orden de trabajo, sin usar y por un importe suficiente.', 'ALLOCATION_ABSORPTION_NOT_AUTHORIZED');
 
         // R5: lo del dueño no supera lo que aceptó más los extras aprobados (B, sin tolerancia).
-        $owner = $sum($lines->filter(fn ($line) => $line->portion_type->isOwner()));
+        // El deducible del dueño (M10) no cuenta acá: lo controlan el deducible aceptado, R7 y R11.
+        $owner = $sum($lines->filter(fn ($line) => $line->portion_type->isOwner() && $line->portion_type !== AllocationPortionType::OWNER_DEDUCTIBLE));
         $limit = $this->ownerShare->acceptedLimit($workOrder);
         $checks[] = $check('R5', bccomp($owner, $limit, 2) <= 0,
             'La parte del dueño (' . Format::money($owner) . ') supera lo que aceptó (' . Format::money($limit) . '): registre una re-aceptación, una absorción del taller o un presupuesto complementario.', 'ALLOCATION_OWNER_AMOUNT_NOT_ACCEPTED');
@@ -262,6 +263,17 @@ class AllocationService
         // R7: los deducibles confirmados del siniestro (sin la versión que esta sustituye) no superan el del siniestro.
         $checks[] = $check('R7', !$deductibleKnown || $this->deductibleWithinClaim($allocation, $claim),
             'La suma de los deducibles asignados a las órdenes de trabajo del siniestro supera su deducible.', 'ALLOCATION_DEDUCTIBLE_EXCEEDS_CLAIM');
+
+        // Modalidad neta del deducible (M10): el deducible de la OT, sin IVA, pasa de lo cubierto al dueño. Sin la
+        // modalidad, las porciones del deducible deben ser 0.
+        $expected = $this->allocationBilling->expectedOwnerDeductible($allocation);
+        $allocatedDeductible = $sum($lines->where('portion_type', AllocationPortionType::OWNER_DEDUCTIBLE));
+        $checks[] = $check('deductible_tax', $expected !== null,
+            'Indique en el siniestro si el deducible incluye el IVA: sin eso no se calcula su parte sin IVA.', 'CLAIM_DEDUCTIBLE_TAX_UNDEFINED');
+        $checks[] = $check('deductible_covered', $expected === null || bccomp($expected, bcadd($sum($covered), $allocatedDeductible, 2), 2) <= 0,
+            'El deducible de esta orden de trabajo (' . Format::money($expected ?? '0') . ' sin IVA) supera lo que cubre la aseguradora: el caso todavía no tiene una regla definida (V16).', 'ALLOCATION_DEDUCTIBLE_EXCEEDS_COVERED');
+        $checks[] = $check('R11', $expected === null || bccomp($allocatedDeductible, $expected, 2) === 0,
+            'Las porciones del deducible (' . Format::money($allocatedDeductible) . ') deben sumar el deducible de esta orden de trabajo sin IVA (' . Format::money($expected ?? '0') . ').', 'ALLOCATION_DEDUCTIBLE_MISMATCH');
 
         return $checks;
     }
@@ -344,6 +356,52 @@ class AllocationService
                 'authorized_total' => $concept['is_extra'] ? null : $authorized?->get($concept['budget_item_id'])?->authorized_total,
             ];
         })->values()->all();
+    }
+
+    /**
+     * Modalidad neta del deducible (M10): la base del deducible de la OT se descuenta de lo cubierto por la aseguradora,
+     * concepto por concepto en orden, y pasa al dueño como porción owner_deductible del mismo concepto (R1 y R2 no
+     * cambian). Si lo cubierto no alcanza, queda lo posible y la confirmación lo rechaza (V16).
+     *
+     * @param Collection<int, array<string, mixed>> $lines
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function withOwnerDeductible(Collection $lines, WorkOrderAllocation $allocation): Collection
+    {
+        $remaining = $this->allocationBilling->expectedOwnerDeductible($allocation);
+
+        if ($remaining === null || bccomp($remaining, '0', 2) <= 0) {
+            return $lines;
+        }
+
+        $ownerClientId = $allocation->workOrder->reception->client_id;
+        $kept = collect();
+        $deductible = collect();
+
+        foreach ($lines as $line) {
+            if ($line['portion_type'] !== AllocationPortionType::INSURER_COVERED || bccomp($remaining, '0', 2) <= 0) {
+                $kept->push($line);
+                continue;
+            }
+
+            $amount = Decimal::of($line['amount'], 2);
+            $taken = bccomp($amount, $remaining, 2) <= 0 ? $amount : $remaining;
+            $remaining = bcsub($remaining, $taken, 2);
+
+            if (bccomp($rest = bcsub($amount, $taken, 2), '0', 2) > 0) {
+                $kept->push([...$line, 'amount' => $rest]);
+            }
+
+            $deductible->push([
+                ...$line,
+                'portion_type' => AllocationPortionType::OWNER_DEDUCTIBLE,
+                'client_id' => $ownerClientId,
+                'insurer_authorization_item_id' => null,
+                'amount' => $taken,
+            ]);
+        }
+
+        return $kept->merge($deductible)->values();
     }
 
     /**

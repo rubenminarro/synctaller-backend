@@ -201,12 +201,15 @@ class VehicleDeliveryService
             );
         }
 
-        // Siniestro con deducible mayor a 0 o desconocido (A): no se entrega por el flujo habitual (M9).
+        // Siniestro con deducible desconocido, o mayor a 0 sin la modalidad neta (A, M9) o sin saber si incluye el IVA
+        // (M10): no se entrega por el flujo habitual. Con la modalidad neta rigen las facturas, como en el resto.
         if ($claim = $this->allocationBilling->claimWithPendingDeductible($reception->id)) {
             throw new VehicleDeliveryException(
-                $claim->deductible_amount === null
-                    ? "El deducible del siniestro {$claim->code} es desconocido: la recepción no se entrega hasta informarlo."
-                    : "El siniestro {$claim->code} tiene deducible: la recepción no se entrega por el flujo habitual hasta definir su facturación.",
+                match (true) {
+                    $claim->deductible_amount === null => "El deducible del siniestro {$claim->code} es desconocido: la recepción no se entrega hasta informarlo.",
+                    $this->allocationBilling->netMode($claim) => "Indique en el siniestro {$claim->code} si el deducible incluye el IVA: la recepción no se entrega hasta facturarlo.",
+                    default => "El siniestro {$claim->code} tiene deducible: la recepción no se entrega por el flujo habitual hasta definir su facturación.",
+                },
                 422,
                 'DELIVERY_CLAIM_DEDUCTIBLE_PENDING'
             );

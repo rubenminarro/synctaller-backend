@@ -71,6 +71,7 @@ class InsurerService
                 'code' => $code,
                 'status' => InsurerStatus::ACTIVE,
                 'payment_term_days' => $data['payment_term_days'] ?? null,
+                'deductible_billing_mode' => $data['deductible_billing_mode'] ?? null,
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $user->id,
             ]));
@@ -80,7 +81,7 @@ class InsurerService
     }
 
     /**
-     * Plazo de pago y notas. Los datos fiscales y de contacto se editan en el cliente.
+     * Plazo de pago, modalidad del deducible por defecto (M10) y notas. Los datos fiscales y de contacto se editan en el cliente.
      */
     public function update(Insurer $insurer, array $data): Insurer
     {

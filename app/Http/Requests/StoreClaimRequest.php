@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\ClaimType;
+use App\Enums\DeductibleBillingMode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -59,6 +60,9 @@ class StoreClaimRequest extends FormRequest
             'inspection_scheduled_at' => [...$presence, 'date'],
             'inspected_at' => [...$presence, 'date', 'before_or_equal:now'],
             'deductible_amount' => [...$presence, 'numeric', 'decimal:0,2', 'min:0', 'max:999999999999.99'],
+            // M10: sin enviarla, el alta copia la de la aseguradora.
+            'deductible_billing_mode' => [...$presence, Rule::prohibitedIf(fn () => !config('insurer.deductible_net_mode')), Rule::enum(DeductibleBillingMode::class)],
+            'deductible_includes_tax' => [...$presence, 'boolean'],
             'coverage_notes' => [...$presence, ...$text],
         ];
     }
@@ -89,6 +93,9 @@ class StoreClaimRequest extends FormRequest
             'deductible_amount.decimal' => 'El deducible admite como máximo 2 decimales.',
             'deductible_amount.min' => 'El deducible no puede ser negativo.',
             'deductible_amount.max' => 'El deducible supera el máximo permitido.',
+            'deductible_billing_mode.prohibited' => 'La modalidad neta del deducible no está habilitada en este sistema.',
+            'deductible_billing_mode.' . Enum::class => 'La modalidad del deducible debe ser net_of_deductible.',
+            'deductible_includes_tax.boolean' => 'Indique si el deducible incluye el IVA (true o false).',
             'reception_id.prohibited' => 'La recepción de un siniestro no se cambia.',
             'insurer_id.prohibited' => 'La aseguradora de un siniestro no se cambia: cancele el siniestro y registre otro.',
         ];

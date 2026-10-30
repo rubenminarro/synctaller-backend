@@ -1820,6 +1820,28 @@ en MySQL (también su `down`).
 | Avisos sin email | El control de `ClientNotificationService` (omitido al registrar, `CLIENT_WITHOUT_EMAIL` al reenviar) queda como defensa, sin cambios: solo se alcanza con un email vacío, y su test usa eso |
 | Pruebas | `ClientKindTest::test_the_database_requires_a_unique_email_and_the_document`, `ReceptionTest` (sin `approved_by`), `DatabaseSeederTest` y los helpers de tests que creaban clientes sin documento o sin email. Dos ajustes por el cambio: `ClaimTestCase` repetía `ana@example.com` entre los clientes de un mismo test (ahora solo el primero), y un test de recordatorios que esperaba avisos omitidos por falta de email reinicia el registro de emails antes de verificar |
 
+# 2.75 Deducible facturado: modalidad neta (M10, 2026-10-30)
+
+Entrega M10 de la especificación (§6.6, Ejemplo 7), con la modalidad candidata que salió de la respuesta a G1. Reglas
+vigentes en `CLAUDE.md` 6.31.
+
+| Tema | Decisión |
+|---|---|
+| Habilitación | Decisión del usuario del 2026-10-30: implementada y probada completa, detrás de `insurer.deductible_net_mode` (`INSURER_DEDUCTIBLE_NET_MODE`), **apagado por defecto**. La respuesta a G1 la dio un dueño de taller que lleva la contabilidad; la confirmación escrita de un contador (V21) es el requisito para encenderlo en producción |
+| IVA del deducible (V15) | Decisión del usuario: se indica en cada siniestro (`deductible_includes_tax`), sin valor por defecto, como la unidad de los importes de una autorización (M6) |
+| Deducible mayor que lo cubierto (V16) | Decisión del usuario: se rechaza la confirmación (`ALLOCATION_DEDUCTIBLE_EXCEEDS_COVERED`) hasta tener la respuesta |
+| Factura del deducible | Decisión del usuario: en la misma factura del dueño (sigue "una vigente por cliente y versión", M9) |
+| Modalidad | En el siniestro, copiada de la aseguradora al abrirse (§4.3). Apagado el interruptor, no se elige (422 de validación) y lo cargado no tiene efecto |
+| Porción del deducible | `owner_deductible` sobre los mismos conceptos, descontada de lo cubierto en orden de concepto (determinista); R1/R2 sin cambios. La propuesta la arma y el editor la muestra como una columna más |
+| R11 | Nombre nuevo (R10 ya era "la OT con reparto no se factura entera"): las porciones del deducible suman la base del deducible asignado a la OT (0 sin la modalidad). Se revalida al generar y al emitir las facturas: si el deducible, su IVA o la modalidad cambian después de confirmar, se genera otra versión |
+| R5 | No cuenta el deducible: lo cubren el control del deducible aceptado, R7 y R11 |
+| Cambios en el siniestro | Modalidad e IVA del deducible, bloqueados con una factura vigente a la aseguradora (`CLAIM_DEDUCTIBLE_LOCKED`), igual que el importe |
+| Datos de ejemplo | Sin escenario: el interruptor viene apagado y `DatabaseSeederTest` no cambia |
+| Migración | `000071` (columnas nulas), probada en MySQL con su `down` |
+| Pruebas | `tests/Feature/Claims/DeductibleNetModeTest` (5): Ejemplo 7 (propuesta, reglas, facturas de 1.760.000 y 1.287.000 con la línea del deducible, bloqueo del siniestro y entrega), interruptor apagado (validación, regla A en factura y entrega), IVA sin indicar y sin IVA, R11 al confirmar y al facturar, deducible mayor que lo cubierto y modalidad copiada de la aseguradora. Los tests de M8 y M9 no cambiaron |
+| Pendiente | V16 (respuesta), V20 (documento de la modalidad), V21 (encender) y el frontend (modalidad e IVA en el siniestro y la aseguradora, columna del deducible y reglas nuevas en el editor del reparto) |
+
+
 ---
 
 ---
