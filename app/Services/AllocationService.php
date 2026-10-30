@@ -36,7 +36,8 @@ class AllocationService
     public function __construct(
         protected WorkOrderSaleBreakdown $saleBreakdown,
         protected OwnerShareService $ownerShare,
-        protected InternalExceptionService $internalExceptions
+        protected InternalExceptionService $internalExceptions,
+        protected AllocationBillingService $allocationBilling
     ) {
     }
 
@@ -141,6 +142,19 @@ class AllocationService
                 ->where('status', AllocationStatus::CONFIRMED)
                 ->lockForUpdate()
                 ->first();
+
+            // P6 con P10 (M9): la versión anterior no puede tener facturado neto; antes se eliminan sus borradores y se
+            // acreditan (o anulan, sin pagos) sus facturas emitidas.
+            $pending = $previous ? $this->allocationBilling->pendingInvoices($previous) : [];
+
+            if ($pending !== []) {
+                throw new AllocationException(
+                    'La versión confirmada del reparto tiene facturas vigentes: elimine los borradores y acredite o anule las emitidas antes de confirmar la nueva.',
+                    409,
+                    'ALLOCATION_HAS_INVOICES',
+                    ['invoices' => $pending]
+                );
+            }
 
             $allocation->update([
                 'status' => AllocationStatus::CONFIRMED,

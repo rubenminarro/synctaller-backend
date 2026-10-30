@@ -3,8 +3,6 @@
 namespace Tests\Feature\Claims;
 
 use App\Exceptions\AllocationException;
-use App\Models\Budget;
-use App\Models\Claim;
 use App\Models\InternalException;
 use App\Models\Reception;
 use App\Models\User;
@@ -19,75 +17,6 @@ use App\Services\BudgetService;
  */
 class WorkOrderAllocationTest extends ClaimTestCase
 {
-    /**
-     * Ejemplo 1 (sin IVA): chapería 1.000.000 (autorizada 800.000), paragolpes de catálogo 2 × 500.000 (autorizado),
-     * pintura 600.000 (no cubierta), las tres a cargo de la aseguradora; alineación 150.000 del dueño; un extra aprobado
-     * de 4 × 5.000. El dueño aprueba con la autorización ya registrada (950.000). Venta: 2.770.000.
-     *
-     * @return array{0: array, 1: Budget, 2: Claim}
-     */
-    private function completedClaimWorkOrder(int $bumpers = 2, bool $authorize = true, int|null $deductible = 0, ?Reception $reception = null): array
-    {
-        $reception ??= $this->openReception();
-        $claim = Claim::where('reception_id', $reception->id)->where('status', 'open')->first()
-            ?? Claim::findOrFail($this->postJson('/api/claims', $this->claimBody($reception->id, $this->insurer(), ['deductible_amount' => $deductible]))->assertCreated()->json('data.id'));
-
-        // El concepto de un repuesto lleva el nombre del repuesto (como la línea de la factura).
-        $part = $this->createPartViaApi(null, ['name' => 'Paragolpes']);
-        $this->entry($part['id'], 10, 300000, ['type' => 'initial'])->assertCreated();
-        $clip = $this->createPartViaApi(null, ['name' => 'Clips de moldura']);
-        $this->entry($clip['id'], 10, 1000, ['type' => 'initial'])->assertCreated();
-
-        $budgetId = app(BudgetService::class)->create(['reception_id' => $reception->id], User::firstOrFail()->id)->id;
-        foreach ([
-            ['type' => 'labor', 'description' => 'Chapería de puerta', 'quantity' => 1, 'unit_price' => 1000000, 'responsibility' => 'insurer'],
-            ['type' => 'part', 'part_id' => $part['id'], 'description' => 'Paragolpes', 'quantity' => 2, 'unit_price' => 500000, 'responsibility' => 'insurer'],
-            ['type' => 'labor', 'description' => 'Pintura', 'quantity' => 1, 'unit_price' => 600000, 'responsibility' => 'insurer'],
-            ['type' => 'labor', 'description' => 'Alineación', 'quantity' => 1, 'unit_price' => 150000],
-        ] as $line) {
-            $this->postJson("/api/budgets/{$budgetId}/items", $line)->assertCreated();
-        }
-        $this->postJson("/api/budgets/{$budgetId}/send")->assertOk();
-        $budget = Budget::with('items')->findOrFail($budgetId);
-
-        if ($authorize) {
-            $decisions = ['Chapería de puerta' => ['decision' => 'partial', 'authorized_total' => 800000], 'Paragolpes' => ['decision' => 'authorized'], 'Pintura' => ['decision' => 'not_covered']];
-            $this->postJson("/api/budgets/{$budgetId}/insurer-authorizations", [
-                'amounts_include_tax' => false,
-                'decided_at' => now()->toDateString(),
-                'channel' => 'email',
-                'items' => $budget->items->where('responsibility.value', 'insurer')->values()
-                    ->map(fn ($item) => ['budget_item_id' => $item->id, ...$decisions[$item->description]])->all(),
-            ])->assertCreated();
-        }
-
-        $this->postJson("/api/budgets/{$budgetId}/approve", ['channel' => 'whatsapp'])->assertOk();
-
-        if (!$authorize) {
-            $this->actingAsRole('jefe-taller');
-            $exception = $this->postJson('/api/internal-exceptions', ['type' => 'start_without_authorization', 'subject_id' => $budgetId, 'reason' => 'El perito confirma por teléfono.'])->assertCreated()->json('data.id');
-            $workOrder = $this->postJson('/api/work-orders', ['budget_id' => $budgetId, 'mechanic_id' => $this->createMechanic()->id, 'internal_exception_id' => $exception])->assertCreated()->json('data');
-            $this->actingAsAdmin();
-        } else {
-            $workOrder = $this->createWorkOrder($budgetId);
-        }
-
-        $this->startWorkOrder($workOrder);
-        $extra = $this->addApprovedExtra($workOrder, ['part_id' => $clip['id'], 'quantity' => 4, 'unit_price' => 5000]);
-        $budgeted = collect($workOrder['parts'])->firstWhere('is_budgeted', true);
-        $this->postJson($this->partsUrl($workOrder, $budgeted['id'], 'consume'), ['quantity_used' => $bumpers])->assertOk();
-        $this->postJson($this->partsUrl($workOrder, $extra['id'], 'consume'), ['quantity_used' => 4])->assertOk();
-        $this->completeAllItems($workOrder);
-        $this->postJson("/api/work-orders/{$workOrder['id']}/complete")->assertOk();
-
-        return [$workOrder, $budget, $claim->refresh()];
-    }
-
-    private function url(array $workOrder, ?int $allocationId = null, string $action = ''): string
-    {
-        return "/api/work-orders/{$workOrder['id']}/allocations" . ($allocationId ? "/{$allocationId}" : '') . ($action ? "/{$action}" : '');
-    }
-
     /** Porciones del borrador como las acepta el PATCH, reemplazando las indicadas por descripción y tipo. */
     private function linesBody(array $allocation, array $replace = []): array
     {

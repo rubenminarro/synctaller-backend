@@ -15,6 +15,7 @@ class InvoiceItemResource extends JsonResource
                 'type' => $this->source_type,
                 'id' => $this->source_id,
             ],
+            'allocation_line_id' => $this->allocation_line_id,
             'description' => $this->description,
             'quantity' => $this->quantity,
             'tax_rate' => [

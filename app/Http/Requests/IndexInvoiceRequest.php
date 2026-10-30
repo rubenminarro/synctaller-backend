@@ -19,6 +19,7 @@ class IndexInvoiceRequest extends FormRequest
         return [
             'status' => ['nullable', Rule::enum(InvoiceStatus::class)],
             'client_id' => ['nullable', 'integer'],
+            'work_order_id' => ['nullable', 'integer'],
             'search' => ['nullable', 'string', 'max:100'],
             'date_from' => ['nullable', 'date_format:Y-m-d'],
             'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
@@ -34,6 +35,9 @@ class IndexInvoiceRequest extends FormRequest
             ],
             'client_id' => [
                 'integer' => 'El ID del cliente debe ser un número entero.',
+            ],
+            'work_order_id' => [
+                'integer' => 'El ID de la orden de trabajo debe ser un número entero.',
             ],
             'date_from' => [
                 'date_format' => 'La fecha desde debe tener el formato AAAA-MM-DD.',

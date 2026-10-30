@@ -3,7 +3,9 @@
 namespace App\Http\Resources;
 
 use App\Services\WorkOrderClosingService;
+use App\Models\Invoice;
 use App\Services\AllocationService;
+use Illuminate\Support\Collection;
 use App\Services\OwnerShareService;
 use App\Services\WorkOrderCommissionService;
 use Illuminate\Http\Request;
@@ -79,6 +81,15 @@ class ShowWorkOrderResource extends JsonResource
                     'total' => $this->currentInvoice->total,
                 ] : null
             ),
+            // Facturas vigentes (M9, F): una por responsable en una OT con reparto. `invoice` queda como clave heredada.
+            'invoices' => $this->when(
+                $this->relationLoaded('currentInvoice') && (bool) $request->user()?->can('invoices.show'),
+                fn () => self::invoices($this->resource->currentInvoices()->get())
+            ),
+            'invoices_count' => $this->when(
+                $this->relationLoaded('currentInvoice') && (bool) $request->user()?->can('invoices.show'),
+                fn () => $this->resource->currentInvoices()->count()
+            ),
             // Costos y margen: solo con permiso (no visibles para el mecánico).
             'economic_summary' => $this->when(
                 $this->relationLoaded('items') &&
@@ -110,5 +121,27 @@ class ShowWorkOrderResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    /**
+     * Resumen de facturas vigentes con su destinatario (también lo usa el historial del vehículo).
+     */
+    public static function invoices(Collection $invoices): array
+    {
+        return $invoices->map(fn (Invoice $invoice) => [
+            'id' => $invoice->id,
+            'number' => $invoice->number,
+            'status' => [
+                'value' => $invoice->status->value,
+                'label' => $invoice->status->label(),
+            ],
+            'client_id' => $invoice->client_id,
+            'customer_name' => $invoice->customer_name,
+            'condition' => $invoice->condition?->value,
+            'allocation_id' => $invoice->allocation_id,
+            'total' => $invoice->total,
+            'balance' => $invoice->balance(),
+            'payment_status' => $invoice->paymentStatus()?->value,
+        ])->values()->all();
     }
 }

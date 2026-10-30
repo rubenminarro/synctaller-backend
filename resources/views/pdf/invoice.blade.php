@@ -23,6 +23,10 @@
                 @if ($invoice->due_date)<div><span class="strong">Vencimiento:</span> {{ $invoice->due_date->format('d/m/Y') }}</div>@endif
                 @if ($invoice->workOrder)<div><span class="strong">OT:</span> {{ $invoice->workOrder->code }}</div>@endif
                 @if ($vehicle)<div><span class="strong">Vehículo:</span> {{ $vehicle['name'] }} {{ $vehicle['plate'] ?? $vehicle['chassis'] }}</div>@endif
+                @if ($claim)
+                    <div><span class="strong">Siniestro:</span> {{ $claim->claim_number ?? $claim->code }}</div>
+                    @if ($claim->policy_number)<div><span class="strong">Póliza:</span> {{ $claim->policy_number }}</div>@endif
+                @endif
             </td>
         </tr>
     </table>

@@ -28,6 +28,7 @@ class Invoice extends Model
 
     protected $fillable = [
         'work_order_id',
+        'allocation_id',
         'client_id',
         'status',
         'invoice_stamp_id',
@@ -117,6 +118,14 @@ class Invoice extends Model
     public function workOrder(): BelongsTo
     {
         return $this->belongsTo(WorkOrder::class)->withTrashed();
+    }
+
+    /**
+     * Versión del reparto que factura (M9); nula en el flujo particular.
+     */
+    public function allocation(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrderAllocation::class, 'allocation_id');
     }
 
     public function client(): BelongsTo

@@ -103,6 +103,17 @@ class WorkOrder extends Model
     /**
      * Factura vigente (borrador o emitida); las anuladas no cuentan.
      */
+    /**
+     * Facturas vigentes (borrador o emitida): una por responsable en una OT con reparto (M9, decisión F).
+     */
+    public function currentInvoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class)->whereIn('status', InvoiceStatus::currentStatuses())->orderBy('id');
+    }
+
+    /**
+     * La última factura vigente (clave heredada `invoice`, F).
+     */
     public function currentInvoice(): HasOne
     {
         return $this->hasOne(Invoice::class)->ofMany(

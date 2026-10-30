@@ -325,6 +325,9 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
 
     Route::post('work-orders/{workOrder}/allocations/{allocation}/confirm', [WorkOrderAllocationController::class, 'confirm'])->name('work-orders.allocations.confirm');
 
+    // Factura de un responsable desde el reparto confirmado (M9).
+    Route::post('work-orders/{workOrder}/allocations/{allocation}/invoices', [WorkOrderAllocationController::class, 'invoice'])->name('work-orders.allocations.invoices.store');
+
     Route::post('work-orders/{workOrder}/parts/{part}/reserve', [WorkOrderPartController::class, 'reserve'])->name('work-orders.parts.reserve');
 
     Route::post('work-orders/{workOrder}/parts/{part}/consume', [WorkOrderPartController::class, 'consume'])->name('work-orders.parts.consume');
