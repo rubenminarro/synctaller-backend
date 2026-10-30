@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
+use App\Enums\CreditNoteStatus;
 use App\Enums\InvoiceCondition;
 use App\Enums\InvoicePaymentStatus;
 use App\Enums\InvoiceStatus;
@@ -155,13 +156,42 @@ class Invoice extends Model
         return $payments->reduce(fn (string $sum, Payment $p) => bcadd($sum, $p->amount, 2), '0.00');
     }
 
-    public function balance(): string
+    /**
+     * Notas de crédito registradas sobre la factura (P10), también las anuladas.
+     */
+    public function creditNotes(): HasMany
     {
-        return bcsub((string) $this->total, $this->paidTotal(), 2);
+        return $this->hasMany(InvoiceCreditNote::class)->orderBy('id');
     }
 
     /**
-     * Estado de cobro: solo aplica a facturas emitidas.
+     * Total acreditado (notas de crédito vigentes). Usa credited_total si vino de
+     * withSum o la relación si está cargada.
+     */
+    public function creditedTotal(): string
+    {
+        if (array_key_exists('credited_total', $this->attributes)) {
+            return bcadd((string) ($this->attributes['credited_total'] ?? '0'), '0', 2);
+        }
+
+        $creditNotes = $this->relationLoaded('creditNotes')
+            ? $this->creditNotes->where('status', CreditNoteStatus::REGISTERED)
+            : $this->creditNotes()->registered()->get();
+
+        return $creditNotes->reduce(fn (string $sum, InvoiceCreditNote $note) => bcadd($sum, $note->total, 2), '0.00');
+    }
+
+    /**
+     * Saldo: total menos lo cobrado y lo acreditado (P10).
+     */
+    public function balance(): string
+    {
+        return bcsub(bcsub((string) $this->total, $this->paidTotal(), 2), $this->creditedTotal(), 2);
+    }
+
+    /**
+     * Estado de cobro: solo aplica a facturas emitidas. Saldada solo con notas de
+     * crédito, sin pagos: acreditada (P10).
      */
     public function paymentStatus(): ?InvoicePaymentStatus
     {
@@ -170,6 +200,7 @@ class Invoice extends Model
         }
 
         return match (true) {
+            bccomp($this->balance(), '0', 2) <= 0 && bccomp($this->paidTotal(), '0', 2) === 0 && bccomp($this->creditedTotal(), '0', 2) > 0 => InvoicePaymentStatus::CREDITED,
             bccomp($this->balance(), '0', 2) <= 0 => InvoicePaymentStatus::PAID,
             bccomp($this->paidTotal(), '0', 2) > 0 => InvoicePaymentStatus::PARTIAL,
             default => InvoicePaymentStatus::UNPAID,

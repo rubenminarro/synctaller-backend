@@ -54,7 +54,7 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 | Pagos a proveedores | Pagos parciales contra compras recibidas (contado o crédito), comprobante `PAG-000001`, anulación con motivo, resumen de egresos y cuentas por pagar por proveedor (vencido / por vencer) |
 | Servicios y mano de obra | Catálogo de servicios, reparto entre mecánicos, horas reales, comisiones |
 | Cierre económico | Al completar la OT se congelan venta, costos, margen y comisiones; liquidación de comisiones |
-| Facturación | Timbrado, numeración `001-001-0000001`, IVA 10% / 5% / exento, contado o crédito |
+| Facturación | Timbrado, numeración `001-001-0000001`, IVA 10% / 5% / exento, contado o crédito; registro de las notas de crédito emitidas fuera del sistema (por línea, hasta el saldo) |
 | Pagos | Pagos parciales, medios de pago, vuelto en efectivo, recibos para crédito, saldo y resumen de caja |
 | Entrega del vehículo | Comprobante `ENT-000001`, kilometraje final, quién retira, conformidad y firma; exige factura emitida y pagada si es al contado |
 | Historial del vehículo | Resumen, visitas (diagnóstico, OT, repuestos, factura, entrega), repuestos usados y lecturas de kilometraje |
@@ -63,15 +63,15 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 | Auditoría | Quién cambió qué y cuándo (antes/después, IP) en precios, costos, facturación, pagos, compras, usuarios, roles, permisos y datos maestros; login, login fallido y logout. Inmutable, solo para el administrador |
 | Exportación y comprobantes | Reportes en CSV (Excel) y PDF; PDF de presupuesto, factura (representación sin valor fiscal), recibo y comprobante de entrega |
 | Notificaciones | Emails al cliente (presupuesto enviado, vehículo listo, factura por vencer / vencida, mantenimiento próximo / vencido) con registro, reenvío y baja por cliente; bandeja interna por usuario (presupuesto aprobado/rechazado, OT completada, repuesto sin stock, cuentas por pagar vencidas) |
-| Aseguradoras y siniestros (en curso) | Aseguradoras vinculadas a un cliente empresa, con contactos; siniestros por recepción (asegurado, perito, deducible) con documentos privados descargables solo por la API; autorizaciones de la aseguradora por línea y versionadas; excepciones internas; reparto económico de la OT por responsable (aseguradora, dueño, taller) con versiones. Faltan las notas de crédito registradas y la facturación por responsable (`CLAUDE.md` 6.22–6.27) |
+| Aseguradoras y siniestros (en curso) | Aseguradoras vinculadas a un cliente empresa, con contactos; siniestros por recepción (asegurado, perito, deducible) con documentos privados descargables solo por la API; autorizaciones de la aseguradora por línea y versionadas; excepciones internas; reparto económico de la OT por responsable (aseguradora, dueño, taller) con versiones. Falta la facturación por responsable (`CLAUDE.md` 6.22–6.28) |
 | Preferencias y logo | Preferencias visuales de cada usuario para el frontend (tema, colores, tipografía, distribución y navegación); logo del sistema (solo administrador; con un PNG transparente se recorta y se genera una versión negra) en los PDF y los emails a clientes |
 
 ### Estado real (verificado el 2026-10-29)
 
 | Estado | Qué |
 |---|---|
-| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema, catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 274 rutas API y 449 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
-| En curso | Aseguradoras y siniestros: M1–M8 de `docs/especificacion-aseguradoras.html` implementadas; siguen las notas de crédito registradas (P10) y la facturación por responsable (M9–M12) |
+| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema, catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 278 rutas API y 455 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
+| En curso | Aseguradoras y siniestros: M1–M8 y P10 de `docs/especificacion-aseguradoras.html` implementadas; sigue la facturación por responsable (M9–M12) |
 | Pendiente, sin diseño | Notificaciones por WhatsApp |
 
 ---
@@ -217,7 +217,7 @@ estado final por los Services, con fechas en los últimos tres meses.
 
 | Escenarios | Estado final |
 |---|---|
-| H01–H13 | OT completada, facturada y entregada: contado y crédito, pagadas, parciales, vencidas (H06, H07), una factura anulada y vuelta a emitir (H04), un cobro anulado (H05), una entrega anulada y vuelta a registrar (H03) |
+| H01–H13 | OT completada, facturada y entregada: contado y crédito, pagadas, parciales, vencidas (H06, H07), una factura anulada y vuelta a emitir (H04), notas de crédito (H13 acreditada entera; H07 con una parcial y otra anulada), un cobro anulado (H05), una entrega anulada y vuelta a registrar (H03) |
 | H14–H17 | OT completada sin entregar: pagada (H14), al contado sin cobrar (H15), factura en borrador (H16), sin facturar (H17) |
 | C01–C03 | Recepción pendiente: sin diagnóstico, con diagnóstico pendiente, con diagnóstico en curso |
 | C04, C06–C08, C15–C16 | Presupuesto en borrador, rechazado, rechazado y reabierto, cancelado; enviado a clientes que no reciben avisos (omitidos) |
@@ -318,7 +318,7 @@ vendor/bin/phpunit
 composer test
 ```
 
-449 tests en `tests/Feature`, uno o más archivos por módulo. No necesitan internet: `phpunit.xml` desactiva la
+455 tests en `tests/Feature`, uno o más archivos por módulo. No necesitan internet: `phpunit.xml` desactiva la
 consulta DNS de los emails (`EMAIL_DNS_CHECK=false`).
 
 Usan una base SQLite en archivo, `database/testing.sqlite` (la crea `tests/bootstrap.php`; está en `.gitignore`):
@@ -357,9 +357,9 @@ API Resource (Resource para listados, ShowResource para detalle)
 
 | Carpeta | Contenido |
 |---|---|
-| `app/Http/Controllers/Api` | Endpoints (57 controllers) |
+| `app/Http/Controllers/Api` | Endpoints (58 controllers) |
 | `app/Http/Requests` | Validación |
-| `app/Services` | Lógica de negocio (43 services) |
+| `app/Services` | Lógica de negocio (44 services) |
 | `app/Models` | Modelos Eloquent |
 | `app/Http/Resources` | Contrato JSON público |
 | `app/Enums` | Estados y tipos |

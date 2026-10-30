@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\ClaimDocumentController;
 use App\Http\Controllers\Api\InsurerAuthorizationController;
 use App\Http\Controllers\Api\InternalExceptionController;
 use App\Http\Controllers\Api\WorkOrderAllocationController;
+use App\Http\Controllers\Api\InvoiceCreditNoteController;
 use App\Http\Controllers\Api\BudgetClientAcceptanceController;
 use App\Http\Controllers\Api\BudgetController;
 use App\Http\Controllers\Api\BudgetItemController;
@@ -223,6 +224,15 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
     Route::post('invoices/{invoice}/issue', [InvoiceController::class, 'issue'])->name('invoices.issue');
 
     Route::post('invoices/{invoice}/cancel', [InvoiceController::class, 'cancel'])->name('invoices.cancel');
+
+    // Notas de crédito emitidas fuera del sistema (P10): se registran y se anulan, no se editan.
+    Route::get('invoices/{invoice}/credit-notes', [InvoiceCreditNoteController::class, 'index'])->name('invoices.credit-notes.index');
+
+    Route::post('invoices/{invoice}/credit-notes', [InvoiceCreditNoteController::class, 'store'])->name('invoices.credit-notes.store');
+
+    Route::get('invoices/{invoice}/credit-notes/{creditNote}', [InvoiceCreditNoteController::class, 'show'])->name('invoices.credit-notes.show');
+
+    Route::post('invoices/{invoice}/credit-notes/{creditNote}/cancel', [InvoiceCreditNoteController::class, 'cancel'])->name('invoices.credit-notes.cancel');
 
     Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('invoices.payments.store');
 

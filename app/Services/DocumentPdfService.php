@@ -88,6 +88,8 @@ class DocumentPdfService
                 'taxed_10' => $item->tax_rate === TaxRate::TEN ? Format::integer($item->total) : '',
             ]),
             'ivaTotal' => bcadd((string) $invoice->iva_5, (string) $invoice->iva_10, 2),
+            // Notas de crédito emitidas fuera del sistema y registradas (P10), con el saldo.
+            'creditNotes' => $invoice->creditNotes()->registered()->get(),
         ]);
     }
 

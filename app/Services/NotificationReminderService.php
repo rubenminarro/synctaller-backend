@@ -53,6 +53,7 @@ class NotificationReminderService
             ->whereDate('due_date', '<=', $limit->toDateString())
             ->whereIn('client_id', Client::select('id'))
             ->withSum(['payments as paid_total' => fn ($q) => $q->registered()], 'amount')
+            ->withSum(['creditNotes as credited_total' => fn ($q) => $q->registered()], 'total')
             ->with('client')
             ->orderBy('id')
             ->get()
