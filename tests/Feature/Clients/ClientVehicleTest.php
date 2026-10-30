@@ -29,6 +29,7 @@ class ClientVehicleTest extends PartsTestCase
             'first_name' => 'Ana',
             'last_name' => 'Gomez',
             'phone' => '+595981' . random_int(100000, 999999),
+            'email' => Str::lower(Str::random(10)) . '@example.com',
         ]);
     }
 

@@ -27,7 +27,13 @@ abstract class WorkOrderPartsTestCase extends InventoryTestCase
 
         $brand = Brand::create(['name' => 'Marca ' . Str::random(6)]);
         $model = VehicleModel::create(['brand_id' => $brand->id, 'name' => 'Modelo ' . Str::random(6)]);
-        $client = Client::create(['first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '0981' . random_int(100000, 999999)]);
+        $client = Client::create([
+            'document_number' => 'QA-' . random_int(100000, 999999),
+            'first_name' => 'Ana',
+            'last_name' => 'Gomez',
+            'phone' => '0981' . random_int(100000, 999999),
+            'email' => 'qa-' . random_int(100000, 999999) . '@example.com',
+        ]);
         $vehicle = Vehicle::create([
             'client_id' => $client->id,
             'brand_id' => $brand->id,

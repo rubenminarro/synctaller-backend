@@ -207,7 +207,7 @@ Qué puede hacer cada rol está en la sección 5 de [`CLAUDE.md`](CLAUDE.md).
 | deposito | `deposito1`, `deposito2` |
 | mechanic | `jperez` (MEC-001), `cgomez` (MEC-002), `mecanico3`–`mecanico4` (activos), `mecanico5` (inactivo), `mecanico6` (de licencia) |
 
-**Catálogos:** 33 clientes (uno sin email, `30111222`, uno dado de baja de los avisos, `30222333`, una empresa,
+**Catálogos:** 33 clientes (uno dado de baja de los avisos, `30222333`, una empresa,
 `80045678-1`, y los clientes empresa de las dos aseguradoras), 45 vehículos (uno
 sin placa), 18 servicios (uno inactivo), 32 ítems de diagnóstico en el catálogo (uno inactivo; todos los ítems de los escenarios salen de él), 5 proveedores (uno inactivo), 18 repuestos (uno inactivo, uno descontinuado,
 dos bajo el mínimo y el kit de embrague sin stock).

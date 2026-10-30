@@ -77,7 +77,7 @@ class InsurerTest extends PartsTestCase
         $this->postJson('/api/insurers', ['client' => $this->newClientData(['business_name' => null, 'first_name' => 'Ana'])])
             ->assertStatus(422)->assertJsonValidationErrors(['client.business_name', 'client.first_name']);
 
-        $person = Client::create(['first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '0981123456']);
+        $person = Client::create(['document_number' => 'QA-8001', 'first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '0981123456', 'email' => 'qa-8001@example.com']);
         $this->postJson('/api/insurers', ['client_id' => $person->id])
             ->assertStatus(422)->assertJsonPath('error_code', 'INSURER_CLIENT_NOT_COMPANY');
 

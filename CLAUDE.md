@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M9, P10 y M11, 6.22–6.30). 282 rutas API, 466 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M9, P10 y M11, 6.22–6.30). 282 rutas API, 467 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -225,7 +225,9 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   (`CLIENT_LINKED_TO_INSURER`; primero se da de baja la aseguradora). Un servicio usado en presupuestos no cambia de
   nombre (`SERVICE_NAME_NOT_EDITABLE`, 422); precio, horas, descripción y categoría sí.
 * Cliente: `document_number` único (letras, números, guiones), `email` único `email:rfc,dns` (el DNS se omite
-  con `EMAIL_DNS_CHECK=false`, ver `config/validation.php`), teléfono `+?[1-9]\d{7,14}`.
+  con `EMAIL_DNS_CHECK=false`, ver `config/validation.php`), teléfono `+?[1-9]\d{7,14}`. Documento y email son
+  obligatorios también en la base (`NOT NULL`) y el email tiene índice único (D7 y D8, migración `000070`, decisión del
+  2026-10-30).
 * **Persona o empresa** (`clients.kind`, `ClientKind`: `person|company`; M1, decisión del 2026-10-29). Sin `kind`, el
   alta es la de siempre (persona). Una empresa lleva `business_name` (mismos caracteres que el nombre de la factura) y
   no lleva `first_name`/`last_name` (`prohibited`); una persona, al revés. `address` es opcional para los dos. El tipo
@@ -276,6 +278,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   se modifica: datos y fotos de la recepción, diagnósticos (con sus ítems y fotos) ni presupuestos (salvo cancelarlos):
   `RECEPTION_CLOSED` (`ReceptionStatusService::ensureEditable()`; decisión del 2026-10-22).
 * Fotos en el disco `public` (`receptions/`), con scoped binding a la recepción.
+* `approved_by` se eliminó (D3, 2026-10-30): nunca se asignaba; el detalle ya no la trae ni la búsqueda la usa.
 * Contrato: fechas `Y-m-d` y `mileage` entero (sin formatear); el detalle trae `check_list` (`id`, `status`) para
   `reception-check-lists/{id}`, y el vehículo con `chassis`, `brand`, `model` y `color` (`value`/`label`).
   `fuel_level` es opcional pero no vacío (`NOT NULL DEFAULT empty`): `null` → 422 en alta y edición.
@@ -544,7 +547,8 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
 
   Días y hora de la tarea diaria en `config/notifications.php`.
 * **Registro y envío:** el aviso se registra dentro de la transacción del evento y se envía por cola con `afterCommit`.
-  * Sin email o con `clients.notifications_enabled = false` queda `skipped` con el motivo.
+  * Con `clients.notifications_enabled = false` queda `skipped` con el motivo. El control de "sin email" sigue como
+    defensa (email vacío), pero desde D8 la base no admite un cliente sin email.
   * El recordatorio de una factura cuyo RUC/CI (`customer_tax_id`) no es el documento del cliente queda `skipped`
     ("La factura está a nombre de otro destinatario."): no se avisa al dueño de una factura a nombre de otro. Se compara
     sin espacios, en mayúsculas y sin el dígito verificador (CI y RUC de la misma persona coinciden); sin documento del
@@ -556,7 +560,7 @@ Fuente: Services y tests. El detalle de diseño y su historia por fase está en 
   * en cola → `CLIENT_NOTIFICATION_PENDING` (409);
   * documento o cliente eliminado → `CLIENT_NOTIFICATION_SUBJECT_UNAVAILABLE`;
   * baja → `CLIENT_NOTIFICATIONS_DISABLED`;
-  * sin email → `CLIENT_WITHOUT_EMAIL` (estos tres, 422).
+  * sin email → `CLIENT_WITHOUT_EMAIL` (estos tres, 422; el último, defensivo desde D8).
 * **Avisos internos** (tabla `notifications`, `WorkshopNotification`, tipo `InternalNotificationType`), destinatarios por
   rol en `config/notifications.php`:
   * presupuesto aprobado/rechazado → recepcionista y jefe-taller;
@@ -989,6 +993,7 @@ Abiertas (reverificado el 2026-10-29):
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes
   del primer taller comercial; mientras tanto, nada nuevo en el disco `public` salvo branding.
 * **#16:** sin antivirus para los archivos subidos (riesgo técnico).
-* **Discrepancias D1–D10** (14.1): D3, D7 y D8 esperan decisión (D9 se resolvió con M1; D4 y D6, solo documentación, el 2026-10-29).
+* **Discrepancias D1–D10** (14.1): todas resueltas o sin acción. D3, D7 y D8 se resolvieron el 2026-10-30 (handoff 2.74);
+  D9 con M1; D4 y D6, solo documentación, el 2026-10-29.
 
 La #11 (repuestos extra sin aprobación del cliente) se resolvió el 2026-10-23; ver 6.7.

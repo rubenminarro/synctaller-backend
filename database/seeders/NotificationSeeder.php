@@ -15,9 +15,9 @@ use Illuminate\Support\Facades\DB;
  * (presupuesto enviado, vehículo listo, avisos internos); acá se completan sus
  * estados:
  *
- * - A clientes: enviados, uno fallido y reenviado, omitidos (cliente sin email o
- *   dado de baja: escenarios C15 y C16) y pendientes (los más recientes y los
- *   que genera la tarea diaria de recordatorios).
+ * - A clientes: enviados, uno fallido y reenviado, omitido (cliente dado de baja:
+ *   escenario C16) y pendientes (los más recientes y los que genera la tarea
+ *   diaria de recordatorios).
  * - Internos: leídos los de más de tres días; los recientes, sin leer.
  *
  * Nunca sale un email: los envíos usan el mailer "array" (en memoria) y el

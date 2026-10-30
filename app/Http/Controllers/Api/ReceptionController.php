@@ -40,7 +40,7 @@ class ReceptionController extends Controller implements HasMiddleware
         $search = $request->input('search');
 
         $query = Reception::query()
-            ->with(['client', 'vehicle.brand', 'vehicle.vehicleModel', 'createdBy', 'approvedBy']);
+            ->with(['client', 'vehicle.brand', 'vehicle.vehicleModel', 'createdBy']);
 
         $query->when($request->filled('plate'), function ($q) use ($request) {
             $q->whereHas('vehicle', function ($v) use ($request) {
@@ -88,9 +88,6 @@ class ReceptionController extends Controller implements HasMiddleware
                     })
                     ->orWhereHas('createdBy', function ($cb) use ($search) {
                         $cb->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('approvedBy', function ($ab) use ($search) {
-                        $ab->where('name', 'like', "%{$search}%");
                     });
             });
         });
@@ -150,7 +147,6 @@ class ReceptionController extends Controller implements HasMiddleware
                     'vehicle.brand',
                     'vehicle.vehicleModel',
                     'createdBy',
-                    'approvedBy',
                     'serviceCategories',
                     'checkList',
                 ])
@@ -169,7 +165,6 @@ class ReceptionController extends Controller implements HasMiddleware
                     'vehicle.brand',
                     'vehicle.vehicleModel',
                     'createdBy',
-                    'approvedBy',
                     'serviceCategories',
                     'checkList',
                 ])
@@ -241,7 +236,6 @@ class ReceptionController extends Controller implements HasMiddleware
                     'vehicle.brand',
                     'vehicle.vehicleModel',
                     'createdBy',
-                    'approvedBy',
                     'serviceCategories',
                     'checkList',
                 ])
@@ -266,7 +260,7 @@ class ReceptionController extends Controller implements HasMiddleware
         return $this->successResponse(
             'Recepción cancelada correctamente.',
             new ShowReceptionResource(
-                $reception->load(['client', 'vehicle.brand', 'vehicle.vehicleModel', 'createdBy', 'approvedBy', 'serviceCategories', 'checkList'])
+                $reception->load(['client', 'vehicle.brand', 'vehicle.vehicleModel', 'createdBy', 'serviceCategories', 'checkList'])
             )
         );
     }

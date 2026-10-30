@@ -3001,7 +3001,7 @@ Con un presupuesto en borrador con ítems de un cliente con email: `POST {{base_
 
 | Caso | Resultado esperado |
 |---|---|
-| Cliente sin email | Aviso `skipped`, `error` "El cliente no tiene email registrado." |
+| Cliente sin email (desde D8 la base no lo admite; solo con un email vacío) | Aviso `skipped`, `error` "El cliente no tiene email registrado." |
 | Cliente con `notifications_enabled = false` | Aviso `skipped`, `error` "El cliente desactivó los avisos." |
 | Rechazar, reabrir y volver a enviar | Un aviso nuevo por cada envío |
 | Falla el servidor de correo | El envío del presupuesto responde `200`; el aviso queda `failed` con el error |
@@ -3034,7 +3034,7 @@ cantidad de avisos registrados. Se puede ejecutar varias veces: no repite avisos
 | Tipo inválido | `GET {{base_url}}/client-notifications?type=x` | — | 422 | `VALIDATION_ERROR` |
 | Detalle | `GET {{base_url}}/client-notifications/{{client_notification_id}}` | — | 200 | `client` (con `notifications_enabled`), `subject.code`, `attempts`, `error`, `created_by` |
 | Reenviar | `POST {{base_url}}/client-notifications/{{client_notification_id}}/resend` | — | 201 | Aviso nuevo con `resent_from_id` y `created_by` |
-| Reenviar con el cliente sin email | ídem | — | 422 | `CLIENT_WITHOUT_EMAIL` |
+| Reenviar con el cliente sin email (defensivo desde D8) | ídem | — | 422 | `CLIENT_WITHOUT_EMAIL` |
 | Reenviar con la baja activada | ídem | — | 422 | `CLIENT_NOTIFICATIONS_DISABLED` |
 | Reenviar un aviso todavía en cola | ídem (aviso `pending`) | — | 409 | `CLIENT_NOTIFICATION_PENDING` |
 | Reenviar con el documento eliminado | ídem | — | 422 | `CLIENT_NOTIFICATION_SUBJECT_UNAVAILABLE` |

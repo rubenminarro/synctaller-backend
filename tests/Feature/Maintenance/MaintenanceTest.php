@@ -40,7 +40,7 @@ class MaintenanceTest extends WorkOrderPartsTestCase
             'interval_days' => 180,
         ])->assertCreated()->json('data');
 
-        $this->client = Client::create(['document_number' => 'QA-7001', 'first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '+595981000777']);
+        $this->client = Client::create(['document_number' => 'QA-7001', 'first_name' => 'Ana', 'last_name' => 'Gomez', 'phone' => '+595981000777', 'email' => 'qa-7001@example.com']);
         $brand = Brand::create(['name' => 'Toyota']);
         $model = VehicleModel::create(['brand_id' => $brand->id, 'name' => 'Hilux']);
         $this->vehicle = Vehicle::create(['client_id' => $this->client->id, 'brand_id' => $brand->id, 'vehicle_model_id' => $model->id, 'plate' => 'QAM123']);

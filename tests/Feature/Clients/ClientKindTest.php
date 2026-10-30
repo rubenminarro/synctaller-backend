@@ -7,6 +7,8 @@ use App\Models\Client;
 use App\Models\Reception;
 use App\Models\Vehicle;
 use App\Models\VehicleModel;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\Feature\Parts\PartsTestCase;
 
@@ -181,6 +183,30 @@ class ClientKindTest extends PartsTestCase
         $this->assertNotContains($company, $people->pluck('id'));
 
         $this->getJson('/api/clients?kind=nadie')->assertStatus(422)->assertJsonValidationErrors('kind');
+    }
+
+    public function test_the_database_requires_a_unique_email_and_the_document(): void
+    {
+        // D7 y D8: además de la validación, la base exige documento y email, y el email único.
+        $client = Client::findOrFail($this->postJson('/api/clients', $this->personPayload())->json('data.id'));
+        $row = collect($client->getAttributes())->only(['kind', 'first_name', 'last_name', 'phone'])->all();
+
+        foreach ([
+            ['document_number' => 'CI-UNICO-1', 'email' => $client->email],
+            ['document_number' => null, 'email' => 'otro@example.com'],
+            ['document_number' => 'CI-UNICO-2', 'email' => null],
+        ] as $attributes) {
+            try {
+                DB::table('clients')->insert($row + $attributes + ['created_at' => now(), 'updated_at' => now()]);
+                $this->fail('La base aceptó ' . json_encode($attributes));
+            } catch (QueryException) {
+                $this->assertDatabaseMissing('clients', ['document_number' => $attributes['document_number'] ?? 'x', 'email' => $attributes['email'] ?? 'x']);
+            }
+        }
+
+        // Dado de baja, el email queda libre (sufijo //deleted_).
+        $this->deleteJson("/api/clients/{$client->id}")->assertOk();
+        $this->postJson('/api/clients', $this->personPayload(['email' => $client->email]))->assertCreated();
     }
 
     public function test_the_greeting_keeps_the_first_name_of_a_person(): void
