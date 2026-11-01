@@ -368,7 +368,7 @@ API Resource (Resource para listados, ShowResource para detalle)
 |---|---|
 | `app/Http/Controllers/Api` | Endpoints (58 controllers) |
 | `app/Http/Requests` | Validación |
-| `app/Services` | Lógica de negocio (45 services) |
+| `app/Services` | Lógica de negocio (47 services) |
 | `app/Models` | Modelos Eloquent |
 | `app/Http/Resources` | Contrato JSON público |
 | `app/Enums` | Estados y tipos |

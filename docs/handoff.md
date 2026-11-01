@@ -12,7 +12,7 @@ Si este documento contradice al código, manda el código.
 | Dato | Valor |
 |---|---|
 | Actualizado | 2026-11-01 |
-| Backend | `main`, último commit de código `18e2bfa`; documentación hasta `9cae759` más esta reorganización |
+| Backend | `main`, último commit de código `18e2bfa`; después, solo documentación y Skills |
 | Frontend | `main` en `c49efec` |
 | Última entrega de código | Hora de Paraguay en toda la aplicación (deuda #17, handoff 2.79) |
 | Última entrega técnica | Revisión del spike T0 y decisiones TD1–TD11 (handoff 2.80) |

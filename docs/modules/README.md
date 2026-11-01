@@ -67,5 +67,5 @@ Lo que no se pudo comprobar en esta auditoría.
 | Instalación desde cero | Esta auditoría no repitió el procedimiento en un equipo limpio |
 | `composer setup` | No se ejecutó |
 | Modalidad neta del deducible con el interruptor encendido | Probada en tests y en una base temporal, nunca en producción |
-| Cada flujo del frontend | Solo hay 43 tests. Las revisiones en navegador cubrieron partes |
+| Cada flujo del frontend | Solo hay 43 tests del frontend. Las revisiones en navegador cubrieron partes |
 | Reinicio completo de MySQL con conexión persistente | Solo se probó cortar la conexión |

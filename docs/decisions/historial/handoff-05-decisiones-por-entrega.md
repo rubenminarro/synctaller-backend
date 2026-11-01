@@ -510,6 +510,21 @@ Plan: pasos 1 a 3 en T2 (base central, identificación, unificar T1), 4 y 5 en T
 (`tenants:migrate`, suspensión). Los tests permanentes van en `tests/Feature/Tenancy` y cada uno debe fallar al quitar su
 protección.
 
+# 2.81 Skills del proyecto (2026-11-01)
+
+Primeras Skills de Claude Code, versionadas en `.claude/skills/`. Las reglas siguen en `docs/README.md` y `CLAUDE.md`: las Skills
+indican qué leer, no las repiten.
+
+| Tema | Decisión |
+|---|---|
+| `retomar` | Solo lectura: informa por separado el último commit y el último checkpoint validado, y propone el siguiente paso. No corre los tests |
+| `cerrar-entrega` | Solo la invoca el usuario. Se detiene si la entrega no está validada, pide confirmación si no puede determinar qué documentar y no hace commit |
+| `validar-docs` | Solo lectura. Enlaces, documentos huérfanos, rutas citadas y cifras contra el código |
+| Cifras | Toda cifra se compara con el código, salvo una marca explícita en su misma cláusula. Las excluidas se cuentan y `--detalle` las lista. Motivo: un filtro para evitar falsos positivos había ocultado el error de `README.md`, 45 services en vez de 47 |
+| Validador en PHP | PHP es requisito del proyecto; Node es opcional en el backend. Pruebas: `.claude/skills/validar-docs/scripts/check-docs-test.php` |
+| Local | `.claude/settings.local.json` queda fuera de Git |
+| `medir-tenancy` | Sin crear: se decide al arrancar T2, con un caso real que medir |
+
 
 ---
 
