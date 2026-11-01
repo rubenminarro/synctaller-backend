@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.39 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M11 y P10, 6.22–6.31; M10 detrás de un interruptor apagado). 282 rutas API, 472 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M11 y P10, 6.22–6.31; M10 detrás de un interruptor apagado), más la configuración del taller en la base (T1, 6.32). 284 rutas API, 486 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -148,7 +148,7 @@ Controller (HasMiddleware) → Form Request → Service → Model/Eloquent → A
 |---|---|
 | `app/Http/Controllers/Api` | 58 controllers |
 | `app/Http/Requests` | Validación (mensajes en español) |
-| `app/Services` | Reglas de negocio (45 services, incluido `AuditLogger`) |
+| `app/Services` | Reglas de negocio (47 services, incluido `AuditLogger`) |
 | `app/Jobs`, `app/Mail`, `app/Notifications`, `app/Console/Commands` | Envío de avisos (FASE 23) |
 | `app/Models` | Modelos Eloquent (muchos con `SoftDeletes`) |
 | `app/Http/Resources` | Contrato JSON |
@@ -195,7 +195,7 @@ de los permisos, ordenados; el administrador recibe todos los del guard `api` po
 
 | Rol | Función | Accesos clave |
 |---|---|---|
-| `administrador` | Todo (`Gate::before`) | Exclusivo: usuarios/roles/permisos, auditoría (`audit-logs.*`), logo del sistema (`system-settings.update`), costos y margen (`work-orders.view-economics`), liquidar comisiones, anular entregas, timbrados, ABM de planes de mantenimiento, reporte de rentabilidad |
+| `administrador` | Todo (`Gate::before`) | Exclusivo: usuarios/roles/permisos, auditoría (`audit-logs.*`), logo y datos del taller (`system-settings.update`), costos y margen (`work-orders.view-economics`), liquidar comisiones, anular entregas, timbrados, ABM de planes de mantenimiento, reporte de rentabilidad |
 | `mechanic` | Ejecuta la OT | Diagnóstico (consulta y usa el catálogo de ítems), iniciar/pausar/completar OT e ítems, consumir/devolver repuestos, sus horas y comisiones, historial, estado de mantenimiento, dashboard (bloque taller) |
 | `recepcionista` | Atiende al cliente | Clientes, vehículos, recepciones, checklist, presupuestos completos, registrar entregas, alertas de mantenimiento, reporte de presupuestos, avisos a clientes (consultar y reenviar), ver repuestos de la OT y registrar la respuesta del cliente a los extras, aseguradoras completas (alta, edición, estado, baja y contactos), siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar), autorizaciones de la aseguradora (registrar y consultar) y re-aceptaciones del dueño y consulta del reparto de la OT |
 | `jefe-taller` | Organiza el trabajo | OT completas, ítems, repuestos en OT (incluida la respuesta del cliente a los extras), asignación y horas de todos, diagnóstico y su catálogo de ítems, intervalos de mantenimiento por vehículo, reporte de productividad, consulta de compras, pagos a proveedores y cuentas por pagar, consulta de aseguradoras y siniestros (alta, edición y cancelación, con sus documentos: subir, listar y descargar), autorizaciones de la aseguradora (registrar y consultar) y excepciones internas (otorgar y consultar) y consulta del reparto de la OT |
@@ -1014,6 +1014,30 @@ Entrega M10 de `docs/especificacion-aseguradoras.html` (§6.6, Ejemplo 7; decisi
 * **Fuera de alcance:** otras modalidades, el documento que respalda la modalidad (V20; se puede subir como documento del
   siniestro) y los datos de ejemplo (el interruptor viene apagado).
 
+### 6.32 Configuración del taller
+
+Entrega T1 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-11-01; `WorkshopSettingService`,
+`AppSupportWorkshopSettings`). Sin migración: usa `system_settings`. Sirve también sin SaaS.
+
+* **Qué se guarda:** datos del taller (`company.*`), tasa de IVA por defecto, remitente (`mail.from.*`) y los horarios de
+  avisos (`notifications.reminders_at`, `invoice_due_soon_days`, `invoice_overdue_repeat_days`). Solo lo que se cambió: lo
+  demás sale del `.env` o del archivo de config, y un campo en `null` borra lo guardado y vuelve a ese valor.
+* **Cómo se aplica:** sobre `config()`, así que el código sigue leyendo `config()`. Lo aplican el middleware
+  `ApplyWorkshopSettings` (grupo `api`), `Queue::before` (un worker vive más que un cambio) y la tarea de recordatorios.
+  Cualquier proceso nuevo que lea estos datos fuera de esos tres caminos debe llamar a `apply()`. T2 lo llamará al
+  identificar el taller. Es un singleton: recuerda el valor original de lo que reemplazó.
+* **Remitente:** `ClientNotificationMail` lo pone en su `Envelope`, porque el mailer guarda el global al crearse. Un
+  mailable nuevo debe hacer lo mismo.
+* **API:** `GET|PATCH system-settings/workshop` con `system-settings.update` (solo administrador). `PATCH` parcial con al
+  menos un campo; tasa 0, 5 o 10 (422 `VALIDATION_ERROR`). Cada cambio se audita (`SystemSetting`).
+* **Tasa de IVA** (decisión del usuario): editable, con aviso. Rige para los cálculos desde que se guarda, también en
+  documentos en curso (un presupuesto aprobado se factura con la tasa nueva); lo emitido no cambia. Si la tasa cambió, la
+  respuesta trae `meta.warnings`. **Un documento ya calculado nunca muestra la tasa de la configuración:** la factura la
+  guarda por línea y el presupuesto, que no la guarda, la deduce de sus importes (`Budget::taxRate`).
+* **Hora de los recordatorios** (decisión del usuario): en hora de Paraguay (`notifications.timezone`). Antes, las 08:00
+  salían a las 05:00 de Paraguay. La tarea corre cada minuto y compara la hora en `when()`, porque `routes/console.php` se
+  evalúa en todo comando, incluso sin la base migrada. No cambiar la zona de toda la aplicación por aquí (deuda #17).
+
 ---
 
 ## 7. Deuda técnica conocida
@@ -1030,6 +1054,8 @@ Abiertas (reverificado el 2026-10-29):
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes
   del primer taller comercial; mientras tanto, nada nuevo en el disco `public` salvo branding.
 * **#16:** sin antivirus para los archivos subidos (riesgo técnico).
+* **#17:** la aplicación corre en UTC (`config/app.php`), no en hora de Paraguay: desde las 21:00 locales `now()` ya es el
+  día siguiente. Afecta a fechas y validaciones como "fecha no futura". Corrección aparte, con decisión previa.
 * **Discrepancias D1–D10** (14.1): todas resueltas o sin acción. D3, D7 y D8 se resolvieron el 2026-10-30 (handoff 2.74);
   D9 con M1; D4 y D6, solo documentación, el 2026-10-29.
 

@@ -4,29 +4,32 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadSystemFaviconRequest;
+use App\Http\Requests\UpdateWorkshopSettingsRequest;
 use App\Http\Requests\UploadSystemLogoRequest;
 use App\Services\BrandingService;
+use App\Services\WorkshopSettingService;
 use App\Traits\ApiResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
 /**
- * Configuración general del sistema. Por ahora, el logo: lectura pública
- * (branding, la usa el login) y cambio solo para el administrador.
+ * Configuración general del sistema: el logo, de lectura pública (branding, la
+ * usa el login), y los datos del taller. Los cambia solo el administrador.
  */
 class SystemSettingController extends Controller implements HasMiddleware
 {
     use ApiResponse;
 
     public function __construct(
-        private readonly BrandingService $brandingService
+        private readonly BrandingService $brandingService,
+        private readonly WorkshopSettingService $workshopSettingService
     ) {
     }
 
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:system-settings.update', only: ['uploadLogo', 'deleteLogo', 'uploadFavicon', 'deleteFavicon']),
+            new Middleware('permission:system-settings.update', only: ['uploadLogo', 'deleteLogo', 'uploadFavicon', 'deleteFavicon', 'workshop', 'updateWorkshop']),
         ];
     }
 
@@ -36,6 +39,27 @@ class SystemSettingController extends Controller implements HasMiddleware
             'Identidad del sistema obtenida correctamente.',
             $this->brandingService->publicData(),
             200
+        );
+    }
+
+    public function workshop()
+    {
+        return $this->successResponse(
+            'Configuración del taller obtenida correctamente.',
+            $this->workshopSettingService->all(),
+            200
+        );
+    }
+
+    public function updateWorkshop(UpdateWorkshopSettingsRequest $request)
+    {
+        $result = $this->workshopSettingService->update($request->validated());
+
+        return $this->successResponse(
+            'Configuración del taller actualizada correctamente.',
+            $result['settings'],
+            200,
+            $result['warnings'] === [] ? null : ['warnings' => $result['warnings']]
         );
     }
 

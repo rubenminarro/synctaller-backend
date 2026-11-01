@@ -291,7 +291,9 @@ día hasta `000071`). **Ninguna entrega del módulo está lista para implementar
   saldo que nunca se cobra (riesgo de §10.4 de la especificación).
 * **Avisos a la aseguradora:** decisión comercial (V7, cerrada por ahora como "sin recordatorios").
 
-Lo único del plan sin bloqueos es **T1** (configuración del taller en la base), que espera autorización del usuario.
+**Actualización (2026-11-01, T1):** la configuración del taller en la base está implementada (handoff 2.78, `CLAUDE.md` 6.32),
+con su pantalla en el frontend y sin migración. Lo siguiente de la línea T es **T2**, que necesita aprobar antes la
+dependencia de tenancy (`docs/spike-t0-informe.md`). También espera decisión la deuda #17 (zona horaria).
 
 **Siguiente paso recomendado, en orden:**
 

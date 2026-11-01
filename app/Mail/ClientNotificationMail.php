@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Services\BrandingService;
 use Illuminate\Mail\Attachment;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Symfony\Component\Mime\Email;
@@ -26,6 +27,8 @@ class ClientNotificationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
+            // Explícito: el mailer guarda el remitente global al crearse, y en un worker no vería un cambio.
+            from: new Address(config('mail.from.address'), config('mail.from.name')),
             subject: $this->content['subject'],
             // Logo del sistema para la cabecera (inline, no como adjunto).
             using: [fn (Email $message) => app(BrandingService::class)->embedLogo($message)],

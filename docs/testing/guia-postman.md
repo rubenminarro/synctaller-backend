@@ -3236,6 +3236,31 @@ El cambio queda en `GET audit-logs?auditable_type=system_setting`.
 
 ---
 
+## Configuración del taller (T1, 2026-11-01)
+
+Solo administrador (`system-settings.update`). Lo no guardado sale del `.env`; un campo en `null` vuelve a ese valor.
+
+**Obtener:** `GET {{base_url}}/system-settings/workshop`. Esperado: `200` con `company_name`, `company_legal_name`, `company_tax_id`, `company_activity`, `company_address`, `company_city`, `company_phone`, `company_email`, `default_tax_rate`, `mail_from_name`, `mail_from_address`, `reminders_at`, `invoice_due_soon_days` e `invoice_overdue_repeat_days`.
+
+**Actualizar:** `PATCH {{base_url}}/system-settings/workshop`
+
+```json
+{ "company_legal_name": "Taller Central S.A.", "mail_from_address": "avisos@mail.com.py", "reminders_at": "09:30" }
+```
+
+Esperado: `200` con los valores vigentes. Generar un PDF después: la cabecera trae la razón social nueva. `reminders_at` es hora de Paraguay.
+
+| Caso | Body | Esperado |
+|---|---|---|
+| Cambiar la tasa | `{ "default_tax_rate": 5 }` | `200`, `meta.warnings` con el efecto sobre los documentos en curso. Una factura nueva nace con `tax_rate.value` 5 |
+| La misma tasa | `{ "default_tax_rate": 5 }` | `200`, `meta` `null` |
+| Volver al valor por defecto | `{ "default_tax_rate": null }` | `200`, vuelve a 10 |
+| Sin datos o solo campos desconocidos | `{}` | `422` `VALIDATION_ERROR` (`errors.settings`) |
+| Tasa inválida | `{ "default_tax_rate": 7 }` | `422` `VALIDATION_ERROR` |
+| Hora inválida | `{ "reminders_at": "25:00" }` | `422` `VALIDATION_ERROR` |
+| Días de repetición en 0 | `{ "invoice_overdue_repeat_days": 0 }` | `422` `VALIDATION_ERROR` |
+| Otro rol (token = `{{token_mec}}`) | `GET` o `PATCH` | `403` `FORBIDDEN` |
+
 ## Errores HTTP genéricos
 
 | Caso | Método / Endpoint | Body | HTTP | error_code |

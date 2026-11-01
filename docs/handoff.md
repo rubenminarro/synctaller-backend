@@ -7,7 +7,7 @@
 **Estado:** Backend/API funcional — roadmap original completo (FASES 10 a 20: repuestos, inventario, servicios,
 cierre económico, facturación, pagos, entrega, historial, mantenimiento preventivo, reportes), FASE 21 (compras) y
 FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría) y
-módulo de aseguradoras en curso (M1–M11 y P10, 2.59–2.75, con M10 detrás de un interruptor apagado); 6 roles; 472 tests
+módulo de aseguradoras en curso (M1–M11 y P10, 2.59–2.75, con M10 detrás de un interruptor apagado) y configuración del taller en la base (T1, 2.78); 6 roles; 486 tests
 en verde (2026-11-01)
 **Stack principal:** Laravel 13.39 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend en React 19, en el repositorio aparte
 `../synctaller-frontend` (ver 1.2)
@@ -1869,6 +1869,23 @@ Pedido del usuario: las versiones más actuales y compatibles en los dos reposit
 | Vulnerabilidades | Producción, sin avisos en los dos repositorios. Quedan 12 moderadas en el frontend, solo de desarrollo (`minimatch`, por ESLint), sin arreglo compatible |
 | Pruebas | Backend: 472 tests. Frontend: 38 tests, build y lint después de `npm ci`. Ningún test cubre los gráficos: se renderizaron los tipos en uso (barras, barras horizontales y donut, con las opciones de los reportes) en Chrome sin interfaz, sin errores, y se revisó la captura |
 | Reinstalar | `composer install` y `npm ci`, nunca `npm install`: la diferencia entre los equipos era un `package-lock.json` reescrito sin cambios en `package.json` |
+
+# 2.78 Configuración del taller en la base (T1, 2026-11-01)
+
+Primera entrega de la línea T, la única sin validaciones pendientes. Sirve también sin SaaS. Reglas vigentes en `CLAUDE.md` 6.32.
+
+| Tema | Decisión |
+|---|---|
+| Alcance | `company.*`, tasa de IVA por defecto, remitente y horarios de avisos, en `system_settings` (sin migración). Quedan afuera `invoice.decimals`, `maintenance.*`, `insurer.*` y los destinatarios internos: la especificación no los incluye |
+| Valores | Solo se guarda lo cambiado; `null` vuelve al `.env`. El frontend manda solo los campos cambiados, para no fijar en la base los valores del `.env` |
+| Aplicación | `config()->set`, como prevé la especificación (§3.6): el resto del código no cambia. Por request (una consulta), por job y en la tarea de recordatorios, no al arrancar: la base puede no estar disponible (`composer install`, `migrate`) |
+| Worker | `Queue::before` reaplica antes de cada job, y el remitente va en el `Envelope` porque el mailer guarda el global al crearse |
+| Tasa de IVA | Decisión del usuario: editable por el administrador (0, 5 o 10), con aviso previo en la pantalla y `meta.warnings`. Rige desde que se guarda, también en documentos en curso |
+| Hora de los recordatorios | Decisión del usuario: en hora de Paraguay. **Cambio de comportamiento:** con el valor por defecto salían a las 08:00 UTC (05:00 de Paraguay) y ahora a las 08:00 de Paraguay. La tarea pasa a `everyMinute()` con `when()`: no se puede leer la base al cargar `routes/console.php` |
+| Permiso | Se reutiliza `system-settings.update`, también para leer: los datos solo se usan en esa pantalla |
+| Hallazgo | La aplicación corre en UTC: deuda #17, sin corregir (decisión del usuario) |
+| Tasa de un documento ya calculado | La prueba en el navegador mostró que el PDF de un presupuesto aprobado al 10 % decía "IVA 5%" junto a su importe del 10 %: la etiqueta salía de la configuración, que hasta T1 era fija. Ahora sale de los importes guardados (`Budget::taxRate`), sin migración. El diálogo "Facturar OT" tampoco afirma ya "IVA 10%": era un texto fijo |
+| Pruebas | `tests/Feature/Settings/WorkshopSettingsTest` (14): valores por defecto, reemplazo, vuelta al `.env`, tasa 0, tasa nueva en la factura y su aviso, tasa del PDF del presupuesto, totales iguales por defecto, validaciones, permisos por rol, auditoría, remitente, job, comando y hora local. Frontend: `WorkshopSettingsCard.test.tsx` (4). Revisión en Chrome (2026-11-01) sobre una copia temporal de la base (`synctaller_t1`, borrada después): error de validación, aviso de la tasa, guardado, recarga, vaciar un campo, PDF, factura al 5 % y 403 de la recepcionista, sin errores de consola |
 
 
 ---
@@ -4387,6 +4404,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Conceptos vendidos en el reparto (2.73)
 [✓] Discrepancias D3, D7 y D8 (2.74)
 [✓] Deducible facturado, modalidad neta: hecha y apagada (2.75)
+[✓] Configuración del taller en la base (T1, 2.78)
 ```
 
 ## Próximo
@@ -4483,6 +4501,7 @@ aprobadas (E y P8, §10.2 de la especificación), que solo faltaba registrar.
 | 14 | **Abierta (2026-10-28): disco `local` con `serve` activo y sin uso** | `config/filesystems.php`: el disco `local` (`storage/app/private`) tiene `'serve' => true`. Laravel registra `GET` y `PUT storage/{path}` con URL firmada: la firma usa la `APP_KEY` y no conoce permisos, taller ni auditoría. Ninguna parte de `app/` usa ese disco | Hoy no expone nada (la carpeta solo tiene `.gitignore`), pero cualquier archivo que se guarde ahí quedaría descargable por URL firmada. Decisión aprobada (E): no se usa para el módulo, que tendrá su propio disco privado sin `serve`; su revisión queda como deuda, **sin desactivarlo en esta etapa** |
 | 15 | **Abierta (2026-10-28): fotos y firmas con URL pública (deuda de seguridad, P8)** | Fotos de recepción (`ReceptionPhotoController`), fotos de ítems de diagnóstico (`DiagnosticItemPhotoController`) y firmas de entrega (`VehicleDeliveryService`) en el disco `public`, con URL permanente y nombre aleatorio. El frontend las muestra con `<img src>`, que no envía el token | Una URL filtrada no se puede revocar hasta mover el archivo; no hay permiso ni auditoría de acceso. Decisión aprobada (P8): tarea independiente **después de T4** (storage por taller), primero la firma y después las fotos, coordinada con el frontend (descarga con token). **Requisito antes del primer taller comercial.** Hasta entonces no se agregan tipos de archivo nuevos al disco `public`, salvo branding |
 | 16 | **Abierta (2026-10-28): sin análisis antivirus de archivos subidos (riesgo técnico)** | Las subidas solo validan tipo, extensión y tamaño (fotos, firma, logo, favicon; y los documentos de siniestros previstos en M4) | La validación no sustituye un antivirus. Decisión aprobada (E): queda fuera del alcance actual y se documenta como riesgo pendiente; decidir antes de recibir documentos de terceros en producción |
+| 17 | **Abierta (2026-11-01): la aplicación corre en UTC** | `config/app.php`: `'timezone' => 'UTC'`, sin variable de entorno. Paraguay está en UTC-3 | Desde las 21:00 locales `now()` ya es el día siguiente: afecta a la fecha de los documentos y a validaciones como "fecha no futura" o "vencimiento ≥ hoy". Decisión del usuario (T1): se corrige aparte, porque toca fechas de todos los módulos y exige revisar los datos guardados. Los recordatorios ya usan hora de Paraguay (`notifications.timezone`) |
 
 ## 14.1 Discrepancias del estudio de aseguradoras (D1–D10, 2026-10-28)
 

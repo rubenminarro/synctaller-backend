@@ -442,6 +442,10 @@ Route::middleware('auth:sanctum')->scopeBindings()->group(function () {
 
     Route::delete('me/preferences', [UserPreferenceController::class, 'destroy'])->name('me.preferences.destroy');
 
+    Route::get('system-settings/workshop', [SystemSettingController::class, 'workshop'])->name('system-settings.workshop.show');
+
+    Route::patch('system-settings/workshop', [SystemSettingController::class, 'updateWorkshop'])->name('system-settings.workshop.update');
+
     Route::post('system-settings/logo', [SystemSettingController::class, 'uploadLogo'])->name('system-settings.logo.update');
 
     Route::delete('system-settings/logo', [SystemSettingController::class, 'deleteLogo'])->name('system-settings.logo.destroy');
