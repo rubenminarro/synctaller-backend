@@ -6,10 +6,12 @@ Instrucciones permanentes para trabajar en este repositorio sin romper lo existe
 |---|---|
 | `CLAUDE.md` (este) | Reglas operativas, convenciones y reglas de negocio vigentes |
 | [`README.md`](README.md) | Instalación, configuración, comandos y estado general |
-| [`docs/handoff.md`](docs/handoff.md) | Historia y decisiones de diseño por fase (FASES 9–20), roadmap original y **deuda técnica conocida (sección 14)** |
+| [`docs/handoff.md`](docs/handoff.md) | Punto de continuidad y mapa de las secciones numeradas del handoff (`handoff 2.N`, sección 14…) |
+| [`docs/decisions/historial/handoff-05-decisiones-por-entrega.md`](docs/decisions/historial/handoff-05-decisiones-por-entrega.md) | Decisiones técnicas por entrega, desde la sección 2.54 |
+| [`docs/roadmap/deuda-tecnica.md`](docs/roadmap/deuda-tecnica.md) | **Deuda técnica conocida y discrepancias** |
 | [`docs/testing/guia-postman.md`](docs/testing/guia-postman.md) | Pruebas manuales de la API, encadenadas por fase |
 
-Si una regla de este archivo contradice al código, **el código manda**: registrar la discrepancia (handoff, sección 14)
+Si una regla de este archivo contradice al código, **el código manda**: registrar la discrepancia (`docs/roadmap/deuda-tecnica.md`)
 y avisar, en lugar de "corregir" por cuenta propia.
 
 ---
@@ -35,7 +37,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 Antes de implementar cualquier cambio:
 
 1. Inspeccionar el código existente relacionado (Service, Request, Resource, Enum, excepción, rutas, permisos, tests).
-2. Identificar las reglas de negocio y los módulos afectados (ver sección 6 y la "regla de oro" del handoff, sección 13).
+2. Identificar las reglas de negocio y los módulos afectados (ver sección 6 y la "regla de oro" en `docs/project/principios.md`).
 3. Proponer el cambio mínimo y explicar su motivo. Las decisiones de negocio se consultan, no se suponen.
 4. Implementar solo el alcance autorizado.
 5. Ejecutar los tests pertinentes y la suite completa antes de dar algo por terminado.
@@ -53,7 +55,7 @@ En fases nuevas: primero diseño funcional y de datos (con las preguntas de nego
 
 ### Documentación por cambio
 
-Cada fase o cambio de API actualiza, en la misma rama: este archivo (reglas), `docs/handoff.md` (decisiones e
+Cada fase o cambio de API actualiza, en la misma rama: este archivo (reglas), `docs/decisions/historial/handoff-05-decisiones-por-entrega.md` (decisiones e
 historia), `README.md` (si cambia instalación, módulos o estado) y `docs/testing/guia-postman.md` (requests, bodies,
 resultados esperados y casos de error).
 
@@ -118,7 +120,7 @@ resultados esperados y casos de error).
   herramientas de edición.
 * Servidor web local: **Nginx** de Laragon (puerto 80, PHP por `php-cgi`), no Apache. Con Apache (PHP como módulo
   multihilo) algunos requests concurrentes corrían sin el `.env` y fallaban con `APP_ENV=production` (el frontend los
-  veía como CORS; `docs/handoff.md`, sección 14, #12). No usar `config:cache` en desarrollo: los tests correrían
+  veía como CORS; `docs/roadmap/deuda-tecnica.md`, #12). No usar `config:cache` en desarrollo: los tests correrían
   contra MySQL.
 * **Zona horaria:** la aplicación corre en hora de Paraguay (`APP_TIMEZONE`, por defecto `America/Asuncion`; handoff 2.79) y
   la base guarda esa hora. La API sigue enviando las fechas con hora en UTC (`Z`). En un test de horario, simular un
@@ -213,7 +215,7 @@ lo suyo.
 
 ## 6. Reglas de negocio vigentes
 
-Fuente: Services y tests. El detalle de diseño y su historia por fase está en el handoff (secciones 2.24–2.34).
+Fuente: Services y tests. El detalle de diseño y su historia por fase está en `docs/decisions/historial/handoff-03-fases-11-a-25.md` (secciones 2.24–2.34).
 
 ### 6.1 Clientes, vehículos y datos maestros
 
@@ -1044,7 +1046,7 @@ Entrega T1 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-11-01
 
 ## 7. Deuda técnica conocida
 
-`docs/handoff.md`, sección 14. Las deudas nuevas se registran ahí y no se corrigen sin decisión previa del usuario.
+`docs/roadmap/deuda-tecnica.md`. Las deudas nuevas se registran ahí y no se corrigen sin decisión previa del usuario.
 Abiertas (reverificado el 2026-10-29):
 
 * **#13, clientes aseguradoras:** en implementación (`docs/especificacion-aseguradoras.html`, versión 3): M1–M9 y P10
