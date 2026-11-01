@@ -14,7 +14,9 @@ Cliente → Vehículo → Recepción → Diagnóstico → Presupuesto → Aproba
 > |---|---|
 > | `README.md` (este) | Qué es, cómo se instala y ejecuta, estado general |
 > | [`CLAUDE.md`](CLAUDE.md) | Reglas operativas, convenciones y reglas de negocio vigentes (para quien modifica el código) |
-> | [`docs/handoff.md`](docs/handoff.md) | Historia y decisiones de diseño por fase, roadmap original y deuda técnica conocida |
+> | [`docs/handoff.md`](docs/handoff.md) | Punto de continuidad y mapa de las secciones numeradas del handoff |
+> | [`docs/decisions/historial/handoff-05-decisiones-por-entrega.md`](docs/decisions/historial/handoff-05-decisiones-por-entrega.md) | Decisiones técnicas por entrega, desde la sección 2.54 |
+> | [`docs/roadmap/deuda-tecnica.md`](docs/roadmap/deuda-tecnica.md) | Deuda técnica conocida y discrepancias |
 > | [`docs/testing/guia-postman.md`](docs/testing/guia-postman.md) | Pruebas manuales de la API, por fase |
 
 ---
@@ -34,7 +36,7 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 | Base de datos | MySQL (Laragon con MySQL 8.4); SQLite en archivo (`database/testing.sqlite`) para los tests |
 | Assets | Vite 7 + Tailwind CSS 4 + axios (scaffold por defecto de Laravel, sin uso: la app es solo API) |
 | Frontend | **No incluido en este repositorio** (ver [Frontend](#frontend)) |
-| Entorno local | Laragon (Windows) con **Nginx** en el puerto 80 (no Apache: ver `docs/handoff.md`, sección 14, #12) |
+| Entorno local | Laragon (Windows) con **Nginx** en el puerto 80 (no Apache: ver `docs/roadmap/deuda-tecnica.md`, #12) |
 
 ---
 
@@ -395,5 +397,5 @@ Convenciones principales:
 
 - No se trabaja directamente sobre `main`: cada fase o cambio va en su propia rama (`feature/...`, `fix/...`,
   `docs/...`, `test/...`) y se integra a `main` con merge manual.
-- Cada fase actualiza `CLAUDE.md` (reglas vigentes), `docs/handoff.md` (decisiones e historia) y la guía de Postman.
+- Cada fase actualiza `CLAUDE.md` (reglas vigentes), `docs/decisions/historial/handoff-05-decisiones-por-entrega.md` (decisiones e historia) y la guía de Postman.
 - Antes de modificar código, leer [`CLAUDE.md`](CLAUDE.md): metodología, convenciones y reglas de negocio.
