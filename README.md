@@ -70,7 +70,7 @@ Versiones verificadas en `composer.lock` y en el entorno local (actualizadas el 
 
 | Estado | Qué |
 |---|---|
-| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema, catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 284 rutas API y 486 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
+| Implementado y probado | Todos los módulos de la tabla anterior: el roadmap original (FASES 10–20), compras (FASE 21), pagos a proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24), auditoría (FASE 25), preferencias y logo del sistema, catálogo de ítems de diagnóstico (2026-10-24) y los módulos base. 284 rutas API y 489 tests automatizados en verde; cada módulo tiene sus tests en `tests/Feature` |
 | En curso | Aseguradoras y siniestros: M1–M11 y P10 de `docs/especificacion-aseguradoras.html` implementadas (M10, deducible mayor a 0, detrás de `INSURER_DEDUCTIBLE_NET_MODE`, apagado hasta la confirmación del contador); siguen los avisos a la aseguradora y M12 (retenciones) |
 | Pendiente, sin diseño | Notificaciones por WhatsApp |
 
@@ -135,6 +135,9 @@ QUEUE_CONNECTION=database
 
 # Modalidad neta del deducible de siniestros (M10, config/insurer.php): apagada hasta la confirmación del contador
 INSURER_DEDUCTIBLE_NET_MODE=false
+
+# Zona horaria del taller (por defecto America/Asuncion). La base guarda esta hora
+APP_TIMEZONE=America/Asuncion
 
 # Datos del taller en los comprobantes y reportes PDF (config/company.php). Son los valores por defecto:
 # el administrador los puede cambiar en Configuración del sistema, y lo guardado ahí tiene prioridad
@@ -322,7 +325,7 @@ vendor/bin/phpunit
 composer test
 ```
 
-486 tests en `tests/Feature`, uno o más archivos por módulo. No necesitan internet: `phpunit.xml` desactiva la
+489 tests en `tests/Feature`, uno o más archivos por módulo. No necesitan internet: `phpunit.xml` desactiva la
 consulta DNS de los emails (`EMAIL_DNS_CHECK=false`).
 
 Usan una base SQLite en archivo, `database/testing.sqlite` (la crea `tests/bootstrap.php`; está en `.gitignore`):

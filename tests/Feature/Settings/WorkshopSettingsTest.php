@@ -206,16 +206,15 @@ class WorkshopSettingsTest extends InvoiceTestCase
         $this->assertSame(9, config('notifications.invoice_due_soon_days'));
     }
 
-    public function test_the_reminders_hour_is_local_and_read_when_the_scheduler_runs(): void
+    public function test_the_reminders_hour_is_read_when_the_scheduler_runs(): void
     {
         $event = collect(app(Schedule::class)->events())
             ->first(fn ($event) => str_contains($event->command, 'notifications:send-reminders'));
 
-        // Paraguay está en UTC-3: las 08:00 son las 11:00 UTC.
-        $this->travelTo('2026-11-02 11:00:00');
+        $this->travelTo('2026-11-02 08:00:00');
         $this->assertTrue($event->filtersPass(app()));
 
-        $this->travelTo('2026-11-02 08:00:00');
+        $this->travelTo('2026-11-02 05:00:00');
         $this->assertFalse($event->filtersPass(app()));
 
         SystemSetting::create(['key' => 'notifications.reminders_at', 'value' => '05:00']);

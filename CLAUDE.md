@@ -19,7 +19,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 * **Backend/API:** Laravel 13.39 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
-  (6.3), y el módulo de aseguradoras en curso (M1–M11 y P10, 6.22–6.31; M10 detrás de un interruptor apagado), más la configuración del taller en la base (T1, 6.32). 284 rutas API, 486 tests en verde.
+  (6.3), y el módulo de aseguradoras en curso (M1–M11 y P10, 6.22–6.31; M10 detrás de un interruptor apagado), más la configuración del taller en la base (T1, 6.32). 284 rutas API, 489 tests en verde.
 * **Nombre:** el proyecto se llamaba **Presupuestador**; desde el 2026-10-21 es **SyncTaller** (repos
   `synctaller-backend` y `synctaller-frontend`, base de datos `synctaller`; la conexión es `mysql`).
 * **Frontend:** **no está en este repositorio**, sino en `../synctaller-frontend` (React 19 + TypeScript + Vite +
@@ -120,6 +120,9 @@ resultados esperados y casos de error).
   multihilo) algunos requests concurrentes corrían sin el `.env` y fallaban con `APP_ENV=production` (el frontend los
   veía como CORS; `docs/handoff.md`, sección 14, #12). No usar `config:cache` en desarrollo: los tests correrían
   contra MySQL.
+* **Zona horaria:** la aplicación corre en hora de Paraguay (`APP_TIMEZONE`, por defecto `America/Asuncion`; handoff 2.79) y
+  la base guarda esa hora. La API sigue enviando las fechas con hora en UTC (`Z`). En un test de horario, simular un
+  instante absoluto en UTC: en la zona de la aplicación, "las 22:00" pasaría también con la zona equivocada.
 * No ejecutar `migrate:fresh`, `db:wipe` ni seeders de datos de ejemplo sobre la base de desarrollo sin pedido
   explícito (ver README, sección de base de datos).
 * **Seeders de ejemplo:** un seeder por módulo, registrados en `DatabaseSeeder`. El flujo del taller sale de
@@ -1034,9 +1037,8 @@ Entrega T1 de `docs/especificacion-aseguradoras.html` (decisiones del 2026-11-01
   documentos en curso (un presupuesto aprobado se factura con la tasa nueva); lo emitido no cambia. Si la tasa cambió, la
   respuesta trae `meta.warnings`. **Un documento ya calculado nunca muestra la tasa de la configuración:** la factura la
   guarda por línea y el presupuesto, que no la guarda, la deduce de sus importes (`Budget::taxRate`).
-* **Hora de los recordatorios** (decisión del usuario): en hora de Paraguay (`notifications.timezone`). Antes, las 08:00
-  salían a las 05:00 de Paraguay. La tarea corre cada minuto y compara la hora en `when()`, porque `routes/console.php` se
-  evalúa en todo comando, incluso sin la base migrada. No cambiar la zona de toda la aplicación por aquí (deuda #17).
+* **Hora de los recordatorios:** la tarea corre cada minuto y compara la hora en `when()`, porque `routes/console.php` se
+  evalúa en todo comando, incluso sin la base migrada.
 
 ---
 
@@ -1054,8 +1056,6 @@ Abiertas (reverificado el 2026-10-29):
 * **#15:** fotos y firmas con URL pública (deuda de seguridad, P8). Se resuelve después del storage por taller y antes
   del primer taller comercial; mientras tanto, nada nuevo en el disco `public` salvo branding.
 * **#16:** sin antivirus para los archivos subidos (riesgo técnico).
-* **#17:** la aplicación corre en UTC (`config/app.php`), no en hora de Paraguay: desde las 21:00 locales `now()` ya es el
-  día siguiente. Afecta a fechas y validaciones como "fecha no futura". Corrección aparte, con decisión previa.
 * **Discrepancias D1–D10** (14.1): todas resueltas o sin acción. D3, D7 y D8 se resolvieron el 2026-10-30 (handoff 2.74);
   D9 con M1; D4 y D6, solo documentación, el 2026-10-29.
 

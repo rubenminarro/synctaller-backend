@@ -2,10 +2,8 @@
 
 return [
 
-    // Hora de la tarea diaria de recordatorios (notifications:send-reminders), en esta zona
-    // horaria: la aplicación corre en UTC (deuda #17).
+    // Hora de la tarea diaria de recordatorios (notifications:send-reminders).
     'reminders_at' => '08:00',
-    'timezone' => 'America/Asuncion',
 
     // Facturas a crédito con saldo: aviso previo (días antes del vencimiento)
     // y, una vez vencidas, un aviso cada tantos días.
