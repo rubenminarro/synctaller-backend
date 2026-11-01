@@ -16,7 +16,7 @@ y avisar, en lugar de "corregir" por cuenta propia.
 
 ## 1. Estado actual (verificado el 2026-10-29)
 
-* **Backend/API:** Laravel 13.38 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
+* **Backend/API:** Laravel 13.39 (PHP ^8.3, spatie/laravel-permission 8, PHPUnit 12), roadmap original completo (FASES 10–20), compras (FASE 21), pagos a
   proveedores (FASE 22), notificaciones (FASE 23), exportación y comprobantes imprimibles (FASE 24) y auditoría
   (FASE 25), más preferencias visuales por usuario y logo del sistema (6.21) y el catálogo de ítems de diagnóstico
   (6.3), y el módulo de aseguradoras en curso (M1–M11 y P10, 6.22–6.31; M10 detrás de un interruptor apagado). 282 rutas API, 472 tests en verde.
