@@ -1904,6 +1904,41 @@ Primera entrega de la línea T, la única sin validaciones pendientes. Sirve tam
 | Pruebas | `tests/Feature/Settings/TimezoneTest` (3), con instantes absolutos en UTC: fallan con `APP_TIMEZONE=UTC`. Frontend: fecha propuesta a la noche. Revisión en Chrome sobre una copia temporal (`synctaller_tz`, borrada después): OT con sus horas correctas y factura emitida con la fecha y la hora del reloj, también en MySQL |
 
 
+# 2.80 Revisión del spike T0 y decisiones para T2 (2026-11-01)
+
+Auditoría y medición antes de T2 (`docs/spike-t0-informe.md`, sección 8). No se cambió código del producto ni se aprobó todavía
+instalar la dependencia en `main`. Se llaman **TD** porque `D1–D10` ya son las discrepancias de 14.1.
+
+| # | Decisión del usuario |
+|---|---|
+| TD1 | Paso 0 hecho en una rama descartable. Lo necesario para repetirlo está en `docs/spike-t0/` |
+| TD2 | Paquete **4.2.3 desde el 2026-11-09**, cuando cumple dos semanas. 4.3.0 no aporta lo suficiente con un `tenants:migrate` propio. **T2 no empieza antes** y repite la medición con esa versión |
+| TD3 | `tenants.domain`, sin `tenant_domains` |
+| TD4 | Id entero |
+| TD5 | `active` y `suspended` en T2; `provisioning` y `cancelled` en T5; el mantenimiento es un dato aparte. Sin `deleted` ni `provisioning_failed`: la fila del taller no se borra |
+| TD6 | Hora de recordatorios por taller, como en T1, recorriendo los activos cada minuto |
+| TD7 | Reintentos de jobs hasta 6 horas |
+| TD8 | Sin `X-Tenant`: hosts reales también en local y tests |
+| TD9 | Los umbrales de G no cambian; conexión persistente solo en la central |
+| TD10 | `DB_DATABASE` vacío en producción: sin taller activo, una consulta falla |
+| TD11 | Taller cancelado: `404 TENANT_NOT_FOUND` |
+
+| Hallazgo | Efecto en T2 y T3 |
+|---|---|
+| El registro de Spatie se instancia al arrancar, antes de identificar el taller | La tarea `initializeCache()` es obligatoria también en HTTP: sin ella, los permisos se comparten entre talleres. Comprobado |
+| `forgetCachedPermissions()` borra la cache | No usarla al activar un taller (corrige §3.6): suma unos 140 ms por request |
+| El paquete borra el job si no encuentra el taller, antes de lanzar la excepción | Por lectura del código, no llegaría a `failed_jobs`: validar al despachar y no borrar filas de `tenants`. Verificar con un test |
+| Las tareas de cambio no abren conexión, y la activación corre en `JobProcessing`, antes del middleware del job | Una tarea que consulte la base, como aplicar T1, haría fallar el job antes del middleware. Se separa cambiar (sin E/S) de preparar (`TenantRuntime::ensureReady()`) |
+| `ApplyWorkshopSettings` corre en tres lugares | Se unifica en T2 |
+| `$tries = 1` es incompatible con liberar el job | `retryUntil` con `maxExceptions = 1`: un error dentro de `handle` no se reintenta, porque podría duplicar el email |
+| `failed_jobs` y `job_batches` usan `DB_CONNECTION` | Fijarlos en la central. También CORS para los dominios de taller |
+| Sin límite de intentos en el login | Fuera de multitenancy. Resolver antes del primer taller comercial y probar el prefijo del `RateLimiter` |
+
+Plan: pasos 1 a 3 en T2 (base central, identificación, unificar T1), 4 y 5 en T3 (jobs, scheduler) y 6 y 7 en T5
+(`tenants:migrate`, suspensión). Los tests permanentes van en `tests/Feature/Tenancy` y cada uno debe fallar al quitar su
+protección.
+
+
 ---
 
 ---

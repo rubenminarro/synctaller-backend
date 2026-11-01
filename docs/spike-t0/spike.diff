@@ -1,0 +1,367 @@
+diff --git a/app/Http/Middleware/ApplyWorkshopSettings.php b/app/Http/Middleware/ApplyWorkshopSettings.php
+index d3c2343..5cd3bb9 100644
+--- a/app/Http/Middleware/ApplyWorkshopSettings.php
++++ b/app/Http/Middleware/ApplyWorkshopSettings.php
+@@ -20,6 +20,7 @@ public function __construct(
+     public function handle(Request $request, Closure $next): Response
+     {
+         $this->settings->apply();
++        \App\Multitenancy\Timing::mark('settings');
+ 
+         return $next($request);
+     }
+diff --git a/app/Http/Middleware/IdentifyTenant.php b/app/Http/Middleware/IdentifyTenant.php
+new file mode 100644
+index 0000000..850dee7
+--- /dev/null
++++ b/app/Http/Middleware/IdentifyTenant.php
+@@ -0,0 +1,56 @@
++<?php
++
++namespace App\Http\Middleware;
++
++use App\Multitenancy\Timing;
++use Closure;
++use Illuminate\Database\Events\QueryExecuted;
++use Illuminate\Http\Request;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Event;
++use Spatie\Multitenancy\TenantFinder\DomainTenantFinder;
++use Symfony\Component\HttpFoundation\Response;
++
++/** Solo para el paso 0: identifica el taller y mide cada etapa. */
++class IdentifyTenant
++{
++    public function handle(Request $request, Closure $next): Response
++    {
++        $queries = [];
++
++        if ($request->hasHeader('X-Spike-Log')) {
++            Event::listen(QueryExecuted::class, function (QueryExecuted $e) use (&$queries) {
++                $queries[] = $e->connectionName . ' ' . preg_replace('/\s+/', ' ', substr($e->sql, 0, 60));
++            });
++        }
++
++        Timing::start();
++
++        $request->getHost();
++        Timing::mark('host');
++
++        DB::connection('landlord')->getPdo();
++        Timing::mark('landlord_connect');
++
++        $tenant = app(DomainTenantFinder::class)->findForRequest($request);
++        Timing::mark('tenant_lookup');
++
++        abort_if($tenant === null, 404);
++
++        $tenant->makeCurrent();
++        Timing::mark('bind');
++
++        DB::connection()->getPdo();
++        Timing::mark('tenant_connect');
++
++        $response = $next($request);
++
++        $response->headers->set('Server-Timing', Timing::header());
++
++        if ($request->hasHeader('X-Spike-Log')) {
++            $response->headers->set('X-Spike-Queries', json_encode($queries));
++        }
++
++        return $response;
++    }
++}
+diff --git a/app/Multitenancy/RebindPermissionsTask.php b/app/Multitenancy/RebindPermissionsTask.php
+new file mode 100644
+index 0000000..2a3cdcf
+--- /dev/null
++++ b/app/Multitenancy/RebindPermissionsTask.php
+@@ -0,0 +1,27 @@
++<?php
++
++namespace App\Multitenancy;
++
++use Spatie\Multitenancy\Contracts\IsTenant;
++use Spatie\Multitenancy\Tasks\SwitchTenantTask;
++use Spatie\Permission\PermissionRegistrar;
++
++/** Variantes del paso 0: `init` usa initializeCache(); `forget` agrega la llamada de §3.6. */
++class RebindPermissionsTask implements SwitchTenantTask
++{
++    public function makeCurrent(IsTenant $tenant): void
++    {
++        $registrar = app(PermissionRegistrar::class);
++
++        $registrar->initializeCache();
++
++        if (($_SERVER['SPIKE_VARIANT'] ?? '') === 'forget') {
++            $registrar->forgetCachedPermissions();
++        }
++    }
++
++    public function forgetCurrent(): void
++    {
++        app(PermissionRegistrar::class)->initializeCache();
++    }
++}
+diff --git a/app/Multitenancy/TimedMakeTenantCurrentAction.php b/app/Multitenancy/TimedMakeTenantCurrentAction.php
+new file mode 100644
+index 0000000..7b152d8
+--- /dev/null
++++ b/app/Multitenancy/TimedMakeTenantCurrentAction.php
+@@ -0,0 +1,22 @@
++<?php
++
++namespace App\Multitenancy;
++
++use Spatie\Multitenancy\Actions\MakeTenantCurrentAction;
++use Spatie\Multitenancy\Contracts\IsTenant;
++use Spatie\Multitenancy\Tasks\SwitchTenantTask;
++
++/** Solo para el paso 0: mide cada tarea de cambio de taller. */
++class TimedMakeTenantCurrentAction extends MakeTenantCurrentAction
++{
++    protected function performTasksToMakeTenantCurrent(IsTenant $tenant): static
++    {
++        $this->tasksCollection->each(function (SwitchTenantTask $task) use ($tenant) {
++            Timing::mark('other');
++            $task->makeCurrent($tenant);
++            Timing::mark('task_' . class_basename($task));
++        });
++
++        return $this;
++    }
++}
+diff --git a/app/Multitenancy/Timing.php b/app/Multitenancy/Timing.php
+new file mode 100644
+index 0000000..a21ef5a
+--- /dev/null
++++ b/app/Multitenancy/Timing.php
+@@ -0,0 +1,34 @@
++<?php
++
++namespace App\Multitenancy;
++
++/** Solo para el paso 0: marcas de tiempo por etapa. Rama descartable. */
++final class Timing
++{
++    public static array $marks = [];
++
++    private static ?int $last = null;
++
++    public static function start(): void
++    {
++        self::$last = hrtime(true);
++    }
++
++    public static function mark(string $name): void
++    {
++        $now = hrtime(true);
++        self::$marks[$name] = (self::$marks[$name] ?? 0) + ($now - self::$last) / 1e6;
++        self::$last = hrtime(true);
++    }
++
++    public static function header(): string
++    {
++        $parts = [];
++
++        foreach (self::$marks as $name => $ms) {
++            $parts[] = sprintf('%s;dur=%.3f', $name, $ms);
++        }
++
++        return implode(', ', $parts);
++    }
++}
+diff --git a/bootstrap/app.php b/bootstrap/app.php
+index abcf6ca..c4cfa25 100644
+--- a/bootstrap/app.php
++++ b/bootstrap/app.php
+@@ -29,7 +29,7 @@
+         // Global (antes del ruteo) para que también los 404/405 de /api respondan JSON.
+         $middleware->prepend(\App\Http\Middleware\EnsureJsonResponse::class);
+ 
+-        $middleware->api(prepend: [\App\Http\Middleware\ApplyWorkshopSettings::class]);
++        $middleware->api(prepend: [\App\Http\Middleware\IdentifyTenant::class, \App\Http\Middleware\ApplyWorkshopSettings::class]);
+ 
+         $middleware->alias([
+             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+diff --git a/composer.json b/composer.json
+index 1318c5a..0e1d21c 100644
+--- a/composer.json
++++ b/composer.json
+@@ -11,6 +11,7 @@
+         "laravel/framework": "^13.0",
+         "laravel/sanctum": "^4.0",
+         "laravel/tinker": "^3.0",
++        "spatie/laravel-multitenancy": "4.2.1",
+         "spatie/laravel-permission": "^8.3"
+     },
+     "require-dev": {
+diff --git a/config/database.php b/config/database.php
+index a648bc4..4336c2d 100644
+--- a/config/database.php
++++ b/config/database.php
+@@ -68,6 +68,21 @@
+             ]) : [],
+         ],
+ 
++        'landlord' => [
++            'driver' => 'mysql',
++            'host' => env('DB_HOST', '127.0.0.1'),
++            'port' => env('DB_PORT', '3306'),
++            'database' => env('DB_LANDLORD_DATABASE', 'landlord'),
++            'options' => ($_SERVER['SPIKE_VARIANT'] ?? '') === 'persist' ? [PDO::ATTR_PERSISTENT => true] : [],
++            'username' => env('DB_USERNAME', 'root'),
++            'password' => env('DB_PASSWORD', ''),
++            'charset' => env('DB_CHARSET', 'utf8mb4'),
++            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
++            'prefix' => '',
++            'strict' => true,
++            'engine' => null,
++        ],
++
+         'mariadb' => [
+             'driver' => 'mariadb',
+             'url' => env('DB_URL'),
+diff --git a/config/multitenancy.php b/config/multitenancy.php
+new file mode 100644
+index 0000000..7bc9708
+--- /dev/null
++++ b/config/multitenancy.php
+@@ -0,0 +1,135 @@
++<?php
++
++use Spatie\Multitenancy\Jobs\TenantAware;
++use Illuminate\Broadcasting\BroadcastEvent;
++use Illuminate\Events\CallQueuedListener;
++use Illuminate\Mail\SendQueuedMailable;
++use Spatie\Multitenancy\Jobs\NotTenantAware;
++use Illuminate\Notifications\SendQueuedNotifications;
++use Illuminate\Queue\CallQueuedClosure;
++use Spatie\Multitenancy\Actions\ForgetCurrentTenantAction;
++use Spatie\Multitenancy\Actions\MakeQueueTenantAwareAction;
++use Spatie\Multitenancy\Actions\MakeTenantCurrentAction;
++use Spatie\Multitenancy\Actions\MigrateTenantAction;
++use Spatie\Multitenancy\Models\Tenant;
++
++return [
++    /*
++     * This class is responsible for determining which tenant should be current
++     * for the given request.
++     *
++     * This class should extend `Spatie\Multitenancy\TenantFinder\TenantFinder`
++     *
++     */
++    'tenant_finder' => null,
++
++    /*
++     * These fields are used by tenant:artisan command to match one or more tenant.
++     */
++    'tenant_artisan_search_fields' => [
++        'id',
++    ],
++
++    /*
++     * These tasks will be performed when switching tenants.
++     *
++     * A valid task is any class that implements Spatie\Multitenancy\Tasks\SwitchTenantTask
++     */
++    'switch_tenant_tasks' => array_values(array_filter([
++        \Spatie\Multitenancy\Tasks\SwitchTenantDatabaseTask::class,
++        \Spatie\Multitenancy\Tasks\PrefixCacheTask::class,
++        ($_SERVER['SPIKE_VARIANT'] ?? '') === 'none' ? null : \App\Multitenancy\RebindPermissionsTask::class,
++    ])),
++
++    /*
++     * This class is the model used for storing configuration on tenants.
++     *
++     * It must  extend `Spatie\Multitenancy\Models\Tenant::class` or
++     * implement `Spatie\Multitenancy\Contracts\IsTenant::class` interface
++     */
++    'tenant_model' => Tenant::class,
++
++    /*
++     * If there is a current tenant when dispatching a job, the id of the current tenant
++     * will be automatically set on the job. When the job is executed, the set
++     * tenant on the job will be made current.
++     */
++    'queues_are_tenant_aware_by_default' => true,
++
++    /*
++     * The connection name to reach the tenant database.
++     *
++     * Set to `null` to use the default connection.
++     */
++    'tenant_database_connection_name' => 'mysql',
++
++    /*
++     * The connection name to reach the landlord database.
++     */
++    'landlord_database_connection_name' => 'landlord',
++
++    /*
++     * This key will be used to associate the current tenant in the context
++     */
++    'current_tenant_context_key' => 'tenantId',
++
++    /*
++     * This key will be used to bind the current tenant in the container.
++     */
++    'current_tenant_container_key' => 'currentTenant',
++
++    /*
++     * Set it to `true` if you like to cache the tenant(s) routes
++     * in a shared file using the `SwitchRouteCacheTask`.
++     */
++    'shared_routes_cache' => false,
++
++    /*
++     * You can customize some of the behavior of this package by using your own custom action.
++     * Your custom action should always extend the default one.
++     */
++    'actions' => [
++        'make_tenant_current_action' => \App\Multitenancy\TimedMakeTenantCurrentAction::class,
++        'forget_current_tenant_action' => ForgetCurrentTenantAction::class,
++        'make_queue_tenant_aware_action' => MakeQueueTenantAwareAction::class,
++        'migrate_tenant' => MigrateTenantAction::class,
++    ],
++
++    /*
++     * You can customize the way in which the package resolves the queueable to a job.
++     *
++     * For example, using the package laravel-actions (by Loris Leiva), you can
++     * resolve JobDecorator to getAction() like so: JobDecorator::class => 'getAction'
++     */
++    'queueable_to_job' => [
++        SendQueuedMailable::class => 'mailable',
++        SendQueuedNotifications::class => 'notification',
++        CallQueuedClosure::class => 'closure',
++        CallQueuedListener::class => 'class',
++        BroadcastEvent::class => 'event',
++    ],
++
++    /*
++    * Interface that once implemented, will make the job tenant aware
++    */
++    'tenant_aware_interface' => TenantAware::class,
++
++    /*
++     * Interface that once implemented, will make the job not tenant aware
++     */
++    'not_tenant_aware_interface' => NotTenantAware::class,
++
++    /*
++     * Jobs tenant aware even if these don't implement the TenantAware interface.
++     */
++    'tenant_aware_jobs' => [
++        // ...
++    ],
++
++    /*
++     * Jobs not tenant aware even if these don't implement the NotTenantAware interface.
++     */
++    'not_tenant_aware_jobs' => [
++        // ...
++    ],
++];

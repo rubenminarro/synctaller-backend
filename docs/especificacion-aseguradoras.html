@@ -258,7 +258,7 @@ footer { margin-top: 32px; font-size: 14px; color: var(--muted); }
 <pre class="mermaid">
 flowchart LR
   FE["Frontend SPA&lt;br/&gt;taller1.synctaller.app"] -->|Host + Bearer| MW["EnsureJsonResponse&lt;br/&gt;IdentifyTenant&lt;br/&gt;auth:sanctum"]
-  MW -->|busca dominio| C[("Base central&lt;br/&gt;tenants · tenant_domains&lt;br/&gt;tenant_migrations · jobs&lt;br/&gt;platform_users")]
+  MW -->|busca dominio| C[("Base central&lt;br/&gt;tenants · registro de migraciones&lt;br/&gt;jobs · failed_jobs · cache")]
   MW -->|conecta| T1[("Base taller 1&lt;br/&gt;esquema actual completo")]
   MW -.-> T2[("Base taller 2")]
   W["Worker de cola"] -->|lee jobs con tenant_id| C
@@ -272,10 +272,9 @@ flowchart LR
   <div class="tablewrap"><table>
     <thead><tr><th>Tabla (propuesta)</th><th>Campos principales</th><th>Notas</th></tr></thead>
     <tbody>
-      <tr><td><code>tenants</code></td><td><code>id</code> (ULID), <code>slug</code> único, <code>name</code>, <code>database</code> único, <code>db_host</code>/<code>db_connection_ref</code> (nulos = servidor por defecto), <code>status</code> (<code>provisioning|active|suspended|cancelled|deleted|provisioning_failed</code>), <code>schema_version</code>, <code>plan</code>, <code>suspended_at</code>, <code>cancelled_at</code>, <code>data_retention_until</code>, timestamps</td><td>Las credenciales de base van en el <code>.env</code> o un gestor de secretos, nunca en la tabla.</td></tr>
-      <tr><td><code>tenant_domains</code></td><td><code>tenant_id</code>, <code>domain</code> único, <code>is_primary</code></td><td>Permite un dominio propio por taller más adelante.</td></tr>
-      <tr><td><code>tenant_migrations</code></td><td><code>tenant_id</code>, <code>migration</code>, <code>status</code> (<code>ok|failed</code>), <code>error</code>, <code>ran_at</code></td><td>Registro por taller para detectar bases desparejas.</td></tr>
-      <tr><td><code>jobs</code>, <code>job_batches</code>, <code>failed_jobs</code></td><td>Como hoy, más <code>tenant_id</code> en el payload</td><td>Una sola cola central: un pool de workers atiende a todos los talleres.</td></tr>
+      <tr><td><code>tenants</code></td><td><code>id</code> entero, <code>name</code> (etiqueta operativa), <code>domain</code> único, <code>database</code> único, <code>status</code> (<code>active|suspended</code> en T2; <code>provisioning|cancelled</code> se agregan en T5), <code>maintenance</code>, timestamps (TD3–TD5)</td><td>Solo datos técnicos: el nombre comercial, el branding y el IVA van en <code>system_settings</code> de cada taller. Las credenciales de base van en el <code>.env</code> o un gestor de secretos, nunca en la tabla. La fila no se borra: un job de un taller inexistente se perdería en silencio.</td></tr>
+      <tr><td>Registro de migraciones</td><td><code>tenant_id</code>, <code>status</code>, <code>error</code>, fechas</td><td>Una fila por ejecución y taller: permite repetir solo los que fallaron.</td></tr>
+      <tr><td><code>jobs</code>, <code>job_batches</code>, <code>failed_jobs</code>, <code>cache</code>, <code>cache_locks</code></td><td>Como hoy. El taller viaja en el <code>Context</code> de Laravel</td><td>Una sola cola central: un pool de workers atiende a todos los talleres.</td></tr>
       <tr><td><code>platform_users</code>, <code>platform_audit_logs</code></td><td>Operadores de la plataforma, con su propio guard</td><td>Separados de los usuarios de cada taller.</td></tr>
       <tr><td><code>insurer_directory</code> (posterior)</td><td>Razón social y RUC de referencia</td><td>Fuera del MVP. Cada taller tendría una referencia opcional, sin clave foránea entre bases.</td></tr>
     </tbody>
@@ -283,12 +282,13 @@ flowchart LR
 
   <h3>3.2 Resolución del taller antes de autenticar</h3>
   <ul>
-    <li><b>Producción:</b> por <code>Host</code> (subdominio o dominio propio) en <code>tenant_domains</code>.</li>
-    <li><b>Local y tests:</b> además se acepta la cabecera <code>X-Tenant</code>, solo si <code>APP_ENV</code> es <code>local</code> o <code>testing</code>.</li>
+    <li><b>Producción y local:</b> por <code>Host</code>, en <code>tenants.domain</code> (TD3).</li>
+    <li><b>Sin cabecera <code>X-Tenant</code></b> (TD8): los tests y el entorno local usan hosts reales, para que exista un solo camino de identificación.</li>
+    <li><b>Orden:</b> buscar el taller, revisar su estado sin tocar su base, revisar mantenimiento, activar y comprobar que su base responde.</li>
     <li>Middleware nuevo <code>IdentifyTenant</code>: va <b>después</b> de <code>EnsureJsonResponse</code> y <b>antes</b> de <code>auth:sanctum</code>, en todas las rutas <code>api/*</code>. Eso incluye las públicas <code>POST login</code> y <code>GET branding</code>.</li>
     <li>Respuestas propuestas, con el contrato JSON actual:
       <ul>
-        <li><code>404 TENANT_NOT_FOUND</code>: dominio desconocido;</li>
+        <li><code>404 TENANT_NOT_FOUND</code>: dominio desconocido o taller cancelado (TD11);</li>
         <li><code>403 TENANT_SUSPENDED</code>: taller suspendido;</li>
         <li><code>503 TENANT_UNAVAILABLE</code>: la base no responde (sin detalles técnicos);</li>
         <li><code>503 TENANT_MAINTENANCE</code>: migración en curso.</li>
@@ -302,6 +302,9 @@ flowchart LR
     <li>Dos conexiones: <code>central</code> (fija) y <code>tenant</code> (plantilla). Al identificar el taller se fija <code>database.connections.tenant.database</code>, se hace <code>DB::purge('tenant')</code> y la conexión por defecto pasa a ser <code>tenant</code>.</li>
     <li>Los modelos actuales usan la conexión por defecto, así que <b>no cambian</b>. Los modelos de plataforma declaran <code>$connection = 'central'</code>.</li>
     <li>Las reglas <code>exists:</code>/<code>unique:</code>, el SQL crudo y los bindings resuelven contra la base del taller sin tocar las ~100 reglas.</li>
+    <li><b>Fallo cerrado (TD10):</b> en producción <code>DB_DATABASE</code> va vacío. Sin taller activo, una consulta falla en vez de leer datos de un taller.</li>
+    <li><b>Conexión persistente solo en la central (TD9):</b> <code>PDO::ATTR_PERSISTENT</code> elimina la sobrecarga medida (<code>docs/spike-t0-informe.md</code>, sección 8). Nunca en las bases de taller.</li>
+    <li><b>Dos fases:</b> cambiar de taller, sin entrada ni salida, y preparar el taller, que comprueba la conexión y aplica <code>system_settings</code>. Solo lo segundo puede fallar. Una tarea de cambio que consulte la base haría fallar el job antes de su middleware.</li>
     <li>Nginx con php-cgi atiende un proceso por request, sin estado compartido. El riesgo de que el contexto de un taller quede pegado aparece solo en los <b>workers de cola</b> (proceso largo): ver 3.5.</li>
   </ul>
 
@@ -317,15 +320,15 @@ flowchart LR
   <ul>
     <li><b>Despacho:</b> todo job lleva <code>tenant_id</code> en su payload, que se agrega automáticamente al despachar en contexto de taller.</li>
     <li><b>Ejecución:</b> un middleware de job restaura el taller antes de <code>handle</code> y lo <b>limpia después</b>: conexión, cache, configuración del taller, registrador de permisos y mailer.</li>
-    <li><b><code>SendClientNotification</code>:</b> recibe un id entero, no un modelo serializado, así que es compatible. Si la base del taller no está disponible, el job se libera con espera sin consumir su único intento, para que el aviso no quede <code>failed</code> por un problema de infraestructura.</li>
+    <li><b><code>SendClientNotification</code>:</b> recibe un id entero, no un modelo serializado, así que es compatible. Si la base del taller no está disponible, un middleware de job lo libera con espera antes de <code>handle</code>, para que el aviso no quede <code>failed</code> por un problema de infraestructura. Reemplaza <code>$tries = 1</code> por <code>retryUntil</code> de 6 horas (TD7) con <code>maxExceptions = 1</code>: un error dentro de <code>handle</code> sigue sin reintentarse, porque reintentarlo podría duplicar el email.</li>
     <li><b><code>afterCommit()</code>:</b> sigue funcionando porque la transacción ocurre en la conexión <code>tenant</code>, que en ese momento es la conexión por defecto.</li>
-    <li><b>Scheduler:</b> <code>notifications:send-reminders</code> pasa a despachar <b>un job por taller activo</b>, para que la falla de un taller no detenga a los demás. La hora diaria sigue global en el MVP; una hora propia por taller queda para después.</li>
+    <li><b>Scheduler:</b> <code>notifications:send-reminders</code> pasa a despachar <b>un job por taller activo</b>, para que la falla de un taller no detenga a los demás. La hora es por taller, como en T1: cada minuto se recorren los talleres activos (TD6). La hora no es global, y la falla de un taller se registra y no frena al resto.</li>
     <li><b>Taller suspendido (P9):</b> el scheduler no despacha sus jobs. Un job de aviso al cliente descartado por la suspensión deja el aviso en <code>failed</code> con el motivo <code>Taller suspendido</code>, <b>nunca en <code>pending</code></b>: el reenvío rechaza los avisos <code>pending</code> (<code>CLIENT_NOTIFICATION_PENDING</code>) y el aviso quedaría sin reenvío posible. Después de reactivar el taller se puede reenviar con las reglas vigentes. No cambia ninguna otra regla de avisos.</li>
   </ul>
 
   <h3>3.6 Cache, permisos Spatie y configuración</h3>
   <ul>
-    <li><b>Prefijo de cache por taller</b> (<code>tenant:{id}:</code>). La clave <code>spatie.permission.cache</code> queda aislada por el prefijo. Al cambiar de taller en un worker se llama a <code>forgetCachedPermissions()</code>.</li>
+    <li><b>Prefijo de cache por taller</b> (<code>tenant:{id}:</code>). La clave <code>spatie.permission.cache</code> queda aislada por el prefijo <b>solo si el registro de Spatie vuelve a tomar la cache</b>: se instancia al arrancar, antes de identificar el taller. Una tarea de cambio llama a <code>initializeCache()</code> en todo contexto. <b>No usar <code>forgetCachedPermissions()</code></b>: borra la cache y suma unos 140 ms por request. Las claves de infraestructura (<code>illuminate:queue:restart</code>, <code>job-exceptions:*</code>, mutex del scheduler) van sin prefijo.</li>
     <li><b>Spatie:</b> <code>teams</code> sigue en <code>false</code>, porque cada base tiene sus propios roles. <code>RolesAndPermissionsSeeder</code> ya es idempotente y corre al crear el taller y en cada despliegue.</li>
     <li><b>Configuración por taller:</b> <code>company.*</code> (razón social, RUC, dirección…), <code>invoice.default_tax_rate</code>, el remitente de email y <code>notifications.*</code> pasan del <code>.env</code> a <code>system_settings</code> y se aplican con <code>config()-&gt;set</code> al identificar el taller. El <code>.env</code> queda como valor por defecto. Es la entrega T1.</li>
   </ul>
@@ -342,7 +345,7 @@ flowchart LR
   <h3>3.8 Migraciones y versiones</h3>
   <ul>
     <li><b>Ubicación:</b> las migraciones de taller siguen en <code>database/migrations</code> (sin mover archivos). Las centrales van en <code>database/migrations/central</code>.</li>
-    <li><b>Comando de taller</b> (propuesto <code>tenants:migrate</code>): recorre los talleres con un lock por taller, registra el resultado en <code>tenant_migrations</code> y marca <code>schema_version</code>. Si un taller falla, queda en mantenimiento (<code>503 TENANT_MAINTENANCE</code>) y los demás continúan.</li>
+    <li><b>Comando de taller</b> (propuesto <code>tenants:migrate</code>): es propio aunque el paquete ofrezca <code>--continue-on-error</code>. Recorre los talleres con un lock por taller, registra cada ejecución y permite repetir solo los fallidos (<code>--failed</code>). Si un taller falla, queda en mantenimiento (<code>503 TENANT_MAINTENANCE</code>), los demás continúan y el comando termina con código 1.</li>
     <li><b>Regla de despliegue:</b> migraciones compatibles hacia atrás (agregar primero, quitar en un despliegue posterior). Se migra y después se publica el código.</li>
     <li>La regla vigente "las migraciones no llaman a código de la aplicación" se mantiene.</li>
   </ul>
@@ -351,9 +354,9 @@ flowchart LR
   <div class="tablewrap"><table>
     <thead><tr><th>Operación</th><th>Pasos</th></tr></thead>
     <tbody>
-      <tr><td>Alta</td><td><code>provisioning</code> → crear base → migraciones → <code>RolesAndPermissionsSeeder</code> → administrador inicial → <code>system_settings</code> → <code>active</code>. Cada paso es idempotente; si falla queda <code>provisioning_failed</code> y se puede limpiar.</td></tr>
+      <tr><td>Alta</td><td><code>provisioning</code> → crear base → migraciones → <code>RolesAndPermissionsSeeder</code> → administrador inicial → <code>system_settings</code> → <code>active</code>. Cada paso es idempotente; si falla sigue en <code>provisioning</code>, con el error registrado, y se puede limpiar.</td></tr>
       <tr><td>Suspensión (P9)</td><td><code>suspended</code>: <b>bloqueo total y reversible</b>. Todas las rutas del dominio del taller, incluidas las públicas (<code>POST login</code>, <code>GET branding</code>), responden <code>403 TENANT_SUSPENDED</code>. El scheduler lo salta y los jobs pendientes se descartan con registro (avisos en <code>failed</code>, §3.5). No se borran datos ni se revocan tokens: al reactivar, las sesiones existentes vuelven a funcionar. La plataforma dispone de un <b>procedimiento operativo</b> de exportación asistida de datos y documentos cuando corresponda (no es una funcionalidad del MVP). El modo solo lectura y los modos según el motivo quedan como alternativa futura, sujeta a decisión comercial; no se implementan. <span class="tag u">Pendiente</span> obligaciones de conservación y acceso a documentos fiscales y datos personales durante la suspensión (contador o asesor legal).</td></tr>
-      <tr><td>Baja</td><td><code>cancelled</code>: exportación (JSON/CSV y archivos) y período de retención; después se borra la base y queda <code>deleted</code>. <span class="tag u">Incógnita</span> El plazo legal de conservación de facturas en Paraguay condiciona la retención.</td></tr>
+      <tr><td>Baja</td><td><code>cancelled</code>: exportación (JSON/CSV y archivos) y período de retención; después se borra la base y la fila queda <code>cancelled</code>. <span class="tag u">Incógnita</span> El plazo legal de conservación de facturas en Paraguay condiciona la retención.</td></tr>
       <tr><td>Backup</td><td>Por taller (<code>mysqldump</code> de su base y su directorio en <code>storage</code>) más la central. Hay que fijar retención y probar la restauración periódicamente.</td></tr>
       <tr><td>Restauración</td><td>Se restaura en una base con otro nombre, se verifica y se cambia <code>tenants.database</code> (cambio atómico de puntero). No afecta a los demás talleres.</td></tr>
     </tbody>
@@ -372,7 +375,7 @@ flowchart LR
   <h3>3.11 Errores y recuperación</h3>
   <ul>
     <li>Si falla la conexión a la base del taller, la API responde <code>503 TENANT_UNAVAILABLE</code>. Se registra el detalle en el log central, nunca en la respuesta. No hay fallback a otra base.</li>
-    <li>Un worker que no logra conectar libera el job con espera, sin consumir intentos. Tras N fallas consecutivas, el taller se marca para revisión.</li>
+    <li>Un worker que no logra conectar libera el job con espera (30 s, 2, 5 y 15 min) hasta <code>retryUntil</code>. Al vencer, queda en <code>failed_jobs</code> y se recupera con <code>queue:retry</code>.</li>
     <li>Healthcheck por taller (conexión y versión de esquema) para el monitoreo.</li>
   </ul>
 
@@ -1251,7 +1254,7 @@ flowchart LR
     <tbody>
       <tr><td><b>T0</b> Spike (no se mergea)</td><td>Instalar <code>spatie/laravel-multitenancy</code> en una rama descartable, con la versión elegida según P2 (§3.13); medir antes la línea base de S13; identificación, conexión y un job</td><td>Central mínima</td><td>Incompatibilidad con Sanctum o Spatie Permission, o con el harness de tests</td><td>Informe con S1–S13, versión y justificación, y mediciones con los umbrales de G; suite completa + pruebas de aislamiento. Si falla un criterio crítico, se detiene y se consulta. <b>La dependencia se aprueba aparte</b>. <b>Hecho el 2026-10-28/29</b> con la versión 4.2.1 (<code>docs/spike-t0-informe.md</code>): los críticos se cumplen; no se cumplen S8 (jobs), S10 y S13 (unos 30–45 ms por request, con mitigaciones a probar). La dependencia sigue sin aprobar</td></tr>
       <tr><td><b>T1</b> Configuración del taller en la base <small>hecha el 2026-11-01 (handoff 2.78)</small></td><td><code>company.*</code>, tasa de IVA, remitente y horarios de avisos a <code>system_settings</code>, con el <code>.env</code> como valor por defecto</td><td>Ninguna (la tabla existe)</td><td>Los PDF y emails deben leer la configuración nueva</td><td>Mismos PDF y totales con los valores por defecto; tests de PDF en verde. Sirve también sin SaaS</td></tr>
-      <tr><td><b>T2</b> Central e identificación</td><td>Base central, <code>tenants</code>, <code>tenant_domains</code>, <code>IdentifyTenant</code>, conexión dinámica, errores <code>TENANT_*</code></td><td>Centrales</td><td>Orden de middleware y rutas públicas</td><td>Suite actual en verde en contexto de un taller; suite de aislamiento (tokens, ids, <code>exists</code>)</td></tr>
+      <tr><td><b>T2</b> Central e identificación</td><td>Base central, <code>tenants</code>, <code>IdentifyTenant</code>, conexión dinámica, errores <code>TENANT_*</code></td><td>Centrales</td><td>Orden de middleware y rutas públicas</td><td>Suite actual en verde en contexto de un taller; suite de aislamiento (tokens, ids, <code>exists</code>)</td></tr>
       <tr><td><b>T3</b> Colas, cache, permisos, scheduler</td><td>Jobs con taller, limpieza de contexto, prefijo de cache, recordatorios por taller</td><td><code>jobs</code> en la central</td><td>Contexto que queda pegado en el worker</td><td>Tests de job y de cache entre talleres; un worker procesa jobs de A y B alternados sin cruces</td></tr>
       <tr><td><b>T4</b> Storage por taller</td><td>Raíces <code>tenants/{id}</code>, disco privado dedicado (E), helper de rutas y adaptación de las raíces de branding, fotos y firmas (siguen públicas en esta entrega)</td><td>Ninguna</td><td>URLs públicas existentes</td><td>Archivos de A no accesibles por rutas de B</td></tr>
       <tr><td><b>Tarea P8</b> Fotos y firmas a privado</td><td>Tarea independiente después de T4: migrar primero las firmas de entrega y después las fotos de recepción y de diagnóstico; contrato de la API y frontend (descarga con token)</td><td>Según el diseño de esa tarea</td><td>Cambio de contrato con el frontend; URLs ya compartidas dejan de funcionar</td><td>Se aprueba e implementa por separado. <b>Requisito antes del primer taller comercial</b></td></tr>
@@ -1432,6 +1435,18 @@ flowchart LR
       <tr><td>P7</td><td>Tope de la autorización</td><td>Por línea, en importe y en cantidad; el exceso va a un complementario; pregunta externa V1 (no G6); unidades explícitas en M6</td><td>§4.4, §5.3, M6</td></tr>
       <tr><td>P8</td><td>Fotos y firmas públicas</td><td>Deuda de seguridad; tarea independiente después de T4, primero la firma; resuelta antes del primer taller comercial; ningún tipo nuevo de archivo en <code>public</code> salvo branding</td><td>§3.7, §9 (tarea P8), T6</td></tr>
       <tr><td>P9</td><td>Taller suspendido</td><td>Bloqueo total y reversible, también en rutas públicas; avisos en cola → <code>failed</code> con <code>Taller suspendido</code>; pantalla específica en el frontend; exportación asistida como procedimiento operativo; solo lectura como alternativa futura</td><td>§3.5, §3.9, §3.12, §7.3, T5</td></tr>
+      <tr class="grp"><td colspan="4">Revisión del spike T0 (aprobadas el 2026-11-01; handoff 2.80)</td></tr>
+      <tr><td>TD1</td><td>Paso 0</td><td>Medición en una rama descartable, antes de T2. Hecha</td><td><code>docs/spike-t0-informe.md</code>, sección 8</td></tr>
+      <tr><td>TD2</td><td>Versión del paquete</td><td><code>spatie/laravel-multitenancy</code> 4.2.3 desde el 2026-11-09, cuando cumple dos semanas; se repite el paso 0 con esa versión</td><td>§3.13, T2</td></tr>
+      <tr><td>TD3</td><td>Dominio</td><td><code>tenants.domain</code>, sin tabla de dominios</td><td>§3.1, §3.2</td></tr>
+      <tr><td>TD4</td><td>Id del taller</td><td>Entero</td><td>§3.1</td></tr>
+      <tr><td>TD5</td><td>Estados</td><td><code>active</code> y <code>suspended</code> en T2; <code>provisioning</code> y <code>cancelled</code> en T5; el mantenimiento es un dato aparte</td><td>§3.1, §3.9</td></tr>
+      <tr><td>TD6</td><td>Hora de recordatorios</td><td>Por taller, recorriendo los activos cada minuto</td><td>§3.5</td></tr>
+      <tr><td>TD7</td><td>Reintentos de jobs</td><td>Hasta 6 horas</td><td>§3.5, §3.11</td></tr>
+      <tr><td>TD8</td><td><code>X-Tenant</code></td><td>Eliminada; hosts reales también en local y tests</td><td>§3.2</td></tr>
+      <tr><td>TD9</td><td>Rendimiento</td><td>Los umbrales de G no cambian; conexión persistente solo en la central</td><td>§3.3</td></tr>
+      <tr><td>TD10</td><td>Fallo cerrado</td><td><code>DB_DATABASE</code> vacío en producción</td><td>§3.3</td></tr>
+      <tr><td>TD11</td><td>Taller cancelado</td><td><code>404 TENANT_NOT_FOUND</code></td><td>§3.2</td></tr>
       <tr class="grp"><td colspan="4">Versión 3 (aprobadas el 2026-10-29)</td></tr>
       <tr><td>P10</td><td>Corrección de facturas emitidas</td><td>Se registra la nota de crédito emitida fuera del sistema, en cualquier factura emitida; por línea y parcial, sin superar lo no acreditado de la línea ni el saldo pendiente (para acreditar lo cobrado se anulan antes los pagos); baja el saldo y el facturado neto de la porción; la anulación vigente no cambia hasta V19; emitir notas de crédito desde SyncTaller queda para SIFEN. Pendientes V18 y V19</td><td>§5.7, P6, M8, M9 (entrega propia)</td></tr>
     </tbody>

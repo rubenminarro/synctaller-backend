@@ -214,6 +214,8 @@ Esta rama no se mergea. `stancl/tenancy` y la solución propia quedan como alter
 
 ## 7. Cierre del spike y estado del entorno local (2026-10-29)
 
+> Lo que sigue es el cierre de la primera evaluación. La revisión posterior y sus mediciones están en la sección 8.
+
 * **Código:** la rama `spike/t0-multitenancy` se descartó sin commitear, como pide P2. Este informe es lo único que
   pasó a `main`. El detalle de lo que se armó está en la sección 3, para retomarlo en T2.
 * **`vendor/`:** `composer install` lo volvió al lock de `main`, sin el paquete.
@@ -227,3 +229,66 @@ Esta rama no se mergea. `stancl/tenancy` y la solución propia quedan como alter
   `php.ini.bak-antes-opcache-2026-10-29`, en la carpeta de PHP de Laragon.
 * **Laragon:** los `php-cgi` quedaron corriendo, lanzados a mano con los mismos parámetros. Un Stop/Start desde
   Laragon los vuelve a su manejo normal.
+
+## 8. Revisión técnica y paso 0 (2026-11-01)
+
+Auditoría del spike contra `main` (`18e2bfa`), el `vendor` instalado y el código de Spatie 4.2.1, con partes de 4.2.2 y
+4.3.0. El código del spike se había descartado, así que el paso 0 lo reconstruyó en una rama descartable, también
+eliminada. **Esta vez se conserva lo necesario para repetirlo en [`docs/spike-t0/`](spike-t0/).** Las decisiones están en
+`docs/handoff.md` 2.80.
+
+### Método
+
+Copias de trabajo separadas, bases temporales y procesos Nginx y `php-cgi` propios, sin tocar Laragon ni la base de
+desarrollo. PHP 8.3.30 con OPcache, Laravel 13.39 y paquete 4.2.1. 300 ciclos por endpoint con las variantes **intercaladas
+al azar en cada ciclo**, para que el ruido las afecte por igual, más 10 ciclos de calentamiento. Sin errores en ninguna
+corrida. Marcas con `hrtime` dentro del proceso, enviadas en `Server-Timing`.
+
+### Etapas (variante `initializeCache()`, ms)
+
+| Etapa | p50 | p95 |
+|---|---|---|
+| Resolver el host | 0,01 | 0,03 |
+| **Conectar a la central** | **18,42** | **26,19** |
+| Buscar el taller | 3,80 | 5,74 |
+| `SwitchTenantDatabaseTask` | 0,16 | 0,23 |
+| `PrefixCacheTask` | 0,06 | 0,15 |
+| Tarea de permisos | 0,25 | 0,32 |
+| Conectar a la base del taller (`main` ya paga una conexión equivalente) | 14,37 | 26,72 |
+| Aplicar la configuración de T1 (`main` ya la paga) | 3,29 | 4,72 |
+
+### Sobrecarga contra `main` (diferencia de p95, ms)
+
+| Endpoint | Umbral G | `initializeCache()` | Más conexión persistente a la central |
+|---|---|---|---|
+| `GET /api/me` | 18,9 | +24,1, no cumple | −4,8 |
+| `GET /api/work-orders` | 27,6 | +21,0 | −11,6 |
+| `GET /api/work-orders/{id}` | 28,0 | +11,4 | −11,8 |
+| `GET /api/reports/sales` | 16,6 | +22,4, no cumple | −5,9 |
+| `GET /api/branding` | 15,0 | +29,6, no cumple | +0,7 |
+
+Los valores negativos no son una mejora: la sobrecarga queda por debajo de lo que la medición detecta (unos 10 ms). El login
+no se midió: lo domina bcrypt.
+
+### Conclusiones
+
+1. **La sobrecarga es la conexión extra.** Con `PDO::ATTR_PERSISTENT` solo en la central, conectar baja de 18,4 a 0,8 ms y se
+   cumplen todos los umbrales de G. La cache `host → taller` queda descartada por ahora: buscar el taller cuesta unos 3 ms.
+2. **La tarea de permisos es obligatoria en todo contexto.** Sin ella, los permisos quedan en la clave global
+   `synctaller-cache-spatie.permission.cache`, compartida entre talleres: `Gate::before` instancia el registro antes de
+   identificar el taller. Con `initializeCache()` pasan a `tenant_id_1spatie.permission.cache`. Cuesta 0,25 ms, así que
+   separar HTTP de workers no aporta nada.
+3. **`forgetCachedPermissions()` no se debe usar al activar un taller:** borra la cache y la regenera en cada request (26
+   consultas contra 22 en el listado de OT) y suma unos 140 ms en los endpoints que usan permisos. La sección 5 estimaba 30–45
+   ms: esa cifra corresponde a la conexión extra, no a esta llamada.
+4. **Si MySQL corta la conexión persistente, se recupera sola:** se cortó con `KILL` y los tres requests siguientes dieron 200,
+   sin errores de conexión en el log. Falta probar un reinicio completo de MySQL.
+
+### Límites
+
+Una corrida con `forgetCachedPermissions()` dio +67 ms en el listado de OT para `initializeCache()`: las variantes compartían
+taller y cache, y una borraba lo que usaba la otra. Las cifras de arriba son de la corrida limpia, sin esa variante.
+
+La medición es local: Windows, un taller y un proceso por variante. Compara variantes, pero no garantiza el rendimiento en
+producción. No se confirmó por qué cada conexión tarda tanto. Una conexión persistente ocupa una conexión por proceso
+`php-cgi`. Hay que repetir con 4.2.3 (TD2) y con 10 talleres (V9).

@@ -296,6 +296,10 @@ con su pantalla en el frontend y sin migración. Lo siguiente de la línea T es 
 dependencia de tenancy (`docs/spike-t0-informe.md`). La deuda #17 se resolvió el mismo día: toda la aplicación corre en
 hora de Paraguay (handoff 2.79; antes de T6, fijar la zona horaria de MySQL en producción).
 
+**Actualización (2026-11-01, revisión del spike):** el paso 0 mostró que la sobrecarga es la conexión extra a la central, y las
+decisiones TD1–TD11 están aprobadas (handoff 2.80). **T2 empieza desde el 2026-11-09**, cuando la 4.2.3 cumple dos semanas (TD2).
+Mientras tanto sigue pendiente el cuestionario al contador.
+
 **Siguiente paso recomendado, en orden:**
 
 1. ~~**Conservar la revisión de la especificación.**~~ Publicada el 2026-10-27 como página «Revisión de la

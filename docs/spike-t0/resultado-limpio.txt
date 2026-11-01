@@ -1,0 +1,48 @@
+errores: []
+
+== Total por endpoint (ms): p50 / p95 / n
+me           | base    150.0 /  189.3 n=300 | init    166.8 /  213.3 n=300 | persist  151.0 /  184.4 n=300
+work-orders  | base    222.2 /  276.2 n=300 | init    236.6 /  297.1 n=300 | persist  211.6 /  264.6 n=300
+work-order   | base    222.0 /  280.2 n=300 | init    229.5 /  291.6 n=300 | persist  210.4 /  268.4 n=300
+sales        | base    121.3 /  166.2 n=300 | init    137.1 /  188.6 n=300 | persist  119.5 /  160.3 n=300
+branding     | base     75.7 /  101.5 n=300 | init     99.0 /  131.1 n=300 | persist   78.0 /  102.2 n=300
+
+== Sobrecarga pareada contra base, por ciclo (ms): mediana / p95 / IC95 de la mediana
+me           | init    +14.4 /  +70.9 [+11.5,+20.4] | persist   -3.9 /  +54.4 [-7.8,+0.9]
+work-orders  | init    +16.8 /  +84.7 [+12.6,+21.8] | persist   -5.7 /  +59.6 [-11.4,-0.1]
+work-order   | init     +6.7 /  +86.6 [+0.5,+11.3] | persist  -10.9 /  +56.6 [-16.9,-6.4]
+sales        | init    +15.6 /  +75.8 [+11.8,+20.2] | persist   -2.3 /  +48.6 [-6.2,+1.5]
+branding     | init    +20.7 /  +66.9 [+17.4,+24.6] | persist   +0.9 /  +38.6 [-2.8,+3.1]
+
+== Etapas dentro del proceso (ms): p50 / p95
+[init]
+  host                                  0.01 /    0.03
+  landlord_connect                     18.42 /   26.19
+  tenant_lookup                         3.80 /    5.74
+  other                                 0.87 /    1.49
+  task_SwitchTenantDatabaseTask         0.16 /    0.23
+  task_PrefixCacheTask                  0.06 /    0.15
+  task_RebindPermissionsTask            0.25 /    0.32
+  bind                                  0.16 /    0.47
+  tenant_connect                       14.37 /   26.72
+  settings                              3.29 /    4.72
+  TOTAL                                36.72 /   59.89
+[persist]
+  host                                  0.01 /    0.03
+  landlord_connect                      0.81 /    1.47
+  tenant_lookup                         2.87 /    4.89
+  other                                 0.70 /    1.29
+  task_SwitchTenantDatabaseTask         0.11 /    0.20
+  task_PrefixCacheTask                  0.05 /    0.10
+  task_RebindPermissionsTask            0.16 /    0.30
+  bind                                  0.13 /    0.29
+  tenant_connect                       14.90 /   25.62
+  settings                              3.08 /    4.49
+  TOTAL                                23.23 /   34.32
+
+== Sobrecarga como diferencia de p50 y de p95 contra base (ms)
+me           | init    p50  +16.7  p95  +24.1 | persist p50   +0.9  p95   -4.8
+work-orders  | init    p50  +14.4  p95  +21.0 | persist p50  -10.6  p95  -11.6
+work-order   | init    p50   +7.5  p95  +11.4 | persist p50  -11.6  p95  -11.8
+sales        | init    p50  +15.8  p95  +22.4 | persist p50   -1.8  p95   -5.9
+branding     | init    p50  +23.3  p95  +29.6 | persist p50   +2.3  p95   +0.7
