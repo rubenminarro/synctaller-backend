@@ -3,10 +3,10 @@
 Punto de continuidad de SyncTaller para retomar el trabajo en otro equipo. Registra el estado verificado, las
 decisiones tomadas, los documentos producidos y el siguiente paso acordado.
 
-> **Alcance de este documento.** No reemplaza a [`CLAUDE.md`](../CLAUDE.md) (reglas vigentes) ni a
-> [`handoff.md`](handoff.md) (historia y decisiones por fase). Las reglas de lo ya implementado del módulo de
+> **Alcance de este documento.** No reemplaza a [`CLAUDE.md`](../../../CLAUDE.md) (reglas vigentes) ni a
+> [`handoff.md`](../../handoff.md) (historia y decisiones por fase). Las reglas de lo ya implementado del módulo de
 > aseguradoras (M1–M11 y P10) están en `CLAUDE.md` 6.22–6.31 y sus decisiones en el handoff (2.59–2.75). El diseño de lo
-> que falta sigue en [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 3; la propuesta M12
+> que falta sigue en [`especificacion-aseguradoras.html`](../../especificacion-aseguradoras.html) (versión 3; la propuesta M12
 > espera revisión; sección 6). Las páginas publicadas de la sección 6 quedan como antecedente.
 
 Convención: **[verificado]** = comprobado en el código o el entorno en la fecha indicada (el 2026-10-27, salvo que se
@@ -118,7 +118,7 @@ Son la dirección del diseño, **no** una autorización para modificar código.
 ### 5.2 Decisiones A–G y P1–P9: aprobadas el 2026-10-27
 
 Se revisaron y aprobaron una por una el 2026-10-27, varias con precisiones. **El texto aprobado está en §10.2 de
-[`especificacion-aseguradoras.html`](especificacion-aseguradoras.html)** y se aplica en las secciones que allí se
+[`especificacion-aseguradoras.html`](../../especificacion-aseguradoras.html)** y se aplica en las secciones que allí se
 indican; las tablas siguientes quedan solo como registro de las propuestas originales. Aprobarlas no resuelve las
 validaciones externas (sección 8).
 
@@ -162,7 +162,7 @@ repositorio**.
 | Informe de decisiones: "Decisiones del módulo de aseguradoras" | Multi-tenant (recomendación C), clientes y aseguradoras, reparto, autorizaciones, MVP, preguntas G | https://claude.ai/artifact/6NQ2MEHFyC4S2pUpgWensC |
 | Especificación técnica: "Especificación del módulo de aseguradoras" | Arquitectura SaaS, entidades, flujos, invariantes I1–I8, API, permisos, plan E/T/M | https://claude.ai/artifact/R1BmU5AE8gYb6VQanTaer4 |
 | Revisión: "Revisión de la especificación de aseguradoras" | Hallazgos H1–H15, invariantes corregidas R1–R10, ejemplos numéricos, criterios del spike S1–S13, decisiones A–G | https://claude.ai/artifact/T1j1B68eKpFZLrub5Jw3vx |
-| **Especificación de trabajo (versión 2, aprobada)** | La especificación técnica con los 14 cambios de la revisión, las decisiones A–G y P1–P9 aprobadas (§10.2) y las validaciones externas pendientes G1–G10 y V1–V14 (§10.1) | [`docs/especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (repositorio) |
+| **Especificación de trabajo (versión 2, aprobada)** | La especificación técnica con los 14 cambios de la revisión, las decisiones A–G y P1–P9 aprobadas (§10.2) y las validaciones externas pendientes G1–G10 y V1–V14 (§10.1) | [`docs/especificacion-aseguradoras.html`](../../especificacion-aseguradoras.html) (repositorio) |
 
 * Las copias HTML de las cuatro páginas están en la carpeta temporal de la sesión de esta notebook
   (`%LOCALAPPDATA%\Temp\claude\...\scratchpad\aseguradoras-*.html`). Esa carpeta **no viaja** al otro equipo.
@@ -293,7 +293,7 @@ día hasta `000071`). **Ninguna entrega del módulo está lista para implementar
 
 **Actualización (2026-11-01, T1):** la configuración del taller en la base está implementada (handoff 2.78, `CLAUDE.md` 6.32),
 con su pantalla en el frontend y sin migración. Lo siguiente de la línea T es **T2**, que necesita aprobar antes la
-dependencia de tenancy (`docs/spike-t0-informe.md`). La deuda #17 se resolvió el mismo día: toda la aplicación corre en
+dependencia de tenancy (`docs/spike-t0/informe.md`). La deuda #17 se resolvió el mismo día: toda la aplicación corre en
 hora de Paraguay (handoff 2.79; antes de T6, fijar la zona horaria de MySQL en producción).
 
 **Actualización (2026-11-01, revisión del spike):** el paso 0 mostró que la sobrecarga es la conexión extra a la central, y las
@@ -319,7 +319,7 @@ Mientras tanto sigue pendiente el cuestionario al contador.
      **E5** (handoff 2.57) mergeada en `main` el 2026-10-28 (migración `000058`). **E1** (handoff §14: deudas
      #14–#16 y discrepancias D1–D10 en 14.1; `CLAUDE.md` §7) en la rama `docs/discrepancias-e1`. Con eso la línea E
      está completa. D3, D7 y D8 se resolvieron el 2026-10-30 (handoff 2.74; D9 con M1; D4 y D6 el 2026-10-29);
-   * ~~spike T0 en una rama descartable~~ Hecho el 2026-10-28/29 y descartado. Informe: `docs/spike-t0-informe.md`
+   * ~~spike T0 en una rama descartable~~ Hecho el 2026-10-28/29 y descartado. Informe: `docs/spike-t0/informe.md`
      (handoff 2.58). Sin fallas críticas. No cumplen S8 (jobs), S10 y S13 (unos 30–45 ms por request), con
      mitigaciones previstas para T2. La dependencia no está aprobada;
    * módulo desde M1 (tipo de cliente), coordinado con el frontend:

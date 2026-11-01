@@ -1,6 +1,6 @@
 # Paso 0 del spike T0: cómo repetir la medición
 
-Código y scripts de la medición del 2026-11-01 (`docs/spike-t0-informe.md`, sección 8). **Es material de referencia, no código
+Código y scripts de la medición del 2026-11-01 ([`informe.md`](informe.md), sección 8). **Es material de referencia, no código
 del producto: no se copia tal cual a T2.** Incluye marcas de tiempo y variantes solo para medir.
 
 | Archivo | Contenido |

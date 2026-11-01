@@ -1,6 +1,6 @@
 # Guía de pruebas con Postman — SyncTaller
 
-**Alcance:** API al cierre de la FASE 20 (reportes y dashboard), con la FASE 19 (mantenimiento preventivo), la FASE 18 (historial del vehículo), los roles del taller, la FASE 17 (entrega del vehículo), la FASE 16 (pagos, vuelto, recibos y resumen de caja), la FASE 15 (facturación con timbrado e IVA incluido), la FASE 14 (cierre económico de la OT y liquidación de comisiones), incluidos los ajustes posteriores a la FASE 12 (rutas de vehículos por cliente, permisos de ítems de presupuesto, `error_code` del login y validaciones de texto) y la corrección de `roles/permissions-grouped-by-module`.
+**Alcance:** API completa. Las secciones siguen el orden de las fases, y las entregas de aseguradoras y de configuración se agregaron en los módulos que afectan. **Cubre el contrato documentado; no se ejecutó en la auditoría del 2026-11-01** (ver [`modules/README.md`](../modules/README.md)).
 **Uso:** ejecutar los requests en el orden indicado; cada sección parte de los datos creados en las anteriores.
 
 ---

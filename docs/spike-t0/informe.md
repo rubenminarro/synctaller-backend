@@ -234,7 +234,7 @@ Esta rama no se mergea. `stancl/tenancy` y la solución propia quedan como alter
 
 Auditoría del spike contra `main` (`18e2bfa`), el `vendor` instalado y el código de Spatie 4.2.1, con partes de 4.2.2 y
 4.3.0. El código del spike se había descartado, así que el paso 0 lo reconstruyó en una rama descartable, también
-eliminada. **Esta vez se conserva lo necesario para repetirlo en [`docs/spike-t0/`](spike-t0/).** Las decisiones están en
+eliminada. **Esta vez se conserva lo necesario para repetirlo en [`docs/spike-t0/`](README.md).** Las decisiones están en
 `docs/handoff.md` 2.80.
 
 ### Método
