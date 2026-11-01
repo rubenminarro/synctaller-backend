@@ -7,7 +7,7 @@
 **Estado:** Backend/API funcional — roadmap original completo (FASES 10 a 20: repuestos, inventario, servicios,
 cierre económico, facturación, pagos, entrega, historial, mantenimiento preventivo, reportes), FASE 21 (compras) y
 FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría) y
-módulo de aseguradoras en curso (M1–M11 y P10, 2.59–2.75, con M10 detrás de un interruptor apagado) y configuración del taller en la base (T1, 2.78); 6 roles; 486 tests
+módulo de aseguradoras en curso (M1–M11 y P10, 2.59–2.75, con M10 detrás de un interruptor apagado) y configuración del taller en la base (T1, 2.78); 6 roles; 489 tests
 en verde (2026-11-01)
 **Stack principal:** Laravel 13.39 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend en React 19, en el repositorio aparte
 `../synctaller-frontend` (ver 1.2)
@@ -1883,9 +1883,25 @@ Primera entrega de la línea T, la única sin validaciones pendientes. Sirve tam
 | Tasa de IVA | Decisión del usuario: editable por el administrador (0, 5 o 10), con aviso previo en la pantalla y `meta.warnings`. Rige desde que se guarda, también en documentos en curso |
 | Hora de los recordatorios | Decisión del usuario: en hora de Paraguay. **Cambio de comportamiento:** con el valor por defecto salían a las 08:00 UTC (05:00 de Paraguay) y ahora a las 08:00 de Paraguay. La tarea pasa a `everyMinute()` con `when()`: no se puede leer la base al cargar `routes/console.php` |
 | Permiso | Se reutiliza `system-settings.update`, también para leer: los datos solo se usan en esa pantalla |
-| Hallazgo | La aplicación corre en UTC: deuda #17, sin corregir (decisión del usuario) |
+| Hallazgo | La aplicación corre en UTC: deuda #17, resuelta después (2.79) |
 | Tasa de un documento ya calculado | La prueba en el navegador mostró que el PDF de un presupuesto aprobado al 10 % decía "IVA 5%" junto a su importe del 10 %: la etiqueta salía de la configuración, que hasta T1 era fija. Ahora sale de los importes guardados (`Budget::taxRate`), sin migración. El diálogo "Facturar OT" tampoco afirma ya "IVA 10%": era un texto fijo |
 | Pruebas | `tests/Feature/Settings/WorkshopSettingsTest` (14): valores por defecto, reemplazo, vuelta al `.env`, tasa 0, tasa nueva en la factura y su aviso, tasa del PDF del presupuesto, totales iguales por defecto, validaciones, permisos por rol, auditoría, remitente, job, comando y hora local. Frontend: `WorkshopSettingsCard.test.tsx` (4). Revisión en Chrome (2026-11-01) sobre una copia temporal de la base (`synctaller_t1`, borrada después): error de validación, aviso de la tasa, guardado, recarga, vaciar un campo, PDF, factura al 5 % y 403 de la recepcionista, sin errores de consola |
+
+
+# 2.79 Zona horaria: hora de Paraguay (deuda #17, 2026-11-01)
+
+| Tema | Decisión |
+|---|---|
+| Problema | La aplicación corría en UTC: desde las 21:00 de Paraguay `now()` ya era el día siguiente. Una factura emitida a la noche salía con fecha de mañana, y el pago con la fecha real se rechazaba por "anterior a la emisión". También se movían filtros y reportes |
+| Opción elegida | Decisión del usuario, entre tres (toda la aplicación en hora local; guardar UTC y calcular el día local; parche mínimo): `app.timezone` = `APP_TIMEZONE`, por defecto `America/Asuncion`. Un solo cambio corrige `whereDate`, validaciones (`today`), rangos y fechas de los Resources, sin tocar cada uso |
+| Por qué no UTC | Es el estándar, pero exigía revisar unos 49 filtros, 77 formatos de fecha y 22 rangos, y cada omisión sería un error silencioso. Paraguay no tiene horario de verano (UTC-3 fijo), así que la hora local no es ambigua, y la base por taller (T2) permite que cada taller tenga su zona |
+| Límite | En un país con horario de verano habría una hora ambigua por año, y un informe entre talleres de distintas zonas necesitaría convertir horas |
+| Datos | Decisión del usuario: la base local solo tiene datos de ejemplo, sin conversión. Sus horas ya estaban pensadas como locales (una OT a las 17:00 se veía a las 14:00 y ahora a las 17:00) |
+| API | Las fechas con hora siguen viajando en UTC (`Z`); el frontend las muestra según el navegador. Sin cambios de contrato |
+| T1 | Se quitó `notifications.timezone`: ya no hace falta |
+| Frontend | `AuthorizationFormModal` calculaba hoy con `toISOString()` (UTC): usa `todayInput()` |
+| **Antes de T6** | Laravel escribe la hora local y las columnas `timestamp` de MySQL la convierten según la zona de la sesión. Aquí es la del sistema (UTC-3). En producción, fijar `database.connections.mysql.timezone` o `default-time-zone` en `-03:00`, y usar la misma al restaurar un respaldo |
+| Pruebas | `tests/Feature/Settings/TimezoneTest` (3), con instantes absolutos en UTC: fallan con `APP_TIMEZONE=UTC`. Frontend: fecha propuesta a la noche. Revisión en Chrome sobre una copia temporal (`synctaller_tz`, borrada después): OT con sus horas correctas y factura emitida con la fecha y la hora del reloj, también en MySQL |
 
 
 ---
@@ -4405,6 +4421,7 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Discrepancias D3, D7 y D8 (2.74)
 [✓] Deducible facturado, modalidad neta: hecha y apagada (2.75)
 [✓] Configuración del taller en la base (T1, 2.78)
+[✓] Hora de Paraguay en toda la aplicación (2.79)
 ```
 
 ## Próximo
@@ -4501,7 +4518,7 @@ aprobadas (E y P8, §10.2 de la especificación), que solo faltaba registrar.
 | 14 | **Abierta (2026-10-28): disco `local` con `serve` activo y sin uso** | `config/filesystems.php`: el disco `local` (`storage/app/private`) tiene `'serve' => true`. Laravel registra `GET` y `PUT storage/{path}` con URL firmada: la firma usa la `APP_KEY` y no conoce permisos, taller ni auditoría. Ninguna parte de `app/` usa ese disco | Hoy no expone nada (la carpeta solo tiene `.gitignore`), pero cualquier archivo que se guarde ahí quedaría descargable por URL firmada. Decisión aprobada (E): no se usa para el módulo, que tendrá su propio disco privado sin `serve`; su revisión queda como deuda, **sin desactivarlo en esta etapa** |
 | 15 | **Abierta (2026-10-28): fotos y firmas con URL pública (deuda de seguridad, P8)** | Fotos de recepción (`ReceptionPhotoController`), fotos de ítems de diagnóstico (`DiagnosticItemPhotoController`) y firmas de entrega (`VehicleDeliveryService`) en el disco `public`, con URL permanente y nombre aleatorio. El frontend las muestra con `<img src>`, que no envía el token | Una URL filtrada no se puede revocar hasta mover el archivo; no hay permiso ni auditoría de acceso. Decisión aprobada (P8): tarea independiente **después de T4** (storage por taller), primero la firma y después las fotos, coordinada con el frontend (descarga con token). **Requisito antes del primer taller comercial.** Hasta entonces no se agregan tipos de archivo nuevos al disco `public`, salvo branding |
 | 16 | **Abierta (2026-10-28): sin análisis antivirus de archivos subidos (riesgo técnico)** | Las subidas solo validan tipo, extensión y tamaño (fotos, firma, logo, favicon; y los documentos de siniestros previstos en M4) | La validación no sustituye un antivirus. Decisión aprobada (E): queda fuera del alcance actual y se documenta como riesgo pendiente; decidir antes de recibir documentos de terceros en producción |
-| 17 | **Abierta (2026-11-01): la aplicación corre en UTC** | `config/app.php`: `'timezone' => 'UTC'`, sin variable de entorno. Paraguay está en UTC-3 | Desde las 21:00 locales `now()` ya es el día siguiente: afecta a la fecha de los documentos y a validaciones como "fecha no futura" o "vencimiento ≥ hoy". Decisión del usuario (T1): se corrige aparte, porque toca fechas de todos los módulos y exige revisar los datos guardados. Los recordatorios ya usan hora de Paraguay (`notifications.timezone`) |
+| 17 | ~~La aplicación corre en UTC~~ **Resuelto el 2026-11-01 (ver 2.79)** | `config/app.php`: `'timezone' => 'UTC'`, sin variable de entorno. Paraguay está en UTC-3 | Desde las 21:00 locales `now()` ya es el día siguiente: afecta a la fecha de los documentos y a validaciones como "fecha no futura" o "vencimiento ≥ hoy". La aplicación pasó a hora de Paraguay (`APP_TIMEZONE`, por defecto `America/Asuncion`), sin convertir datos: la base local solo tiene ejemplos |
 
 ## 14.1 Discrepancias del estudio de aseguradoras (D1–D10, 2026-10-28)
 

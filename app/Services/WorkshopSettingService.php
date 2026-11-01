@@ -86,7 +86,7 @@ class WorkshopSettingService
     {
         $this->apply();
 
-        return now(config('notifications.timezone'))->format('H:i') === config('notifications.reminders_at');
+        return now()->format('H:i') === config('notifications.reminders_at');
     }
 
     private function cast(string $field, string $value): int|string
