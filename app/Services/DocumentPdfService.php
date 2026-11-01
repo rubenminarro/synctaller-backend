@@ -50,7 +50,7 @@ class DocumentPdfService
             'budget' => $budget,
             'client' => $this->client($budget->reception?->client),
             'vehicle' => $this->vehicle($budget->reception?->vehicle),
-            'taxRate' => (int) config('invoice.default_tax_rate', 10),
+            'taxRate' => $budget->taxRate(),
             'items' => $budget->items->map(fn ($item) => [
                 'type' => $item->type->label(),
                 'description' => $item->description,

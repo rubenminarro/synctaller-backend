@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use App\Models\Budget;
 use App\Models\Invoice;
@@ -14,6 +15,7 @@ use App\Models\WorkOrder;
 use App\Models\WorkOrderAllocation;
 use App\Models\WorkOrderItem;
 use App\Models\WorkOrderPart;
+use App\Services\WorkshopSettingService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(WorkshopSettingService::class);
     }
 
     /**
@@ -45,6 +47,9 @@ class AppServiceProvider extends ServiceProvider
             'invoice' => Invoice::class,
             'vehicle_maintenance' => VehicleMaintenance::class,
         ]);
+
+        // Un worker vive más que un cambio de configuración: se vuelve a aplicar antes de cada job.
+        Queue::before(fn () => $this->app->make(WorkshopSettingService::class)->apply());
 
         // Bypass implícito para el rol 'administrador'
         Gate::before(function ($user, $ability) {

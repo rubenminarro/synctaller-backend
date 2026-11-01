@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Enums\BudgetStatus;
 use App\Enums\InsurerAuthorizationStatus;
+use App\Support\Decimal;
 use App\Traits\Auditable;
 
 class Budget extends Model
@@ -36,6 +37,19 @@ class Budget extends Model
         'approved_at' => 'datetime',
     ];
     
+    /**
+     * Tasa de IVA con la que se calculó: sale de los importes guardados, no de la
+     * configuración, que pudo cambiar después (el presupuesto no guarda la tasa).
+     */
+    public function taxRate(): int
+    {
+        if (bccomp((string) $this->subtotal, '0', 2) !== 1) {
+            return (int) config('invoice.default_tax_rate', 10);
+        }
+
+        return (int) Decimal::round(bcdiv(bcmul((string) $this->tax, '100', 4), (string) $this->subtotal, 4), 0);
+    }
+
     public function reception(): BelongsTo
     {
         return $this->belongsTo(Reception::class);
