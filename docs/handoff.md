@@ -3,12 +3,13 @@
 ## SyncTaller (antes Presupuestador) — Sistema de Gestión para Taller Mecánico
 
 **Versión del handoff:** 1.2
-**Fecha:** 2026-10-17 (contenido actualizado hasta el 2026-10-29)
+**Fecha:** 2026-10-17 (contenido actualizado hasta el 2026-11-01)
 **Estado:** Backend/API funcional — roadmap original completo (FASES 10 a 20: repuestos, inventario, servicios,
 cierre económico, facturación, pagos, entrega, historial, mantenimiento preventivo, reportes), FASE 21 (compras) y
 FASE 22 (pagos a proveedores), FASE 23 (notificaciones), FASE 24 (exportación y comprobantes), FASE 25 (auditoría) y
-módulo de aseguradoras en curso (M1–M9 y P10, 2.59–2.70); 6 roles; 460 tests en verde (2026-10-29)
-**Stack principal:** Laravel 13.38 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend en React 19, en el repositorio aparte
+módulo de aseguradoras en curso (M1–M11 y P10, 2.59–2.75, con M10 detrás de un interruptor apagado); 6 roles; 472 tests
+en verde (2026-11-01)
+**Stack principal:** Laravel 13.39 (desde el 2026-10-24; antes 12.70) + MySQL (8.4 en Laragon). Frontend en React 19, en el repositorio aparte
 `../synctaller-frontend` (ver 1.2)
 **Entorno local:** Laragon / Windows
 **Base de datos:** `synctaller` (hasta el 2026-10-21, `presupuestador`)
@@ -1840,7 +1841,8 @@ vigentes en `CLAUDE.md` 6.31.
 | Migración | `000071` (columnas nulas), probada en MySQL con su `down` |
 | Pruebas | `tests/Feature/Claims/DeductibleNetModeTest` (5): Ejemplo 7 (propuesta, reglas, facturas de 1.760.000 y 1.287.000 con la línea del deducible, bloqueo del siniestro y entrega), interruptor apagado (validación, regla A en factura y entrega), IVA sin indicar y sin IVA, R11 al confirmar y al facturar, deducible mayor que lo cubierto y modalidad copiada de la aseguradora. Los tests de M8 y M9 no cambiaron |
 | Corrección | La revisión del frontend (2026-10-30) mostró que `deductible_fiscal_pending` seguía en `true` con la modalidad neta (el reparto y el resumen decían "no se factura"). Ahora es deducible mayor a 0 **que no se factura** (`AllocationBillingService::deductibleInvoiced`: modalidad neta en vigor y su IVA indicado). Rama `fix/deducible-fiscal-pendiente`, con su verificación en el test del Ejemplo 7 |
-| Pendiente | V16 (respuesta), V20 (documento de la modalidad), V21 (encender) y el frontend (modalidad e IVA en el siniestro y la aseguradora, columna del deducible y reglas nuevas en el editor del reparto) |
+| Frontend | Mergeado el 2026-10-30 (`1d4d44a`, rama `feature/deducible-neto`): modalidad e IVA en el siniestro y la aseguradora, columna del deducible y reglas nuevas en el editor del reparto |
+| Pendiente | V16 (respuesta), V20 (documento de la modalidad) y V21 (encender) |
 
 
 # 2.76 Emails de ejemplo en mail.com.py (2026-10-30)
@@ -1853,6 +1855,20 @@ Los emails de ejemplo de clientes, aseguradoras (contactos), proveedores y sinie
 | Riesgo | Es un dominio real con correo: con un SMTP configurado, un aviso reenviado de un cliente de ejemplo sale de verdad (hoy `MAIL_MAILER=log`). `NotificationSeeder` sigue usando el mailer `array` |
 | Base local | Los seeders no corrigen lo que ya existe: los datos de ejemplo de la base local se actualizaron con el mismo reemplazo (clientes, asegurados de siniestros, contactos de aseguradoras y proveedores) |
 | Pruebas | `DatabaseSeederTest` (email del cliente C15) |
+
+# 2.77 Actualización de dependencias (2026-11-01)
+
+Pedido del usuario: las versiones más actuales y compatibles en los dos repositorios, para dejar iguales sus dos equipos.
+
+| Tema | Decisión |
+|---|---|
+| Backend | `composer update` dentro de los rangos de `composer.json`, sin cambiarlos: Laravel 13.39, PHPUnit 12.5.42, Symfony 7.4.22 y otros parches. `composer outdated` queda vacío y `composer audit` sin avisos |
+| Frontend | `npm update` dentro de los rangos, más ApexCharts (abajo). Siguen por compatibilidad `typescript` 6.0.3 (`typescript-eslint` exige `<6.1.0`) y `@types/node` 24 (el runtime es Node 22) |
+| Licencia de los gráficos | Decisión del usuario, informado del cambio: `apexcharts` 4.7.0 → 8.7.0 y `react-apexcharts` 1.7.0 → 2.2.0, en versión exacta. Ya no son MIT: licencia dual, gratis por debajo de USD 2 millones de ingresos anuales; la OEM (paga) puede aplicar a un SaaS con gráficos interactivos. **Revisar antes del primer taller comercial** |
+| Efecto en el frontend | `react-apexcharts` 2 es ESM: se quitó el envoltorio de `default` en `Chart.tsx`. El paquete lazy de gráficos pasa a unos 280 kB gzip; `react-apexcharts/core` permitiría reducirlo |
+| Vulnerabilidades | Producción, sin avisos en los dos repositorios. Quedan 12 moderadas en el frontend, solo de desarrollo (`minimatch`, por ESLint), sin arreglo compatible |
+| Pruebas | Backend: 472 tests. Frontend: 38 tests, build y lint después de `npm ci`. Ningún test cubre los gráficos: se renderizaron los tipos en uso (barras, barras horizontales y donut, con las opciones de los reportes) en Chrome sin interfaz, sin errores, y se revisó la captura |
+| Reinstalar | `composer install` y `npm ci`, nunca `npm install`: la diferencia entre los equipos era un `package-lock.json` reescrito sin cambios en `package.json` |
 
 
 ---
@@ -4223,14 +4239,15 @@ La arquitectura objetivo es:
 El proyecto actualmente se encuentra en:
 
 ```text
-MÓDULO DE ASEGURADORAS — M1 a M9 Y P10 IMPLEMENTADAS (2026-10-29, ver 2.59–2.70); SIGUEN M10–M12
+MÓDULO DE ASEGURADORAS — M1 a M11 Y P10 IMPLEMENTADAS (ver 2.59–2.75; M10 APAGADA, M11 SIN LOS AVISOS); SIGUE M12
 ```
 
 Con la FASE 20 se completó el roadmap original (FASES 10–20); después se implementaron compras (FASE 21), pagos a
 proveedores (FASE 22), notificaciones por email y bandeja interna (FASE 23), exportación de reportes y comprobantes
 imprimibles (FASE 24) y auditoría avanzada (FASE 25). Desde el 2026-10-24 se trabaja en el módulo de aseguradoras
-(deuda #13), según el plan de `docs/especificacion-aseguradoras.html` (§9): M1–M9, P10 y M11 (sin los avisos) están
-hechas; quedan M10 (deducible mayor a 0, espera G1), M12 (retenciones, espera V17) y los avisos a la aseguradora (V7). El frontend React 19 está en
+(deuda #13), según el plan de `docs/especificacion-aseguradoras.html` (§9): M1–M9, P10, M10 (detrás de un interruptor
+apagado, en backend y frontend) y M11 (sin los avisos) están hechas; quedan encender M10 (confirmación escrita del
+contador, V21, y V16), M12 (retenciones: aprobar el diseño y V17) y los avisos a la aseguradora (decisión comercial, V7). El frontend React 19 está en
 `../synctaller-frontend` y se adapta en su propio repositorio. Sigue sin fase asignada:
 
 ```text
@@ -4367,12 +4384,15 @@ para que el sistema pueda crecer posteriormente hacia compras, facturación y re
 [✓] Facturas por responsable (2.70)
 [✓] Reportes del módulo de aseguradoras (2.71)
 [✓] Filtro por tipo de cliente (2.72)
+[✓] Conceptos vendidos en el reparto (2.73)
+[✓] Discrepancias D3, D7 y D8 (2.74)
+[✓] Deducible facturado, modalidad neta: hecha y apagada (2.75)
 ```
 
 ## Próximo
 
 ```text
-[ ] Aseguradoras: deducible mayor a 0 (M10, espera G1), retenciones (M12, espera V17) y avisos a la aseguradora (V7)
+[ ] Aseguradoras: encender M10 (V21 y V16), retenciones (M12: aprobar el diseño y V17) y avisos a la aseguradora (V7)
 [ ] Notificaciones por WhatsApp
 ```
 
@@ -4459,7 +4479,7 @@ aprobadas (E y P8, §10.2 de la especificación), que solo faltaba registrar.
 | 10 | ~~Alta de mecánico con costo o comisión `null` → `500`~~ **Resuelto el 2026-10-21** | `StoreMechanicRequest` declaraba `hour_cost` y `commission_percentage` como `nullable`, pero las columnas son `NOT NULL DEFAULT 0` (migración `000001`). `POST /api/mechanics` con `"hour_cost": null` respondía `500 INTERNAL_SERVER_ERROR` | Decisión del usuario: rechazar con `422`. Alta y edición validan `sometimes\|required`: sin enviarlos quedan en `0`; vacíos → `422 VALIDATION_ERROR`. Test: `MechanicTest::test_cost_and_commission_cannot_be_null` |
 | 11 | ~~Repuestos extra sin aprobación del cliente~~ **Resuelto el 2026-10-23 (opción 3, ver 2.49)** | `POST work-orders/{id}/parts` agrega repuestos fuera del presupuesto aprobado (`work_order_item_id` `null`, `is_budgeted` `false`, precio de venta del repuesto o el informado) con la OT `pending\|in_progress\|paused`. El cierre (6.9) y la factura (6.10) suman lo realmente usado, extras incluidos | El cliente paga más que el presupuesto que aprobó, sin registro de su conformidad ni aviso. La diferencia solo se ve en el cierre (`variance`, con `work-orders.view-economics`). Hoy se puede formalizar con un presupuesto complementario en la misma recepción y otra OT. Opciones a decidir con los clientes del taller: (1) mantener y mostrar en OT y factura lo no presupuestado y la diferencia; (2) prohibir extras y usar siempre el presupuesto complementario; (3) extras con aprobación registrada del cliente antes de consumir o facturar (diseño nuevo, con migración). **Se eligió la 3:** el extra nace `awaiting_approval` y se registra la respuesta del cliente (medio, contacto, quién la cargó) antes de reservar, consumir o completar la OT |
 | 12 | ~~Requests ocasionales sin el `.env` (entorno local)~~ **Resuelto el 2026-10-22** | En la revisión visual de F9, un request concurrente del frontend falló y el navegador lo informó como CORS; `laravel.log`: `production.ERROR: Database connection [framework_base] not configured` (sin `APP_ENV` ni `DB_CONNECTION`: corrió sin las variables del `.env`). Reproducido: 13 de 300 requests concurrentes con 500 | Causa: Apache multihilo de Laragon (`mpm_winnt` + PHP como módulo ZTS), `putenv` no es seguro entre hilos. Laragon pasó a **Nginx** (puerto 80, `php-cgi` con procesos hijos, `client_max_body_size 2000M`): 900 de 900 requests concurrentes en 200, sin errores nuevos. Además `database.default` pasó de `framework_base` (resto del scaffold) a `mysql`; el 2026-10-24 la conexión del proyecto, que se llamaba `synctaller` y no se usaba (Laravel completaba `mysql` con su configuración interna), se renombró a `mysql`. No usar `config:cache` en desarrollo: con la config cacheada `php artisan test` usaría MySQL y `RefreshDatabase` borraría la base |
-| 13 | **Abierta (2026-10-24), en diseño desde el 2026-10-27: clientes aseguradoras.** Especificación de trabajo en `docs/especificacion-aseguradoras.html` (versión 3): decisiones A–G y P1–P9 aprobadas; primeras respuestas externas a G1–G5 (2026-10-28); correcciones previas E2–E5 implementadas (2.54–2.57). **M1–M9 y P10 implementadas (2.59–2.70, 2026-10-29)**; faltan M10–M12 (deducible mayor a 0, avisos y retenciones) | No hay concepto de aseguradora, siniestro, póliza ni deducible. La factura toma el `client_id` del dueño de la recepción (`InvoiceService::generate`); en borrador se pueden cambiar `customer_name`, `customer_tax_id`, `customer_address` y la condición (`UpdateInvoiceRequest`), así que hoy se puede facturar a nombre de la aseguradora y a crédito. Una sola factura vigente por OT (`WORK_ORDER_ALREADY_INVOICED`); el presupuesto lo aprueba el cliente, sin aprobación parcial por ítem | Reportes de ventas, clientes y cobros muestran al dueño, no a la aseguradora; no se puede dividir la factura (deducible al dueño y el resto a la aseguradora); no se registra el número de siniestro ni el perito. Preguntas abiertas: ¿quién paga el deducible y con qué factura?, ¿quién aprueba el presupuesto (perito, dueño o ambos) y si puede ser parcial?, ¿siniestro o póliza en presupuesto y factura?, ¿cuentas por cobrar por aseguradora? Para entregar con pago diferido hay que facturar a crédito (la entrega exige la factura de contado pagada) |
+| 13 | **Abierta (2026-10-24), en diseño desde el 2026-10-27: clientes aseguradoras.** Especificación de trabajo en `docs/especificacion-aseguradoras.html` (versión 3): decisiones A–G y P1–P9 aprobadas; primeras respuestas externas a G1–G5 (2026-10-28); correcciones previas E2–E5 implementadas (2.54–2.57). **M1–M11 y P10 implementadas (2.59–2.75)**, con M10 detrás de un interruptor apagado; faltan M12 (retenciones) y los avisos a la aseguradora de M11 | No hay concepto de aseguradora, siniestro, póliza ni deducible. La factura toma el `client_id` del dueño de la recepción (`InvoiceService::generate`); en borrador se pueden cambiar `customer_name`, `customer_tax_id`, `customer_address` y la condición (`UpdateInvoiceRequest`), así que hoy se puede facturar a nombre de la aseguradora y a crédito. Una sola factura vigente por OT (`WORK_ORDER_ALREADY_INVOICED`); el presupuesto lo aprueba el cliente, sin aprobación parcial por ítem | Reportes de ventas, clientes y cobros muestran al dueño, no a la aseguradora; no se puede dividir la factura (deducible al dueño y el resto a la aseguradora); no se registra el número de siniestro ni el perito. Preguntas abiertas: ¿quién paga el deducible y con qué factura?, ¿quién aprueba el presupuesto (perito, dueño o ambos) y si puede ser parcial?, ¿siniestro o póliza en presupuesto y factura?, ¿cuentas por cobrar por aseguradora? Para entregar con pago diferido hay que facturar a crédito (la entrega exige la factura de contado pagada) |
 | 14 | **Abierta (2026-10-28): disco `local` con `serve` activo y sin uso** | `config/filesystems.php`: el disco `local` (`storage/app/private`) tiene `'serve' => true`. Laravel registra `GET` y `PUT storage/{path}` con URL firmada: la firma usa la `APP_KEY` y no conoce permisos, taller ni auditoría. Ninguna parte de `app/` usa ese disco | Hoy no expone nada (la carpeta solo tiene `.gitignore`), pero cualquier archivo que se guarde ahí quedaría descargable por URL firmada. Decisión aprobada (E): no se usa para el módulo, que tendrá su propio disco privado sin `serve`; su revisión queda como deuda, **sin desactivarlo en esta etapa** |
 | 15 | **Abierta (2026-10-28): fotos y firmas con URL pública (deuda de seguridad, P8)** | Fotos de recepción (`ReceptionPhotoController`), fotos de ítems de diagnóstico (`DiagnosticItemPhotoController`) y firmas de entrega (`VehicleDeliveryService`) en el disco `public`, con URL permanente y nombre aleatorio. El frontend las muestra con `<img src>`, que no envía el token | Una URL filtrada no se puede revocar hasta mover el archivo; no hay permiso ni auditoría de acceso. Decisión aprobada (P8): tarea independiente **después de T4** (storage por taller), primero la firma y después las fotos, coordinada con el frontend (descarga con token). **Requisito antes del primer taller comercial.** Hasta entonces no se agregan tipos de archivo nuevos al disco `public`, salvo branding |
 | 16 | **Abierta (2026-10-28): sin análisis antivirus de archivos subidos (riesgo técnico)** | Las subidas solo validan tipo, extensión y tamaño (fotos, firma, logo, favicon; y los documentos de siniestros previstos en M4) | La validación no sustituye un antivirus. Decisión aprobada (E): queda fuera del alcance actual y se documenta como riesgo pendiente; decidir antes de recibir documentos de terceros en producción |

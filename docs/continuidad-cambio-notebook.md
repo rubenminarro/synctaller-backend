@@ -5,9 +5,9 @@ decisiones tomadas, los documentos producidos y el siguiente paso acordado.
 
 > **Alcance de este documento.** No reemplaza a [`CLAUDE.md`](../CLAUDE.md) (reglas vigentes) ni a
 > [`handoff.md`](handoff.md) (historia y decisiones por fase). Las reglas de lo ya implementado del módulo de
-> aseguradoras (M1–M7) están en `CLAUDE.md` 6.22–6.26 y sus decisiones en el handoff (2.59–2.65). El diseño de lo que
-> falta sigue en [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 3; sus propuestas M10
-> y M12 esperan revisión; P10 se aprobó el 2026-10-29; sección 6). Las páginas publicadas de la sección 6 quedan como antecedente.
+> aseguradoras (M1–M11 y P10) están en `CLAUDE.md` 6.22–6.31 y sus decisiones en el handoff (2.59–2.75). El diseño de lo
+> que falta sigue en [`especificacion-aseguradoras.html`](especificacion-aseguradoras.html) (versión 3; la propuesta M12
+> espera revisión; sección 6). Las páginas publicadas de la sección 6 quedan como antecedente.
 
 Convención: **[verificado]** = comprobado en el código o el entorno en la fecha indicada (el 2026-10-27, salvo que se
 diga otra); **[pendiente]** = sin verificar o sin decidir.
@@ -19,12 +19,12 @@ diga otra); **[pendiente]** = sin verificar o sin decidir.
 | Tema | Estado | Fuente |
 |---|---|---|
 | Proyecto | SyncTaller (antes Presupuestador): gestión de talleres mecánicos | `CLAUDE.md` §1 |
-| Backend | Laravel **13.38.0** [verificado: `php artisan --version`], PHP `^8.3`, Sanctum 4.3.3, spatie/laravel-permission 8.3.2, dompdf `^3.1` [verificado: `vendor/composer/installed.json`, `composer.json`] | — |
+| Backend | Laravel **13.39.0** [verificado: `php artisan --version`], PHP `^8.3`, Sanctum 4.3.3, spatie/laravel-permission 8.3.2, dompdf `^3.1` [verificado: `vendor/composer/installed.json`, `composer.json`] | — |
 | Base de datos | MySQL en Laragon, base `synctaller`, conexión `mysql`. Tests en SQLite (`database/testing.sqlite`) | `CLAUDE.md` §1 y §3 |
 | Servidor local | Nginx de Laragon con `php-cgi` (no Apache) | `CLAUDE.md` §3 |
 | Frontend | Repositorio aparte `../synctaller-frontend` (React 19 + TypeScript + Vite + Tabler) | `CLAUDE.md` §1 |
-| Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico. Módulo de aseguradoras: M1–M9 y P10 en `main` (2026-10-29) | `CLAUDE.md` §1 |
-| Tests | **460 tests (7872 aserciones) en verde, en 388 s** [verificado el 2026-10-29: `php artisan test` en la rama de M9, que después se mergeó sin cambios de código]. Antes: 455 con P10, 449 con M8, 440 con M7 y 374 el 2026-10-27 | `CLAUDE.md` §1 |
+| Estado funcional | Roadmap FASES 10–25 implementado, más preferencias, logo y catálogo de ítems de diagnóstico. Módulo de aseguradoras: M1–M11 y P10 en `main` (M10 con el interruptor apagado; M11 sin los avisos) | `CLAUDE.md` §1 |
+| Tests | **472 tests (8390 aserciones) en verde, en 438 s** [verificado el 2026-11-01: `php artisan test` en `main`, `21bfcd5`]. Antes: 460 con M9, 455 con P10, 449 con M8, 440 con M7 y 374 el 2026-10-27 | `CLAUDE.md` §1 |
 | Deuda técnica | Handoff §14 **#13 (clientes aseguradoras) abierta**, en implementación (M10 hecho detrás de un interruptor; faltan M12 y los avisos). Abiertas también #14–#16; las discrepancias D1–D10 (14.1) quedaron resueltas o sin acción (D3, D7 y D8 el 2026-10-30, handoff 2.74) | `docs/handoff.md`, §14 |
 
 Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 desde el 2026-10-24 (handoff 2.51).
@@ -33,12 +33,12 @@ Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 de
 
 ## 2. Repositorios y ramas
 
-| Repositorio | Remoto | Rama | Commit | Estado [verificado el 2026-10-29] |
+| Repositorio | Remoto | Rama | Commit | Estado [verificado el 2026-11-01] |
 |---|---|---|---|---|
-| Backend | `https://github.com/rubenminarro/synctaller-backend.git` | `main` | `4f1ea1a` (merge de M7) | Sin cambios pendientes. El estado actual se verifica con `git log origin/main` |
-| Frontend | `https://github.com/rubenminarro/synctaller-frontend.git` | `main` | `cbbb559` ("Elige siempre del catálogo el ítem del diagnóstico") | Sin cambios pendientes. **Todavía no consume nada del módulo de aseguradoras** (ni el cliente empresa de M1) |
+| Backend | `https://github.com/rubenminarro/synctaller-backend.git` | `main` | `21bfcd5` (emails de ejemplo, handoff 2.76) | Sin cambios pendientes. El estado actual se verifica con `git log origin/main` |
+| Frontend | `https://github.com/rubenminarro/synctaller-frontend.git` | `main` | `1d4d44a` (merge de M10) | Consume todo el módulo de aseguradoras (FA0–FA4 y M10). El estado actual se verifica con `git log origin/main` |
 
-* Las entregas del módulo se hicieron cada una en su rama y se mergearon en `main` (M1 a M7, handoff 2.59–2.65).
+* Las entregas del módulo se hicieron cada una en su rama y se mergearon en `main` (handoff 2.59–2.75).
 * La rama remota `docs/deuda-aseguradoras` (`d48c38a`) ya está integrada en `main` (registró la deuda #13).
 * La rama remota `docs/especificacion-aseguradoras` (`5a6939e`) ya está integrada en `main` mediante el merge
   `d7dfcb5`.
@@ -57,7 +57,7 @@ Nota: en algunos pedidos se mencionó "Laravel 12"; el código usa Laravel 13 de
   más.
 * **Notebook anterior:** `vendor/` había quedado con las versiones nuevas. El 2026-10-28 se alineó con
   `composer install` y la suite pasó completa (374 tests, 5985 aserciones, 315 s).
-* Actualizar las dependencias queda para una tarea aparte (`chore/`), con la suite completa.
+* Las dependencias se actualizaron el 2026-11-01 en los dos repositorios (handoff 2.77), con la suite completa.
 
 ### 3.2 Este documento
 
@@ -236,15 +236,15 @@ Las preguntas concretas están en el informe de decisiones (§G) y la dependenci
 
 ## 9. Limitaciones y riesgos conocidos
 
-Registradas el 2026-10-27; estado revisado el 2026-10-29.
+Registradas el 2026-10-27; estado revisado el 2026-11-01.
 
 * ~~Las validaciones de cliente no admiten empresas.~~ Resuelto con M1 (handoff 2.59): cliente persona o empresa.
-* El email de cliente es único solo por validación, no en la base: **abierta** (D7, espera decisión). ~~La baja de
-  cliente no verifica si está en uso.~~ Resuelto con M1 (`CLIENT_IN_USE`, D9).
+* ~~El email de cliente es único solo por validación, no en la base.~~ Resuelto el 2026-10-30 (D7, handoff 2.74). ~~La
+  baja de cliente no verifica si está en uso.~~ Resuelto con M1 (`CLIENT_IN_USE`, D9).
 * ~~Seis generadores de códigos usan `max(id)+1` sin bloqueo.~~ Resuelto con E3 (handoff 2.55): `document_sequences`.
 * ~~`budgets` y `budget_items` usan `decimal(10,2)`.~~ Resuelto con E4 (handoff 2.56): `decimal(14,2)`.
 * ~~Los recordatorios de una factura a nombre de otro van al dueño.~~ Resuelto con E2 (handoff 2.54): quedan `skipped`.
-* `receptions.approved_by` no se asigna nunca: **abierta** (D3, espera decisión).
+* ~~`receptions.approved_by` no se asigna nunca.~~ Resuelto el 2026-10-30 (D3, handoff 2.74): se eliminó.
 * El disco `local` tiene `'serve' => true`: **abierta** (deuda #14; los documentos de siniestros usan su propio disco
   sin `serve`).
 
@@ -281,8 +281,17 @@ y mergeado en `main` (handoff 2.69; migración `000068`, probada en una base MyS
 
 **Actualización (2026-10-29, M9):** las facturas por responsable están implementadas y mergeadas en
 `main` (handoff 2.70; migración `000069`, probada en una base MySQL temporal). Con eso un siniestro con deducible 0 se factura y se entrega de punta a punta. Cambio de
-comportamiento: con un siniestro abierto de deducible desconocido la recepción ya no se entrega. **Siguen M10 (espera
-G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
+comportamiento: con un siniestro abierto de deducible desconocido la recepción ya no se entrega.
+
+**Actualización (2026-11-01):** se verificó el entorno en esta notebook (472 tests en verde, 282 rutas, migraciones al
+día hasta `000071`). **Ninguna entrega del módulo está lista para implementar.** Falta:
+
+* **Encender M10:** confirmación escrita del contador (V21) y respuesta a V16. Ya está hecha en backend y frontend.
+* **M12 (retenciones):** aprobar el diseño y respuesta a V17. Hasta entonces, las facturas a aseguradoras quedan con un
+  saldo que nunca se cobra (riesgo de §10.4 de la especificación).
+* **Avisos a la aseguradora:** decisión comercial (V7, cerrada por ahora como "sin recordatorios").
+
+Lo único del plan sin bloqueos es **T1** (configuración del taller en la base), que espera autorización del usuario.
 
 **Siguiente paso recomendado, en orden:**
 
@@ -332,9 +341,9 @@ G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
        y se resembraron los permisos. `AllocationInvoiceSeeder` fallaba en MySQL (DISTINCT con ORDER BY); corregido en
        `main` (`fab7c4e`).
      * **M10** (deducible facturado, modalidad neta, handoff 2.75; migración `000071`) el 2026-10-30, detrás de
-       `INSURER_DEDUCTIBLE_NET_MODE` (apagado hasta la confirmación escrita del contador, V21; V16 sin respuesta). Falta su
-       parte del frontend.
-     * **Sigue M12 (espera V17)** y los avisos a la aseguradora (V7).
+       `INSURER_DEDUCTIBLE_NET_MODE` (apagado hasta la confirmación escrita del contador, V21; V16 sin respuesta). Su
+       parte del frontend se mergeó el mismo día (`1d4d44a`).
+     * **Sigue M12 (aprobar el diseño y V17)** y los avisos a la aseguradora (V7).
 
 ---
 
@@ -345,11 +354,12 @@ G1), M11 y M12 (espera V17)**, y la adaptación del frontend.
    * clonar los dos repositorios en `C:\laragon\www\` (o hacer `git pull` en `main` si ya existen);
    * `composer install`, `.env` y base de datos según `README.md` (secciones "Requisitos", "Instalación local" y
      "Base de datos");
+   * en el frontend, `npm ci` (no `npm install`, que puede reescribir el lock y separar los dos equipos);
    * Laragon con **Nginx**;
    * no usar `config:cache` en desarrollo.
 3. **Verificar el entorno:** `php artisan test` (o `php -d extension=pdo_sqlite -d extension=sqlite3
    vendor/bin/phpunit` si falta `pdo_sqlite`) y anotar el resultado. La última ejecución verificada es la de la
-   sección 1 (460 tests en verde, 2026-10-29); repetirla en el equipo donde se retome.
+   sección 1 (472 tests en verde, 2026-11-01); repetirla en el equipo donde se retome.
 4. **Abrir las páginas de la sección 6** con la cuenta de claude.ai del usuario.
 5. **Abrir Claude Code** en `synctaller-backend` y pedirle que lea `CLAUDE.md`, `docs/handoff.md`, este documento y
    `docs/especificacion-aseguradoras.html` (en especial §9 y §10), verifique el estado de Git y retome desde la
